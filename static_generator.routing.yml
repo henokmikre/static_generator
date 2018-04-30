@@ -1,0 +1,7 @@
+static_generator.settings:
+  path: '/admin/config/system/static_generator'
+  defaults:
+    _form: '\Drupal\static_generator\Form\StaticGeneratorSettingsForm'
+    _title: 'Static Generator'
+  requirements:
+    _permission: 'administer static generator'

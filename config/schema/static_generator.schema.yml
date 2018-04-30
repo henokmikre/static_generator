@@ -1,0 +1,12 @@
+# Schema for the configuration files of the Static Generator module.
+
+static_generator.settings:
+  type: config_object
+  label: 'Static generator settings'
+  mapping:
+    production_host_url:
+      type: string
+      label: 'Production host URL'
+    generator_directory:
+      type: string
+      label: 'Generator directory'
