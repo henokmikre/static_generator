@@ -7,7 +7,7 @@ use Drupal\user\Entity\User;
 use Drupal\Component\Serialization\Json;
 
 /**
- * Verifies operation of the Tally member profile service.
+ * Verifies operation of the Static Generator service.
  *
  * @group tally
  */
@@ -41,8 +41,8 @@ class StaticGeneratorTest extends BrowserTestBase {
     'datetime',
     'options',
     'telephone',
-    'tally',
-    'tally_test',
+    'static_generator',
+    'static_generator_test',
   ];
 
   /**
@@ -66,8 +66,7 @@ class StaticGeneratorTest extends BrowserTestBase {
    */
   protected $permissionsAdmin = [
     'access administration pages',
-    'tally member',
-    'administer tally',
+    'administer static generator',
     'administer users',
     'administer account settings',
     'administer site configuration',

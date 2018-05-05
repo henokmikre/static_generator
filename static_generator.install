@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Install, update and uninstall functions for the aggregator module.
+ * Install, update and uninstall functions for the static_generator module.
  */
 
 /**
