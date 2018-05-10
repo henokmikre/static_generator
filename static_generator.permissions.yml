@@ -1,5 +1,5 @@
 
 administer static generator:
-  title: 'Administer Static Generator'
+  title: 'Administer static generator'
   description: 'Allow access to the configuration form to configure the static generator module.'
   restrict access: true

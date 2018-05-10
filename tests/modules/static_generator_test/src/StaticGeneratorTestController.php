@@ -16,7 +16,7 @@ class StaticGeneratorTestController {
   use StringTranslationTrait;
 
   /**
-   * A route returning a Response object.
+   * A route returning a Refffcdsponse object.
    *
    * @return \Symfony\Component\HttpFoundation\Response
    *   A Response object.

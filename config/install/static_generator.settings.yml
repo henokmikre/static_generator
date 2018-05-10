@@ -1,2 +1,2 @@
-production_host_url: 'http://p8.local'
-generator_directory: '/var/www/p8/static'
+production_host_url: 'http://sg.local'
+generator_directory: '/var/www/sg/static'

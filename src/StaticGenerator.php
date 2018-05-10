@@ -4,10 +4,8 @@ namespace Drupal\static_generator;
 
 use Drupal\Core\Cache\CacheBackendInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Entity\EntityTypeInterface;
-use Drupal\Core\Entity\Routing\EntityRouteProviderInterface;
 use Symfony\Component\Routing\Route;
-use Symfony\Component\Routing\RouteCollection;
+use Drupal\Core\Render\RendererInterface;
 
 /**
  * Static Generator Service.
@@ -21,14 +19,14 @@ class StaticGenerator {
    *
    * @var string
    */
-  private $generatorDirectory = '/var/www/p8/static';
+  private $generatorDirectory = '/var/www/sg/static';
 
   /**
-   * The render cache.
+   * The renderer.
    *
-   * @var RenderCacheInterface
+   * @var RendererInterface
    */
-  private $renderCache;
+  private $renderer;
 
   /**
    * The static generator cache.
@@ -38,54 +36,49 @@ class StaticGenerator {
   private $staticGeneratorCache;
 
   /**
-   * The renderer config.
-   *
-   * @var array rendererConfig
-   */
-  private $rendererConfig;
-
-  /**
    * Constructs a new StaticGenerator object.
    *
-   * @param string $generatorDirectory
-   *   The static generator target directory.
-   * @param RenderCacheInterface $render_cache
-   *   The render cache.
+   * @param RendererInterface $renderer
+   *   The renderer.
    * @param CacheBackendInterface $static_generator_cache
    *   The render cache.
    */
-  public function __construct($render_cache, $static_generator_cache) {
-    $this->renderCache = $render_cache;
+  public function __construct(RendererInterface $renderer, $static_generator_cache) {
+    $this->renderer = $renderer;
     $this->staticGeneratorCache = $static_generator_cache;
   }
 
   /**
    * {@inheritdoc}
    */
-//  public static function create(ContainerInterface $container) {
-//    return new static(
-//      '/sites/default/files/static_generator',
-//      $container->get('render_cache'),
-//      $container->get('render_config'),
-//      $container->get('cache.default')
-//    );
-//  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function generateAll() {
-    if (empty($route)) {
-      //$account = $this->currentUser;
-    }
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('renderer'),
+      $container->get('static_generator_cache')
+    );
   }
 
   /**
-   * {@inheritdoc}
    */
-  public function generate(Route $route = NULL) {
-    if (empty($route)) {
-      //$account = $this->currentUser;
-    }
+  public function generateAll() {
+  }
+
+  /**
+   * Returns the rendered route.
+   *
+   * @param Route $route
+   *   The route to render.
+   *
+   * @return String
+   *   The rendered markup.
+   *
+   */
+  public function generateRoute(Route $route) {
+    $this->renderer->renderRoot($route->getDefaults());
+
+    //    if (empty($route)) {
+    //      return;
+    //    }
+    //$rendered = $this->renderer->
   }
 }

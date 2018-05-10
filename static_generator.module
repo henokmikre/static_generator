@@ -23,3 +23,7 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
       return $output;
   }
 }
+
+function static_generator_block_build_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
+    $build['#cache']['max-age'] = 0;
+}
