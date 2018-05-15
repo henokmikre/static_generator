@@ -18,14 +18,6 @@ class StaticGeneratorTest extends BrowserTestBase {
    * @var array
    */
   public static $modules = [
-    'system',
-    'user',
-    'field',
-    'field_ui',
-    'filter',
-    'text',
-    'datetime',
-    'options',
     'static_generator',
   ];
 
@@ -64,7 +56,7 @@ class StaticGeneratorTest extends BrowserTestBase {
   }
 
   /**
-   * Tests static generator cache of route.
+   * Tests static generator caching of route.
    *
    * @param Route $route
    * The route to cache.
@@ -84,7 +76,7 @@ class StaticGeneratorTest extends BrowserTestBase {
    * Tests generating markup for a single route.
    */
   public function testGenerateStaticMarkupForRoute() {
-    $static_markup = \Drupal::service('static_generator.static_generator')->generateStaticMarkupForRoute(new Route('/node/1'));
+    $static_markup = \Drupal::service('static_generator.static_generator')->generateStaticMarkupForNode(1);
     $this->assertContains('html', $static_markup);
   }
 

@@ -11,7 +11,6 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-
 /**
  * Static Generator Service.
  *
@@ -105,7 +104,7 @@ class StaticGenerator {
   }
 
   /**
-   * Returns the rendered markup for a route.
+   * Returns the rendered markup for a node.
    *
    * @param int $nid
    *   The node id to render.
@@ -113,29 +112,26 @@ class StaticGenerator {
    * @return String
    *   The rendered markup.
    *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   *
    */
   public function generateStaticMarkupForPage($nid = 1) {
     $entity_type = 'node';
     $view_mode = 'full';
     $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
-    $render_array = \Drupal::entityTypeManager()
+    $node_render_array = \Drupal::entityTypeManager()
       ->getViewBuilder($entity_type)
       ->view($node, $view_mode);
     $request = new Request();
-
-    $response = $this->htmlRenderer->renderResponse($render_array, $request, $this->routeMatch);
-
-//    $render = $this->renderer->render($render_array, NULL, NULL);
-//    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
-//    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
-//    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
-//
-//
-//    $entity_type_id = $node->getEntityTypeId();
+    $response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
     return NULL;
 
+    //    $render = $this->renderer->render($render_array, NULL, NULL);
+    //    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
+    //    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
+    //    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
+    //    $entity_type_id = $node->getEntityTypeId();
     //$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
     //$rendered = $this->renderer->
   }
-
 }
