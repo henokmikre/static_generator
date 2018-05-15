@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Symfony\Component\Routing\Route;
 
 /**
  * Implements hook_help().
@@ -25,5 +26,8 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
 }
 
 function static_generator_block_build_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
-    $build['#cache']['max-age'] = 0;
+  //\Drupal::service('router.builder')->rebuild();
+
+  $static_markup = \Drupal::service('static_generator')->generateStaticMarkupForPage(1);
+//    $build['#cache']['max-age'] = 0;
 }

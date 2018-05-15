@@ -7,8 +7,9 @@ services:
     factory: cache_factory:get
     arguments: [static_generator]
 
-  static_generator.static_generator:
+  static_generator:
     class: Drupal\static_generator\StaticGenerator
     tags:
       - { name: static_generator, priority: 200 }
-    arguments: ['@renderer', '@cache.static_generator']
+    arguments: ['@cache.static_generator', '@renderer', '@current_route_match', '@class_resolver','@main_content_renderer.html']
+

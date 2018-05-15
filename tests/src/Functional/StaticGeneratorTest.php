@@ -57,6 +57,10 @@ class StaticGeneratorTest extends BrowserTestBase {
    */
   public function setup() {
     parent::setup();
+
+    // Create a page node.
+    $this->drupalCreateNode(['type' => 'page', 'title' => 'Test']);
+
   }
 
   /**
@@ -77,11 +81,11 @@ class StaticGeneratorTest extends BrowserTestBase {
   }
 
   /**
-   * Tests generating a single route.
+   * Tests generating markup for a single route.
    */
-  public function testGenerate() {
-    //$response = \Drupal::service('static_generator')->generateRoute('/node/1');
-    $this->assertTrue(TRUE);
+  public function testGenerateStaticMarkupForRoute() {
+    $static_markup = \Drupal::service('static_generator.static_generator')->generateStaticMarkupForRoute(new Route('/node/1'));
+    $this->assertContains('html', $static_markup);
   }
 
   /**
