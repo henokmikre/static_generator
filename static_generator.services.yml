@@ -11,5 +11,5 @@ services:
     class: Drupal\static_generator\StaticGenerator
     tags:
       - { name: static_generator, priority: 200 }
-    arguments: ['@cache.static_generator', '@renderer', '@current_route_match', '@class_resolver','@main_content_renderer.html']
+    arguments: ['@cache.static_generator', '@renderer', '@current_route_match', '@class_resolver','%main_content_renderers']
 

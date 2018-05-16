@@ -54,12 +54,11 @@ class StaticGenerator {
   private $classResolver;
 
   /**
-   * The html renderer.
+   * The available main content renderer services, keyed per format.
    *
-   * @var HtmlRenderer
-   *
+   * @var array
    */
-  protected $htmlRenderer;
+  protected $mainContentRenderers;
 
   /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
@@ -73,16 +72,16 @@ class StaticGenerator {
    *   The route matcher.
    * @param ClassResolverInterface $class_resolver
    *  The class resolver.
-   * @param htmlRenderer $html_renderer
-   *  The main content renderer.
+   * @param array $main_content_renderers
+   *   The available main content renderer service IDs, keyed by format.
    *
    */
-  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, htmlRenderer $html_renderer) {
+  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, array $main_content_renderers) {
     $this->staticGeneratorCache = $static_generator_cache;
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
-    $this->htmlRenderer = $html_renderer;
+    $this->mainContentRenderers = $main_content_renderers;
   }
 
   /**
@@ -123,9 +122,13 @@ class StaticGenerator {
       ->getViewBuilder($entity_type)
       ->view($node, $view_mode);
     $request = new Request();
-    $response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
+
+    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
+    $response = $renderer->renderResponse($node_render_array, $request, $this->routeMatch);
+
     return NULL;
 
+    $response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
     //    $render = $this->renderer->render($render_array, NULL, NULL);
     //    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
     //    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
