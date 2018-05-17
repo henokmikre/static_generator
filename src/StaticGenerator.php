@@ -2,21 +2,25 @@
 
 namespace Drupal\static_generator;
 
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Cache\CacheBackendInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Routing\Route;
 use Drupal\Core\Render\RendererInterface;
-use Drupal\Core\Render\MainContent\HtmlRenderer;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Event\GetResponseEvent;
+use Symfony\Component\HttpKernel\KernelEvents;
+
+use Drupal\Core\Render\MainContent\HtmlRenderer;
+use Symfony\Component\Routing\Route;
 
 /**
  * Static Generator Service.
  *
  * Manages static generation process.
  */
-class StaticGenerator {
+class StaticGenerator implements EventSubscriberInterface {
 
   /**
    * The generator directory.
@@ -61,6 +65,13 @@ class StaticGenerator {
   protected $mainContentRenderers;
 
   /**
+   * The request stack.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
+  protected $requestStack;
+
+  /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
@@ -74,39 +85,57 @@ class StaticGenerator {
    *  The class resolver.
    * @param array $main_content_renderers
    *   The available main content renderer service IDs, keyed by format.
+   * @param array $request_stack
+   *   The request stack.
    *
    */
-  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, array $main_content_renderers) {
+  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, array $main_content_renderers, RequestStack $request_stack) {
     $this->staticGeneratorCache = $static_generator_cache;
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
     $this->mainContentRenderers = $main_content_renderers;
+    $this->requestStack = $request_stack;
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('static_generator_cache'),
-      $container->get('renderer'),
-      $container->get('route_match'),
-      $container->get('class_resolver'),
-      $container->get('main_content_renderers')
-    );
+  public static function getSubscribedEvents() {
+    $events[KernelEvents::REQUEST][] = ['generateStaticMarkupForPage'];
+    return $events;
   }
 
   /**
+   * Write static file.
+   *
    */
-  public function generateAll() {
+  public function writePage() {
+  }
+
+  /**
+   * Generate a single page.
+   *
+   * @return int
+   *   The number of pages generated.
+   *
+   */
+  public function generatePage() {
+    $foo = $this->generatorDirectory;
+  }
+
+  /**
+   * Generate all pages.
+   *
+   * @return int
+   *   The number of pages generated.
+   *
+   */
+  public function generateAllPages() {
   }
 
   /**
    * Returns the rendered markup for a node.
-   *
-   * @param int $nid
-   *   The node id to render.
    *
    * @return String
    *   The rendered markup.
@@ -114,10 +143,10 @@ class StaticGenerator {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    *
    */
-  public function generateStaticMarkupForPage($nid = 1) {
+  public function generateStaticMarkupForPage(GetResponseEvent $event) {
     $entity_type = 'node';
     $view_mode = 'full';
-    $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
+    $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load(1);
     $node_render_array = \Drupal::entityTypeManager()
       ->getViewBuilder($entity_type)
       ->view($node, $view_mode);
@@ -126,9 +155,9 @@ class StaticGenerator {
     $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
     $response = $renderer->renderResponse($node_render_array, $request, $this->routeMatch);
 
-    return NULL;
+    return 'html';
 
-    $response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
+    //$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
     //    $render = $this->renderer->render($render_array, NULL, NULL);
     //    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
     //    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
