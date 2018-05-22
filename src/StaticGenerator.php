@@ -102,7 +102,9 @@ class StaticGenerator implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    $events[KernelEvents::REQUEST][] = ['generateStaticMarkupForPage'];
+    //$events[KernelEvents::REQUEST][] = ['generateStaticMarkupForPage'];
+    //$a = 'foo';
+    $events = [];
     return $events;
   }
 
@@ -144,6 +146,9 @@ class StaticGenerator implements EventSubscriberInterface {
    *
    */
   public function generateStaticMarkupForPage(GetResponseEvent $event) {
+
+    $a = 'foo';
+
     $entity_type = 'node';
     $view_mode = 'full';
     $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load(1);
@@ -154,16 +159,18 @@ class StaticGenerator implements EventSubscriberInterface {
 
     $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
     $response = $renderer->renderResponse($node_render_array, $request, $this->routeMatch);
+    $content = $response->getContent();
+    return $content;
 
-    return 'html';
-
-    //$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
-    //    $render = $this->renderer->render($render_array, NULL, NULL);
-    //    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
-    //    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
-    //    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
-    //    $entity_type_id = $node->getEntityTypeId();
-    //$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
-    //$rendered = $this->renderer->
   }
 }
+
+
+//$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
+//    $render = $this->renderer->render($render_array, NULL, NULL);
+//    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
+//    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
+//    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
+//    $entity_type_id = $node->getEntityTypeId();
+//$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
+//$rendered = $this->renderer->
