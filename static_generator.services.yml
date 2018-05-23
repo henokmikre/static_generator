@@ -12,10 +12,10 @@ services:
     tags:
       - { name: static_generator, priority: 200 }
       - { name: event_subscriber }
-    arguments: ['@cache.static_generator', '@renderer', '@current_route_match', '@class_resolver','%main_content_renderers%', '@request_stack']
+    arguments: ['@cache.static_generator', '@renderer', '@current_route_match', '@class_resolver','%main_content_renderers%', '@request_stack', '@http_kernel']
 
   placeholder_strategy.static_generator:
     class: Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy
     arguments: ['@session_configuration', '@request_stack', '@current_route_match']
     tags:
-      - { name: placeholder_strategy, priority: 0 }
+      - { name: placeholder_strategy, priority: 1 }

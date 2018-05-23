@@ -5,3 +5,11 @@ static_generator.settings:
     _title: 'Static Generator'
   requirements:
     _permission: 'administer static generator'
+
+static_generator.generate_static_markup_for_page:
+  path: '/gen'
+  defaults:
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generateStaticMarkupForPage'
+    _title: 'SG Example'
+  requirements:
+    _permission: 'access content'

@@ -57,7 +57,8 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    * {@inheritdoc}
    */
   public function processPlaceholders(array $placeholders) {
-    $request = $this->requestStack->getCurrentRequest();
+    //return $placeholders;
+    //$request = $this->requestStack->getCurrentRequest();
     return $this->doProcessPlaceholders($placeholders);
   }
 
