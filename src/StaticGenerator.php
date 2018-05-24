@@ -11,6 +11,7 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AnonymousUserSession;
 
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\Routing\Route;
@@ -78,6 +79,13 @@ class StaticGenerator implements EventSubscriberInterface {
    * @var \Symfony\Component\HttpKernel\HttpKernelInterface
    */
   protected $httpKernel;
+
+  /**
+   * The session configuration.
+   *
+   * @var \Drupal\Core\Session\SessionConfigurationInterface
+   */
+  protected $sessionConfiguration;
 
   /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
@@ -192,8 +200,11 @@ class StaticGenerator implements EventSubscriberInterface {
    *
    */
   public function generateStaticMarkupForPage() {
+    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
     $request = Request::create('/node/1');
-    $response = $this->httpKernel->handle($request);
+    //$request->setSession(new AnonymousUserSession());
+    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+    //\Drupal::service('account_switcher')->switchBack();
     return $response->getContent();
   }
 

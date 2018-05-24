@@ -1,12 +1,5 @@
 services:
 
-  cache.static_generator:
-    class: Drupal\Core\Cache\CacheBackendInterface
-    tags:
-      - { name: cache.bin }
-    factory: cache_factory:get
-    arguments: [static_generator]
-
   static_generator:
     class: Drupal\static_generator\StaticGenerator
     tags:
@@ -16,6 +9,13 @@ services:
 
   placeholder_strategy.static_generator:
     class: Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy
-    arguments: ['@session_configuration', '@request_stack', '@current_route_match']
+    arguments: ['@request_stack', '@current_route_match','@session_configuration']
     tags:
       - { name: placeholder_strategy, priority: 1 }
+
+  cache.static_generator:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin }
+    factory: cache_factory:get
+    arguments: [static_generator]

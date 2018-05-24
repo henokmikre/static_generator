@@ -17,13 +17,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
 
   /**
-   * The session configuration.
-   *
-   * @var \Drupal\Core\Session\SessionConfigurationInterface
-   */
-  protected $sessionConfiguration;
-
-  /**
    * The request stack.
    *
    * @var \Symfony\Component\HttpFoundation\RequestStack
@@ -38,6 +31,13 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
   protected $routeMatch;
 
   /**
+   * The session configuration.
+   *
+   * @var \Drupal\Core\Session\SessionConfigurationInterface
+   */
+  protected $sessionConfiguration;
+
+  /**
    * Constructs a new StaticGeneratorStrategy class.
    *
    * @param \Drupal\Core\Session\SessionConfigurationInterface $session_configuration
@@ -47,18 +47,23 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The current route match.
    */
-  public function __construct(SessionConfigurationInterface $session_configuration, RequestStack $request_stack, RouteMatchInterface $route_match) {
-    $this->sessionConfiguration = $session_configuration;
+  public function __construct(RequestStack $request_stack, RouteMatchInterface $route_match, SessionConfigurationInterface $session_configuration) {
     $this->requestStack = $request_stack;
     $this->routeMatch = $route_match;
+    $this->sessionConfiguration = $session_configuration;
   }
 
   /**
    * {@inheritdoc}
    */
   public function processPlaceholders(array $placeholders) {
-    //return $placeholders;
-    //$request = $this->requestStack->getCurrentRequest();
+
+    $request = $this->requestStack->getCurrentRequest();
+
+//    if ($this->sessionConfiguration->hasSession($request)) {
+//      return [];
+//    }
+
     return $this->doProcessPlaceholders($placeholders);
   }
 
@@ -74,20 +79,6 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
   protected function doProcessPlaceholders(array $placeholders) {
     $overridden_placeholders = [];
     foreach ($placeholders as $placeholder => $placeholder_elements) {
-      // StaticGenerator uses JavaScript and the DOM to find the placeholder to replace.
-      // This means finding the placeholder to replace must be efficient. Most
-      // placeholders are HTML, which we can find efficiently thanks to the
-      // querySelector API. But some placeholders are HTML attribute values or
-      // parts thereof, and potentially even plain text in DOM text nodes. For
-      // StaticGenerator's JavaScript to find those placeholders, it would need to
-      // iterate over all DOM text nodes. This is highly inefficient. Therefore,
-      // the StaticGenerator placeholder strategy only converts HTML placeholders into
-      // StaticGenerator placeholders. The other placeholders need to be replaced on the
-      // server, not via StaticGenerator.
-      // @see \Drupal\Core\Access\RouteProcessorCsrf::renderPlaceholderCsrfToken()
-      // @see \Drupal\Core\Form\FormBuilder::renderFormTokenPlaceholder()
-      // @see \Drupal\Core\Form\FormBuilder::renderPlaceholderFormAction()
-
       $overridden_placeholders[$placeholder] = static::createStaticGeneratorPlaceholder($placeholder, $placeholder_elements);
     }
     return $overridden_placeholders;
@@ -108,7 +99,7 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
     $static_generator_placeholder_id = static::generateStaticGeneratorPlaceholderId($original_placeholder, $placeholder_render_array);
 
     return [
-      '#markup' => '<span data-static-generator-placeholder-id="' . Html::escape($static_generator_placeholder_id) . '"></span>',
+      '#markup' => '<!--#include virtual="/esi/block/' . Html::escape($static_generator_placeholder_id) . '" -->',
       '#cache' => [
         'max-age' => 0,
       ],
