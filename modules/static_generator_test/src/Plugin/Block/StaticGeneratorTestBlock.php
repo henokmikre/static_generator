@@ -11,7 +11,7 @@ use Drupal\Core\Block\BlockBase;
  * @Block(
  *   id = "static_generator_block",
  *   admin_label = @Translation("Static Generator Test Block"),
- *   category = @Translation("Hello World"),
+ *   category = @Translation("Static Generator"),
  * )
  */
 class StaticGeneratorTestBlock extends BlockBase {
@@ -22,7 +22,7 @@ class StaticGeneratorTestBlock extends BlockBase {
   public function build() {
     return [
       '#markup' => $this->t('Static Generator Test Block says: Hello World!'),
-      '#cache' => ['max-age' => 0],
+      '#cache' => ['max-age' => -1],
     ];
   }
 

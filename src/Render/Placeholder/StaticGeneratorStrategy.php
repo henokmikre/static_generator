@@ -60,9 +60,9 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
 
     $request = $this->requestStack->getCurrentRequest();
 
-//    if ($this->sessionConfiguration->hasSession($request)) {
-//      return [];
-//    }
+    if ($this->sessionConfiguration->hasSession($request)) {
+      return [];
+    }
 
     return $this->doProcessPlaceholders($placeholders);
   }
@@ -118,7 +118,7 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    *   The generated StaticGenerator placeholder ID.
    */
   protected static function generateStaticGeneratorPlaceholderId($original_placeholder, array $placeholder_render_array) {
-    // Generate a StaticGenerator placeholder ID (to be used by StaticGenerator's ESI's).
+    // Generate a StaticGenerator placeholder ID (to be used by Static Generator's ESI's).
     // @see \Drupal\Core\Render\PlaceholderGenerator::createPlaceholder()
     if (isset($placeholder_render_array['#lazy_builder'])) {
       $callback = $placeholder_render_array['#lazy_builder'][0];

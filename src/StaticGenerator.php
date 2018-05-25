@@ -200,12 +200,18 @@ class StaticGenerator implements EventSubscriberInterface {
    *
    */
   public function generateStaticMarkupForPage() {
-    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
+
     $request = Request::create('/node/1');
+    $response = $this->httpKernel->handle($request);
+    //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+    $markup =  $response->getContent();
+    return $markup;
+
+    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
+    //$session_manager = Drupal::service('session_manager');
+    //$request = Request::create('/node/1');
     //$request->setSession(new AnonymousUserSession());
-    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-    //\Drupal::service('account_switcher')->switchBack();
-    return $response->getContent();
+    //Drupal::service('account_switcher')->switchBack();
   }
 
 }
