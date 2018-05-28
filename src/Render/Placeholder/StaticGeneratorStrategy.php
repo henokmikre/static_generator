@@ -5,6 +5,7 @@ namespace Drupal\static_generator\Render\Placeholder;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\UrlHelper;
+use Drupal\Core\Render\Markup;
 use Drupal\Core\Render\Placeholder\PlaceholderStrategyInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\SessionConfigurationInterface;
@@ -65,7 +66,6 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
     //    }
 
     return $this->doProcessPlaceholders($placeholders);
-    //return $placeholders;
   }
 
   /**
@@ -79,11 +79,28 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    */
   protected function doProcessPlaceholders(array $placeholders) {
     $overridden_placeholders = [];
-    foreach ($placeholders as $placeholder => $placeholder_elements) {
-      $overridden_placeholders[$placeholder] = static::createStaticGeneratorPlaceholder($placeholder, $placeholder_elements);
+    foreach ($placeholders as $placeholder => $placeholder_render_array) {
+      if ($placeholder_render_array['#lazy_builder'][0] == 'Drupal\block\BlockViewBuilder::lazyBuilder') {
+
+        // Markup
+        $callback = 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder';
+        $arguments = UrlHelper::buildQuery($placeholder_render_array['#lazy_builder'][1]);
+        $token = Crypt::hashBase64(serialize($placeholder_render_array));
+        $placeholder_markup = '<drupal-render-placeholder callback="' . Html::escape($callback) . '" arguments="' . Html::escape($arguments) . '" token="' . Html::escape($token) . '"></drupal-render-placeholder>';
+
+        $overridden_placeholders[$placeholder]['#cache'] = $placeholder_render_array['#cache'];
+        $overridden_placeholders[$placeholder]['#lazy_builder'][0] = $callback;
+        $overridden_placeholders[$placeholder]['#lazy_builder'][1] = $placeholder_render_array['#lazy_builder'][1];
+
+      } else {
+        $overridden_placeholders[$placeholder] = $placeholder_render_array;
+      }
     }
     return $overridden_placeholders;
   }
+
+  //    $overridden_placeholders = [];
+  //$overridden_placeholders[$placeholder] = static::createStaticGeneratorPlaceholder($placeholder, $placeholder_elements);
 
   /**
    * Creates a StaticGenerator placeholder.
@@ -97,25 +114,61 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    *   The resulting StaticGenerator placeholder render array.
    */
   protected static function createStaticGeneratorPlaceholder($original_placeholder, array $placeholder_render_array) {
-    //$static_generator_placeholder_id = static::generateStaticGeneratorPlaceholderId($original_placeholder, $placeholder_render_array);
+    $static_generator_placeholder_id = static::generateStaticGeneratorPlaceholderId($original_placeholder, $placeholder_render_array);
+    //kint($placeholder_render_array);
 
     if ($placeholder_render_array['#lazy_builder'][0] == 'Drupal\block\BlockViewBuilder::lazyBuilder') {
+
+      // Markup
+      $callback = 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder';
+      $arguments = UrlHelper::buildQuery($placeholder_render_array['#lazy_builder'][1]);
+      $token = Crypt::hashBase64(serialize($placeholder_render_array));
+      $placeholder_markup = '<drupal-render-placeholder callback="' . Html::escape($callback) . '" arguments="' . Html::escape($arguments) . '" token="' . Html::escape($token) . '"></drupal-render-placeholder>';
+
+      // Change Callable
       $placeholder_render_array['#lazy_builder'][0] = 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder';
+
+      // Build render array.
+      $sg_placeholder_render_array = [];
+      $sg_placeholder_render_array['#markup'] = Markup::create($placeholder_markup);
+      $sg_placeholder_render_array['#attached']['placeholders'][$placeholder_markup] = $placeholder_render_array;
+
+      return $sg_placeholder_render_array;
     }
-
-    //      '<drupal-render-placeholder
-    //        callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder"
-    //        arguments="0=views_block__content_recent_block_1&amp;1=full&amp;2"
-    //        token="YubCraeCL0yOsmG4F9WpXita9XPg6z54-4ARk2s9ruM">
-    //        </drupal-render-placeholder>';
-    //kint($placeholder_render_array);
-    //    $original_placeholder->Callable;
-    //    $original_placeholder->Callable;
-    //    $original_placeholder->Callable;
-
-    return $placeholder_render_array;
-
+    else {
+      return $placeholder_render_array;
+    }
   }
+
+
+
+  //      $sg_placeholder_render_array ['#cache'] = $placeholder_render_array['#cache'];
+  //      $sg_placeholder_render_array ['#cache']['max-age'] = 0;
+  //      $sg_placeholder_render_array ['#cache']['keys'] = [];
+  //      $sg_placeholder_render_array ['#cache']['tags'] = [];
+
+
+  //      $sg_placeholder_render_array = [
+  //        '#lazy_builder' => 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder',
+  //        '#markup' => '<drupal-render-placeholder callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder arguments="' . '>',
+  //        '#cache' => [
+  //          'max-age' => 0,
+  //        ],
+  //        'static_generator_placeholders' => [
+  //          Html::escape($static_generator_placeholder_id) => $placeholder_render_array,
+  //        ],
+  //      ];
+  //    }
+
+  //      '<drupal-render-placeholder
+  //        callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder"
+  //        arguments="0=views_block__content_recent_block_1&amp;1=full&amp;2"
+  //        token="YubCraeCL0yOsmG4F9WpXita9XPg6z54-4ARk2s9ruM">
+  //        </drupal-render-placeholder>';
+
+
+  //return $sg_placeholder_render_array;
+
 
   /**
    * #lazy_builder callback; builds a #pre_render-able block.
