@@ -205,11 +205,11 @@ class StaticGenerator implements EventSubscriberInterface {
     $response = $this->httpKernel->handle($request);
     //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
     $markup =  $response->getContent();
+    //$markup = 'aaa';
     return $markup;
 
     //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
     //$session_manager = Drupal::service('session_manager');
-    //$request = Request::create('/node/1');
     //$request->setSession(new AnonymousUserSession());
     //Drupal::service('account_switcher')->switchBack();
   }

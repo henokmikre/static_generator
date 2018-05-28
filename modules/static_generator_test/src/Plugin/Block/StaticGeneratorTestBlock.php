@@ -22,7 +22,7 @@ class StaticGeneratorTestBlock extends BlockBase {
   public function build() {
     return [
       '#markup' => $this->t('Static Generator Test Block says: Hello World!'),
-      '#cache' => ['max-age' => -1],
+      '#cache' => ['max-age' => 0],
     ];
   }
 

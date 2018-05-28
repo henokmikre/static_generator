@@ -58,13 +58,14 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    */
   public function processPlaceholders(array $placeholders) {
 
-    $request = $this->requestStack->getCurrentRequest();
+    //$request = $this->requestStack->getCurrentRequest();
 
-    if ($this->sessionConfiguration->hasSession($request)) {
-      return [];
-    }
+    //    if ($this->sessionConfiguration->hasSession($request)) {
+    //      return [];
+    //    }
 
     return $this->doProcessPlaceholders($placeholders);
+    //return $placeholders;
   }
 
   /**
@@ -96,14 +97,40 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
    *   The resulting StaticGenerator placeholder render array.
    */
   protected static function createStaticGeneratorPlaceholder($original_placeholder, array $placeholder_render_array) {
-    $static_generator_placeholder_id = static::generateStaticGeneratorPlaceholderId($original_placeholder, $placeholder_render_array);
+    //$static_generator_placeholder_id = static::generateStaticGeneratorPlaceholderId($original_placeholder, $placeholder_render_array);
 
-    return [
-      '#markup' => '<!--#include virtual="/esi/block/' . Html::escape($static_generator_placeholder_id) . '" -->',
-      '#cache' => [
-        'max-age' => 0,
-      ],
-    ];
+    if ($placeholder_render_array['#lazy_builder'][0] == 'Drupal\block\BlockViewBuilder::lazyBuilder') {
+      $placeholder_render_array['#lazy_builder'][0] = 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder';
+    }
+
+    //      '<drupal-render-placeholder
+    //        callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder"
+    //        arguments="0=views_block__content_recent_block_1&amp;1=full&amp;2"
+    //        token="YubCraeCL0yOsmG4F9WpXita9XPg6z54-4ARk2s9ruM">
+    //        </drupal-render-placeholder>';
+    //kint($placeholder_render_array);
+    //    $original_placeholder->Callable;
+    //    $original_placeholder->Callable;
+    //    $original_placeholder->Callable;
+
+    return $placeholder_render_array;
+
+  }
+
+  /**
+   * #lazy_builder callback; builds a #pre_render-able block.
+   *
+   * @param $entity_id
+   *   A block config entity ID.
+   * @param $view_mode
+   *   The view mode the block is being viewed in.
+   *
+   * @return array
+   *   A render array with a #pre_render callback to render the block.
+   */
+  public static function lazyBuilder($entity_id, $view_mode) {
+    //return static::buildPreRenderableBlock(Block::load($entity_id), \Drupal::service('module_handler'));
+    return ['#markup' => '<!--#include virtual="/esi/block/' . Html::escape($entity_id) . '" -->'];
   }
 
   /**
@@ -124,7 +151,11 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
       $callback = $placeholder_render_array['#lazy_builder'][0];
       $arguments = $placeholder_render_array['#lazy_builder'][1];
       $token = Crypt::hashBase64(serialize($placeholder_render_array));
-      return UrlHelper::buildQuery(['callback' => $callback, 'args' => $arguments, 'token' => $token]);
+      return UrlHelper::buildQuery([
+        'callback' => $callback,
+        'args' => $arguments,
+        'token' => $token,
+      ]);
     }
     // When the placeholder's render array is not using a #lazy_builder,
     // anything could be in there: only #lazy_builder has a strict contract that
