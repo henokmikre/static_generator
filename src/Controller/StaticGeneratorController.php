@@ -12,9 +12,9 @@ class StaticGeneratorController extends ControllerBase {
   /**
    * {@inheritdoc}
    */
-  public function generateStaticMarkupForPage() {
+  public function generatePage() {
     $build = [
-      '#markup' => \Drupal::service('static_generator')->generateStaticMarkupForPage(),
+      '#markup' => \Drupal::service('static_generator')->generatePage(1),
       ];
     return $build;
   }

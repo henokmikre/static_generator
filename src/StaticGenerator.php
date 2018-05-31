@@ -2,6 +2,11 @@
 
 namespace Drupal\static_generator;
 
+use DOMDocument;
+use DOMXPath;
+use Drupal\block\BlockViewBuilder;
+use Drupal\Component\Utility\Html;
+use Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -29,7 +34,7 @@ class StaticGenerator implements EventSubscriberInterface {
    *
    * @var string
    */
-  private $generatorDirectory = '/var/www/sg/static';
+  private $generatorDirectory = '/var/www/sg/private/static';
 
   /**
    * The static generator cache.
@@ -121,27 +126,129 @@ class StaticGenerator implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    //$events[KernelEvents::REQUEST][] = ['generateStaticMarkupForPage'];
     $events = [];
     return $events;
   }
 
   /**
-   * Write static file.
+   * Generate markup for a single page.
    *
+   * @param int $nid
+   *   The node id.
+   *
+   * @return String
+   *   The generated markup.
+   *
+   * @throws \Exception
    */
-  public function writePage() {
+  public function generatePage($nid = 1) {
+    $markup = $this->getMarkupForPage($nid);
+    $markup_esi = $this->injectESIs($markup);
+    if($nid == 0) {
+      $filename = 'private://static/index.htm';
+    } else {
+      $filename = 'private://static/node/' . $nid;
+    }
+
+    file_unmanaged_save_data($markup_esi,  $filename, FILE_EXISTS_REPLACE);
+    return $markup_esi;
   }
 
   /**
-   * Generate a single page.
+   * Returns the rendered markup for a node.
    *
-   * @return int
-   *   The number of pages generated.
+   * @param int $nid
+   *   The node id.
+   *
+   * @return String
+   *   The rendered markup.
+   *
+   * @throws \Exception When an Exception occurs during processing
    *
    */
-  public function generatePage() {
-    $foo = $this->generatorDirectory;
+  public function getMarkupForPage($nid = 1) {
+    if ($nid == 0) {
+      $request = Request::create('/node');
+    }
+    else {
+      $request = Request::create('/node/' . $nid);
+    }
+    $response = $this->httpKernel->handle($request);
+
+    // Return markup.
+    $markup = $response->getContent();
+    return $markup;
+
+
+
+    //$request = $this->requestStack->getCurrentRequest();
+    //$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
+
+    //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
+    //$session_manager = Drupal::service('session_manager');
+    //$request->setSession(new AnonymousUserSession());
+    //Drupal::service('account_switcher')->switchBack();
+  }
+
+  /**
+   * Inject ESI markup for every block.
+   *
+   * @param String $markup
+   *   The markup.
+   *
+   * @return String
+   *   Markup with ESI's injected.
+   *
+   * @throws \Exception
+   */
+  public function injectESIs($markup) {
+    $dom = new DomDocument();
+    @$dom->loadHTML($markup);
+    $finder = new DomXPath($dom);
+    $classname = "block";
+    $blocks = $finder->query("//div[contains(@class, '$classname')]");
+    foreach ($blocks as $block) {
+      $id = $block->getAttribute('id');
+      if($id == '') {
+        continue;
+      }
+      $block_id = str_replace('-', '_', substr($id, 6));
+      if (substr($block_id, 0, 12) == 'views_block_') {
+        //str_replace('views_block_', 'views_block__', $block_id);
+        $block_id = 'views_block__' . substr($block_id, 12);
+      }
+      $block_ids_esi = ['bartik_branding', 'views_block__content_recent_block_1', ];
+      if(!in_array($block_id, $block_ids_esi )) {
+        continue;
+      }
+      $this->generateFragment($block_id);
+      $include_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
+      $include = $dom->createElement('span', $include_markup);
+      $block->parentNode->replaceChild($include, $block);
+    }
+    return $dom->saveHTML();
+  }
+
+  /**
+   * Generate a fragment file.
+   *
+   * @param string $block_id
+   *   The block id.
+   *
+   * @return boolean
+   *   The file was successfully generated.
+   *
+   * @throws \Exception
+   */
+  public function generateFragment($block_id) {
+
+    if(empty($block_id)) {
+      return;
+    }
+    $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
+    $block_markup = $this->renderer->render($block_render_array);
+    file_unmanaged_save_data($block_markup, 'private://esi/block/' . $block_id, FILE_EXISTS_REPLACE);
   }
 
   /**
@@ -150,23 +257,26 @@ class StaticGenerator implements EventSubscriberInterface {
    * @return int
    *   The number of pages generated.
    *
+   * @throws \Exception
    */
   public function generateAllPages() {
+    //$this->generateFrontPage();
+    $this->generatePage(1);
+    return 0;
   }
 
   /**
-   * Returns the rendered markup for a node.
+   * Generate front page.
    *
-   * @return String
-   *   The rendered markup.
-   *
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
-   *
+   * @throws \Exception
    */
-//  public function generateStaticMarkupForPageOLD(GetResponseEvent $event) {
-//
-//    $a = 'foo';
-//
+  public function generateFrontPage() {
+    $this->generatePage(0);
+  }
+
+}
+
+
 //    $entity_type = 'node';
 //    $view_mode = 'full';
 //    $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load(1);
@@ -181,37 +291,12 @@ class StaticGenerator implements EventSubscriberInterface {
 //    return $content;
 //
 //  }
-  //$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
-  //    $render = $this->renderer->render($render_array, NULL, NULL);
-  //    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
-  //    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
-  //    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
-  //    $entity_type_id = $node->getEntityTypeId();
-  //$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
-  //$rendered = $this->renderer->
+//$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
+//    $render = $this->renderer->render($render_array, NULL, NULL);
+//    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
+//    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
+//    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
+//    $entity_type_id = $node->getEntityTypeId();
+//$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
+//$rendered = $this->renderer->
 
-  /**
-   * Returns the rendered markup for a node.
-   *
-   * @return String
-   *   The rendered markup.
-   *
-   * @throws \Exception When an Exception occurs during processing
-   *
-   */
-  public function generateStaticMarkupForPage() {
-
-    $request = Request::create('/node/1');
-    $response = $this->httpKernel->handle($request);
-    //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-    $markup =  $response->getContent();
-    //$markup = 'aaa';
-    return $markup;
-
-    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
-    //$session_manager = Drupal::service('session_manager');
-    //$request->setSession(new AnonymousUserSession());
-    //Drupal::service('account_switcher')->switchBack();
-  }
-
-}

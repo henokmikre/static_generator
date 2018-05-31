@@ -65,7 +65,8 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
     //      return [];
     //    }
 
-    return $this->doProcessPlaceholders($placeholders);
+    //return $this->doProcessPlaceholders($placeholders);
+    return $placeholders;
   }
 
   /**
@@ -140,50 +141,18 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
     }
   }
 
-
-
-  //      $sg_placeholder_render_array ['#cache'] = $placeholder_render_array['#cache'];
-  //      $sg_placeholder_render_array ['#cache']['max-age'] = 0;
-  //      $sg_placeholder_render_array ['#cache']['keys'] = [];
-  //      $sg_placeholder_render_array ['#cache']['tags'] = [];
-
-
-  //      $sg_placeholder_render_array = [
-  //        '#lazy_builder' => 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder',
-  //        '#markup' => '<drupal-render-placeholder callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder arguments="' . '>',
-  //        '#cache' => [
-  //          'max-age' => 0,
-  //        ],
-  //        'static_generator_placeholders' => [
-  //          Html::escape($static_generator_placeholder_id) => $placeholder_render_array,
-  //        ],
-  //      ];
-  //    }
-
-  //      '<drupal-render-placeholder
-  //        callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder"
-  //        arguments="0=views_block__content_recent_block_1&amp;1=full&amp;2"
-  //        token="YubCraeCL0yOsmG4F9WpXita9XPg6z54-4ARk2s9ruM">
-  //        </drupal-render-placeholder>';
-
-
-  //return $sg_placeholder_render_array;
-
-
   /**
    * #lazy_builder callback; builds a #pre_render-able block.
    *
-   * @param $entity_id
+   * @param $block_id
    *   A block config entity ID.
-   * @param $view_mode
-   *   The view mode the block is being viewed in.
    *
    * @return array
    *   A render array with a #pre_render callback to render the block.
    */
-  public static function lazyBuilder($entity_id, $view_mode) {
-    //return static::buildPreRenderableBlock(Block::load($entity_id), \Drupal::service('module_handler'));
-    return ['#markup' => '<!--#include virtual="/esi/block/' . Html::escape($entity_id) . '" -->'];
+  public static function lazyBuilder($block_id) {
+    //return ['#markup' => '<span><!--#include virtual="/esi/block/' . Html::escape($block_id) . '" --></span>'];
+    return Markup::create('<span><!--#include virtual="/esi/block/' . Html::escape($block_id) . '" --></span>');
   }
 
   /**
@@ -220,3 +189,35 @@ class StaticGeneratorStrategy implements PlaceholderStrategyInterface {
   }
 
 }
+
+
+
+
+
+
+//      $sg_placeholder_render_array ['#cache'] = $placeholder_render_array['#cache'];
+//      $sg_placeholder_render_array ['#cache']['max-age'] = 0;
+//      $sg_placeholder_render_array ['#cache']['keys'] = [];
+//      $sg_placeholder_render_array ['#cache']['tags'] = [];
+
+
+//      $sg_placeholder_render_array = [
+//        '#lazy_builder' => 'Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy::lazy_builder',
+//        '#markup' => '<drupal-render-placeholder callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder arguments="' . '>',
+//        '#cache' => [
+//          'max-age' => 0,
+//        ],
+//        'static_generator_placeholders' => [
+//          Html::escape($static_generator_placeholder_id) => $placeholder_render_array,
+//        ],
+//      ];
+//    }
+
+//      '<drupal-render-placeholder
+//        callback="Drupal\static_generator\Render\StaticGeneratorStrategy::lazyBuilder"
+//        arguments="0=views_block__content_recent_block_1&amp;1=full&amp;2"
+//        token="YubCraeCL0yOsmG4F9WpXita9XPg6z54-4ARk2s9ruM">
+//        </drupal-render-placeholder>';
+
+
+//return $sg_placeholder_render_array;

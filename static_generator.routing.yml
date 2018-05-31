@@ -9,7 +9,7 @@ static_generator.settings:
 static_generator.generate_static_markup_for_page:
   path: '/gen'
   defaults:
-    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generateStaticMarkupForPage'
-    _title: 'SG Example'
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generatePage'
+    _title: 'Generate Page'
   requirements:
     _permission: 'access content'
