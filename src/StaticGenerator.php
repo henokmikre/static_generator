@@ -6,6 +6,7 @@ use DOMDocument;
 use DOMXPath;
 use Drupal\block\BlockViewBuilder;
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Site\Settings;
 use Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -133,32 +134,71 @@ class StaticGenerator implements EventSubscriberInterface {
   /**
    * Generate markup for a single page.
    *
-   * @param int $nid
-   *   The node id.
+   * @param String $path
+   *   The page's path.
    *
    * @return String
    *   The generated markup.
    *
    * @throws \Exception
    */
-  public function generatePage($nid = 1) {
-    $markup = $this->getMarkupForPage($nid);
+  public function generatePageOld($path) {
+    $markup = $this->getMarkupForPage($path);
     $markup_esi = $this->injectESIs($markup);
-    if($nid == 0) {
-      $filename = 'private://static/index.htm';
+    if($path == '/front') {
+      $full_path = 'private://static';
     } else {
-      $filename = 'private://static/node/' . $nid;
+      $full_path = 'private://static' . $path;
     }
-
-    file_unmanaged_save_data($markup_esi,  $filename, FILE_EXISTS_REPLACE);
+    $filename = $full_path . '/index.htm';
+    if (file_prepare_directory($full_path, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($markup_esi, $filename, FILE_EXISTS_REPLACE);
+    }
     return $markup_esi;
   }
 
   /**
-   * Returns the rendered markup for a node.
+   * Generate markup for a single page.
    *
-   * @param int $nid
-   *   The node id.
+   * @param String $path
+   *   The page's path.
+   *
+   * @return String
+   *   The generated markup.
+   *
+   * @throws \Exception
+   */
+  public function generatePage($path) {
+
+    // Get/Process markup.
+    $markup = $this->getMarkupForPage($path);
+    $markup_esi = $this->injectESIs($markup);
+
+    // Write page files.
+    $real_path = '';
+    if($path == '/front') {
+      $file_name = 'index.htm';
+    } else {
+      $file_name = strrchr($path, '/') . '.html';
+      $file_name = substr($file_name,1);
+      $occur = substr_count($path, '/');
+      if ($occur > 1) {
+        $last_pos = strrpos($path, '/');
+        $real_path = substr($path, 0, $last_pos);
+      }
+    }
+    $directory = Settings::get('file_private_path') . '/static' . $real_path;
+    if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    }
+    return $markup_esi;
+  }
+
+  /**
+   * Returns the rendered markup for a path.
+   *
+   * @param String $path
+   *   The path.
    *
    * @return String
    *   The rendered markup.
@@ -166,24 +206,18 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception When an Exception occurs during processing
    *
    */
-  public function getMarkupForPage($nid = 1) {
-    if ($nid == 0) {
-      $request = Request::create('/node');
-    }
-    else {
-      $request = Request::create('/node/' . $nid);
-    }
+  public function getMarkupForPage($path) {
+
+    // Get a response.
+    $request = Request::create($path);
     $response = $this->httpKernel->handle($request);
 
-    // Return markup.
+    // Return the markup.
     $markup = $response->getContent();
     return $markup;
 
-
-
     //$request = $this->requestStack->getCurrentRequest();
     //$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
-
     //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
     //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
     //$session_manager = Drupal::service('session_manager');
@@ -242,13 +276,15 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateFragment($block_id) {
-
     if(empty($block_id)) {
       return;
     }
     $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
-    $block_markup = $this->renderer->render($block_render_array);
-    file_unmanaged_save_data($block_markup, 'private://esi/block/' . $block_id, FILE_EXISTS_REPLACE);
+    $block_markup = $this->renderer->renderRoot($block_render_array);
+    $dir = 'private://static/esi/block';
+    if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($block_markup, 'private://static/esi/block/' . $block_id, FILE_EXISTS_REPLACE);
+    }
   }
 
   /**
@@ -260,8 +296,30 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAllPages() {
-    //$this->generateFrontPage();
-    $this->generatePage(1);
+    $this->generateFrontPage();
+    $this->generateBasicPages();
+    return 0;
+  }
+
+  /**
+   * Generate all pages.
+   *
+   * @return int
+   *   The number of pages generated.
+   *
+   * @throws \Exception
+   */
+  public function generateBasicPages() {
+    $bundle = 'page';
+    $query = \Drupal::entityQuery('node');
+    $query->condition('status', 1);
+    $query->condition('type', $bundle);
+    //$query->condition('field_name.value', 'default', '=');
+    $entity_ids = $query->execute();
+    foreach($entity_ids as $entity_id) {
+      $alias = \Drupal::service('path.alias_manager')->getAliasByPath('/node/'.$entity_id);
+      $this->generatePage($alias);
+    }
     return 0;
   }
 
@@ -271,7 +329,7 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateFrontPage() {
-    $this->generatePage(0);
+    $this->generatePage('/front');
   }
 
 }
