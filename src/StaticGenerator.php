@@ -18,6 +18,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\Core\Render\Markup;
 
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\Routing\Route;
@@ -142,32 +143,6 @@ class StaticGenerator implements EventSubscriberInterface {
    *
    * @throws \Exception
    */
-  public function generatePageOld($path) {
-    $markup = $this->getMarkupForPage($path);
-    $markup_esi = $this->injectESIs($markup);
-    if($path == '/front') {
-      $full_path = 'private://static';
-    } else {
-      $full_path = 'private://static' . $path;
-    }
-    $filename = $full_path . '/index.htm';
-    if (file_prepare_directory($full_path, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($markup_esi, $filename, FILE_EXISTS_REPLACE);
-    }
-    return $markup_esi;
-  }
-
-  /**
-   * Generate markup for a single page.
-   *
-   * @param String $path
-   *   The page's path.
-   *
-   * @return String
-   *   The generated markup.
-   *
-   * @throws \Exception
-   */
   public function generatePage($path) {
 
     // Get/Process markup.
@@ -176,11 +151,12 @@ class StaticGenerator implements EventSubscriberInterface {
 
     // Write page files.
     $real_path = '';
-    if($path == '/front') {
-      $file_name = 'index.htm';
-    } else {
+    if ($path == '/front') {
+      $file_name = 'index.html';
+    }
+    else {
       $file_name = strrchr($path, '/') . '.html';
-      $file_name = substr($file_name,1);
+      $file_name = substr($file_name, 1);
       $occur = substr_count($path, '/');
       if ($occur > 1) {
         $last_pos = strrpos($path, '/');
@@ -208,21 +184,32 @@ class StaticGenerator implements EventSubscriberInterface {
    */
   public function getMarkupForPage($path) {
 
-    // Get a response.
+    // Get response for path.
+    \Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
     $request = Request::create($path);
-    $response = $this->httpKernel->handle($request);
+    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+    $request->server->set('SCRIPT_FILENAME', 'index.php');
+    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, false);
 
-    // Return the markup.
+    // Return markup.
     $markup = $response->getContent();
+    \Drupal::service('account_switcher')->switchBack();
+
     return $markup;
 
+    // Get a response.
+    //    $request = Request::create($path);
+    //    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+    //    $request->server->set('SCRIPT_FILENAME', 'index.php');
+    //    $response = $this->httpKernel->handle($request);
+
+    //\Drupal::service('account_switcher')->switchBack();
+    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
     //$request = $this->requestStack->getCurrentRequest();
     //$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
     //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
     //$session_manager = Drupal::service('session_manager');
     //$request->setSession(new AnonymousUserSession());
-    //Drupal::service('account_switcher')->switchBack();
   }
 
   /**
@@ -244,7 +231,7 @@ class StaticGenerator implements EventSubscriberInterface {
     $blocks = $finder->query("//div[contains(@class, '$classname')]");
     foreach ($blocks as $block) {
       $id = $block->getAttribute('id');
-      if($id == '') {
+      if ($id == '') {
         continue;
       }
       $block_id = str_replace('-', '_', substr($id, 6));
@@ -252,16 +239,43 @@ class StaticGenerator implements EventSubscriberInterface {
         //str_replace('views_block_', 'views_block__', $block_id);
         $block_id = 'views_block__' . substr($block_id, 12);
       }
-      $block_ids_esi = ['bartik_branding', 'views_block__content_recent_block_1', ];
-      if(!in_array($block_id, $block_ids_esi )) {
+      $block_ids_esi = [
+        'bartik_branding',
+        'views_block__content_recent_block_1',
+      ];
+      if (!in_array($block_id, $block_ids_esi)) {
         continue;
       }
       $this->generateFragment($block_id);
+
       $include_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
-      $include = $dom->createElement('span', $include_markup);
+      //$include_markup = Html::escape('<!--#include virtual="/esi/block/' . $block_id . '" -->');
+      $include = $dom->createElement('div', $include_markup);
       $block->parentNode->replaceChild($include, $block);
+
+      $dom->validateOnParse = FALSE;
+      $xp = new DOMXPath($dom);
+      $col = $xp->query('//div[ @id="toolbar-administration" ]');
+      if (!empty($col)) {
+        foreach ($col as $node) {
+          $node->parentNode->removeChild($node);
+        }
+      }
+
+      // Admin menu
+      //      $admin_menu = $dom->getElementById('toolbar-administration');
+      //      if(!empty($admin_menu)){
+      //        $body = $dom->getElementsByTagName('body');
+      //        $body = $body->item(0);
+      //        $body->removeChild($admin_menu);
+      //      }
+
     }
-    return $dom->saveHTML();
+    $markup_esi = $dom->saveHTML();
+    $markup_esi = str_replace('&lt;', '<', $markup_esi);
+    $markup_esi = str_replace('&gt;', '>', $markup_esi);
+
+    return $markup_esi;
   }
 
   /**
@@ -276,7 +290,7 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateFragment($block_id) {
-    if(empty($block_id)) {
+    if (empty($block_id)) {
       return;
     }
     $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
@@ -290,15 +304,15 @@ class StaticGenerator implements EventSubscriberInterface {
   /**
    * Generate all pages.
    *
-   * @return int
+   * @return String
    *   The number of pages generated.
    *
    * @throws \Exception
    */
   public function generateAllPages() {
-    $this->generateFrontPage();
+    $front_page = $this->generateFrontPage();
     $this->generateBasicPages();
-    return 0;
+    return $front_page;
   }
 
   /**
@@ -316,8 +330,9 @@ class StaticGenerator implements EventSubscriberInterface {
     $query->condition('type', $bundle);
     //$query->condition('field_name.value', 'default', '=');
     $entity_ids = $query->execute();
-    foreach($entity_ids as $entity_id) {
-      $alias = \Drupal::service('path.alias_manager')->getAliasByPath('/node/'.$entity_id);
+    foreach ($entity_ids as $entity_id) {
+      $alias = \Drupal::service('path.alias_manager')
+        ->getAliasByPath('/node/' . $entity_id);
       $this->generatePage($alias);
     }
     return 0;
@@ -326,10 +341,13 @@ class StaticGenerator implements EventSubscriberInterface {
   /**
    * Generate front page.
    *
+   * @return String
+   *   The number of pages generated.
+   *
    * @throws \Exception
    */
   public function generateFrontPage() {
-    $this->generatePage('/front');
+    return $this->generatePage('/front');
   }
 
 }
