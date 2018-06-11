@@ -5,17 +5,16 @@ services:
     tags:
       - { name: static_generator, priority: 200 }
       - { name: event_subscriber }
-    arguments: ['@cache.static_generator', '@renderer', '@current_route_match', '@class_resolver','%main_content_renderers%', '@request_stack', '@http_kernel']
+    arguments: ['@renderer', '@current_route_match', '@class_resolver','%main_content_renderers%', '@request_stack', '@http_kernel', '@theme.manager', '@theme.initialization', '@config.factory']
 
-  placeholder_strategy.static_generator:
-    class: Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy
-    arguments: ['@request_stack', '@current_route_match','@session_configuration']
-    tags:
-      - { name: placeholder_strategy, priority: 1 }
+#  placeholder_strategy.static_generator:
+#    class: Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy
+#    arguments: ['@request_stack', '@current_route_match','@session_configuration']
+#    tags:
+#      - { name: placeholder_strategy, priority: 1 }
 
-  cache.static_generator:
-    class: Drupal\Core\Cache\CacheBackendInterface
-    tags:
-      - { name: cache.bin }
-    factory: cache_factory:get
-    arguments: [static_generator]
+#  static_generator.theme:
+#    class: Drupal\static_generator\Theme\BartikThemeNegotiator
+#    tags:
+#      - { name: theme_negotiator, priority: 10000 }
+

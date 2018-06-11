@@ -1,2 +1,1 @@
-production_host_url: 'http://sg.local'
-generator_directory: '/var/www/sg/static'
+generator_directory: 'private://static'

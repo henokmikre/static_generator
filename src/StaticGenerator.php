@@ -7,6 +7,11 @@ use DOMXPath;
 use Drupal\block\BlockViewBuilder;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Site\Settings;
+use Drupal\Core\Theme\ThemeManagerInterface;
+use Drupal\Core\Theme\ThemeInitializationInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+
+
 use Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -95,6 +100,27 @@ class StaticGenerator implements EventSubscriberInterface {
   protected $sessionConfiguration;
 
   /**
+   * The webform theme manager.
+   *
+   * @var \Drupal\webform\WebformThemeManagerInterface
+   */
+  protected $themeManager;
+
+  /**
+   * The theme initialization.
+   *
+   * @var \Drupal\Core\Theme\ThemeInitializationInterface
+   */
+  protected $themeInitialization;
+
+  /**
+   * The configuration object factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
@@ -108,13 +134,19 @@ class StaticGenerator implements EventSubscriberInterface {
    *  The class resolver.
    * @param array $main_content_renderers
    *   The available main content renderer service IDs, keyed by format.
-   * @param array $request_stack
+   * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
    *   The request stack.
    * @param \Symfony\Component\HttpKernel\HttpKernelInterface $http_kernel
    *   The HTTP Kernel service.
+   * @param \Drupal\Core\Theme\ThemeManagerInterface $theme_manager
+   *   The theme manager.
+   * @param \Drupal\Core\Theme\ThemeInitializationInterface $theme_initialization
+   *   The theme initialization.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The configuration object factory.
    *
    */
-  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, array $main_content_renderers, RequestStack $request_stack, HttpKernelInterface $http_kernel) {
+  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, array $main_content_renderers, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory) {
     $this->staticGeneratorCache = $static_generator_cache;
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
@@ -122,6 +154,9 @@ class StaticGenerator implements EventSubscriberInterface {
     $this->mainContentRenderers = $main_content_renderers;
     $this->requestStack = $request_stack;
     $this->httpKernel = $http_kernel;
+    $this->themeManager = $theme_manager;
+    $this->themeInitialization = $theme_initialization;
+    $this->configFactory = $config_factory;
   }
 
   /**
@@ -184,15 +219,29 @@ class StaticGenerator implements EventSubscriberInterface {
    */
   public function getMarkupForPage($path) {
 
-    // Get response for path.
+    // Generate as Anonymous user.
     \Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
+
+    // Save active theme.
+    $active_theme = $this->themeManager->getActiveTheme();
+
+    // Switch to default theme.
+    $default_theme_name = $this->configFactory->get('system.theme')
+      ->get('default');
+    $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
+    $this->themeManager->setActiveTheme($default_theme);
+
     $request = Request::create($path);
-    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-    $request->server->set('SCRIPT_FILENAME', 'index.php');
-    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, false);
+    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+    //$request->server->set('SCRIPT_FILENAME', 'index.php');
+    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
 
     // Return markup.
     $markup = $response->getContent();
+
+    // Switch back to active theme.
+    $this->themeManager->setActiveTheme($active_theme);
+
     \Drupal::service('account_switcher')->switchBack();
 
     return $markup;
@@ -312,6 +361,8 @@ class StaticGenerator implements EventSubscriberInterface {
   public function generateAllPages() {
     $front_page = $this->generateFrontPage();
     $this->generateBasicPages();
+    $this->generatePaths();
+    //$this->rsyncFiles();
     return $front_page;
   }
 
@@ -348,6 +399,28 @@ class StaticGenerator implements EventSubscriberInterface {
    */
   public function generateFrontPage() {
     return $this->generatePage('/front');
+  }
+
+  /**
+   * Generate paths.
+   *
+   * @throws \Exception
+   */
+  public function generatePaths() {
+    $paths_string = $this->configFactory->get('static_generator.settings')->get('generator_paths');
+    $paths = explode(',', $paths_string );
+    foreach($paths as $path) {
+      $this->generatePage($path);
+    }
+  }
+
+  /**
+   * rSync files.
+   *
+   */
+  public function rsyncFiles() {
+    //$rysncCommand = "rsync -avzhe ssh /var/www/folder1/file5 root@192.168.56.74:/var/www/folder2";
+    //shell_exec($rysncCommand);
   }
 
 }

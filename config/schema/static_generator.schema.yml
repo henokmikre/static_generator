@@ -4,9 +4,12 @@ static_generator.settings:
   type: config_object
   label: 'Static generator settings'
   mapping:
-    production_host_url:
-      type: string
-      label: 'Production host URL'
     generator_directory:
       type: string
       label: 'Generator directory'
+    paths_generate:
+      type: string
+      label: 'Paths to Generate'
+    paths_do_not_generate:
+      type: string
+      label: 'Paths to not generate.'

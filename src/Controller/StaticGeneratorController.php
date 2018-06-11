@@ -12,7 +12,7 @@ class StaticGeneratorController extends ControllerBase {
   /**
    * {@inheritdoc}
    */
-  public function generatePage() {
+  public function generate() {
     $build = [
       '#markup' => \Drupal::service('static_generator')->generateAllPages(),
       ];

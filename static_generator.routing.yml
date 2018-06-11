@@ -1,5 +1,6 @@
 static_generator.settings:
   path: '/admin/config/system/static_generator'
+
   defaults:
     _form: '\Drupal\static_generator\Form\StaticGeneratorSettingsForm'
     _title: 'Static Generator'
@@ -9,7 +10,7 @@ static_generator.settings:
 static_generator.generate_static_markup_for_page:
   path: '/gen'
   defaults:
-    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generatePage'
-    _title: 'Generate Page'
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generate'
+    _title: 'Generate'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer static generator'

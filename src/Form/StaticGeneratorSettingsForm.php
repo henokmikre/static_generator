@@ -42,13 +42,27 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
    */
-//  public function submitForm(array &$form, FormStateInterface $form_state) {
-//    /* TODO: Add some sanity checking so they can't just pull random junk */
-//    $endpoint_url = $form_state->getValue('endpoint_url');
-//    $this->config('static.settings')
-//      ->set('endpoint_url', $endpoint_url)
-//      ->save();
-//  }
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+
+    // Generator directory.
+    $generator_directory = $form_state->getValue('generator_directory');
+    $this->config('static_generator.settings')
+      ->set('generator_directory', $generator_directory)
+      ->save();
+
+    // Paths - generate.
+    $paths_generate = $form_state->getValue('paths_generate');
+    $this->config('static_generator.settings')
+      ->set('paths_generate', $paths_generate)
+      ->save();
+
+    // Paths - do not generate.
+    $paths_do_not_generate = $form_state->getValue('paths_do_not_generate');
+    $this->config('static_generator.settings')
+      ->set('paths_generate', $paths_do_not_generate)
+      ->save();
+
+  }
 
   /**
    * Defines the settings form for the Static Generator module.
@@ -64,18 +78,28 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('static_generator.settings');
     $form['static_generator_settings']['#markup'] = 'Static Generator Settings';
-    $form['production_host_url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Production host URL'),
-      '#default_value' => $config->get('production_host_url'),
-      '#description' => $this->t('The Production host URL for the statically generated site.'),
-    ];
+
     $form['generator_directory'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Generator directory'),
       '#default_value' => $config->get('generator_directory'),
       '#description' => $this->t('The static generator target directory.'),
     ];
+
+    $form['paths_generate'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Paths to Generate'),
+      '#description' => $this->t('Specify paths to generate - comma separated, no spaces.'),
+      '#default_value' => $config->get('paths_generate'),
+    ];
+
+    $form['paths_do_not_generate'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Paths to not Generate'),
+      '#description' => $this->t('Specify paths to not generate - comma separated, no spaces.'),
+      '#default_value' => $config->get('paths_do_not_generate'),
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 }

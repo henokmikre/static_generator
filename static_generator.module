@@ -5,6 +5,7 @@
  * Generates a static version of a Drupal site.
  */
 
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
@@ -30,3 +31,21 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
 function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
   //$build['#cache']['max-age'] = -1;
 }
+
+/**
+ * Implements hook_entity_update().
+ */
+function static_generator_entity_update(EntityInterface $entity) {
+  // Content entities only.
+  if (!($entity->getEntityTypeId() === 'node') || empty($entity->get('moderation_state')) || $entity->get('moderation_state')->value !== 'published') {
+    return;
+  }
+  else {
+    $path = $entity->toUrl()->toString();
+    \Drupal::service('static_generator')->generatePage($path);
+  }
+}
+
+// as seen in the content_moderation_notifications.
+// Implementing these hooks gives you a single place to react to content states changes.
+
