@@ -2,32 +2,22 @@
 
 namespace Drupal\static_generator;
 
-use DOMDocument;
 use DOMXPath;
-use Drupal\block\BlockViewBuilder;
-use Drupal\Component\Utility\Html;
-use Drupal\Core\Site\Settings;
-use Drupal\Core\Theme\ThemeManagerInterface;
-use Drupal\Core\Theme\ThemeInitializationInterface;
-use Drupal\Core\Config\ConfigFactoryInterface;
-
-
-use Drupal\static_generator\Render\Placeholder\StaticGeneratorStrategy;
+use DOMDocument;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
-use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Render\RendererInterface;
+use Drupal\block\BlockViewBuilder;
+use Drupal\Component\Utility\Html;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\Render\Markup;
-
-use Symfony\Component\HttpKernel\Event\GetResponseEvent;
-use Symfony\Component\Routing\Route;
-use Drupal\Core\Render\MainContent\HtmlRenderer;
+use Drupal\Core\Site\Settings;
+use Drupal\Core\Theme\ThemeInitializationInterface;
+use Drupal\Core\Theme\ThemeManagerInterface;
 
 /**
  * Static Generator Service.
@@ -35,20 +25,6 @@ use Drupal\Core\Render\MainContent\HtmlRenderer;
  * Manages static generation process.
  */
 class StaticGenerator implements EventSubscriberInterface {
-
-  /**
-   * The generator directory.
-   *
-   * @var string
-   */
-  private $generatorDirectory = '/var/www/sg/private/static';
-
-  /**
-   * The static generator cache.
-   *
-   * @var CacheBackendInterface
-   */
-  private $staticGeneratorCache;
 
   /**
    * The renderer.
@@ -70,13 +46,6 @@ class StaticGenerator implements EventSubscriberInterface {
    * @var ClassResolverInterface
    */
   private $classResolver;
-
-  /**
-   * The available main content renderer services, keyed per format.
-   *
-   * @var array
-   */
-  protected $mainContentRenderers;
 
   /**
    * The request stack.
@@ -124,16 +93,12 @@ class StaticGenerator implements EventSubscriberInterface {
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
-   * @param CacheBackendInterface $static_generator_cache
-   *   The cache for statically generated pages.
    * @param RendererInterface $renderer
    *  The renderer.
    * @param RouteMatchInterface $route_match
    *   The route matcher.
    * @param ClassResolverInterface $class_resolver
    *  The class resolver.
-   * @param array $main_content_renderers
-   *   The available main content renderer service IDs, keyed by format.
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
    *   The request stack.
    * @param \Symfony\Component\HttpKernel\HttpKernelInterface $http_kernel
@@ -146,12 +111,10 @@ class StaticGenerator implements EventSubscriberInterface {
    *   The configuration object factory.
    *
    */
-  public function __construct(CacheBackendInterface $static_generator_cache, RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, array $main_content_renderers, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory) {
-    $this->staticGeneratorCache = $static_generator_cache;
+  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory) {
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
-    $this->mainContentRenderers = $main_content_renderers;
     $this->requestStack = $request_stack;
     $this->httpKernel = $http_kernel;
     $this->themeManager = $theme_manager;
@@ -180,25 +143,37 @@ class StaticGenerator implements EventSubscriberInterface {
    */
   public function generatePage($path) {
 
+    // Return if path is excluded.
+    $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')->get('paths_do_not_generate');
+    if(!empty($paths_do_not_generate_string)){
+      $paths_do_not_generate = explode(',', $paths_do_not_generate_string );
+      if(in_array($path, $paths_do_not_generate)) {
+        return;
+      }
+    }
+
     // Get/Process markup.
     $markup = $this->getMarkupForPage($path);
     $markup_esi = $this->injectESIs($markup);
 
     // Write page files.
     $real_path = '';
-    if ($path == '/front') {
+    $front = $this->configFactory->get('system.site')->get('page.front');
+    if ($path == $front) {
       $file_name = 'index.html';
     }
     else {
-      $file_name = strrchr($path, '/') . '.html';
+      $alias = \Drupal::service('path.alias_manager')
+        ->getAliasByPath($path);
+      $file_name = strrchr($alias, '/') . '.html';
       $file_name = substr($file_name, 1);
-      $occur = substr_count($path, '/');
+      $occur = substr_count($alias, '/');
       if ($occur > 1) {
-        $last_pos = strrpos($path, '/');
-        $real_path = substr($path, 0, $last_pos);
+        $last_pos = strrpos($alias, '/');
+        $real_path = substr($alias, 0, $last_pos);
       }
     }
-    $directory = Settings::get('file_private_path') . '/static' . $real_path;
+    $directory = $this->configFactory->get('static_generator.settings')->get('generator_directory') . $real_path;
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
     }
@@ -298,8 +273,7 @@ class StaticGenerator implements EventSubscriberInterface {
       $this->generateFragment($block_id);
 
       $include_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
-      //$include_markup = Html::escape('<!--#include virtual="/esi/block/' . $block_id . '" -->');
-      $include = $dom->createElement('div', $include_markup);
+      $include = $dom->createElement('span', $include_markup);
       $block->parentNode->replaceChild($include, $block);
 
       $dom->validateOnParse = FALSE;
@@ -344,7 +318,7 @@ class StaticGenerator implements EventSubscriberInterface {
     }
     $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
     $block_markup = $this->renderer->renderRoot($block_render_array);
-    $dir = 'private://static/esi/block';
+    $dir = $this->configFactory->get('static_generator.settings')->get('generator_directory') . '/esi/block';
     if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($block_markup, 'private://static/esi/block/' . $block_id, FILE_EXISTS_REPLACE);
     }
@@ -359,11 +333,8 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAllPages() {
-    $front_page = $this->generateFrontPage();
     $this->generateBasicPages();
     $this->generatePaths();
-    //$this->rsyncFiles();
-    return $front_page;
   }
 
   /**
@@ -382,23 +353,9 @@ class StaticGenerator implements EventSubscriberInterface {
     //$query->condition('field_name.value', 'default', '=');
     $entity_ids = $query->execute();
     foreach ($entity_ids as $entity_id) {
-      $alias = \Drupal::service('path.alias_manager')
-        ->getAliasByPath('/node/' . $entity_id);
-      $this->generatePage($alias);
+      $this->generatePage('/node/' . $entity_id);
     }
     return 0;
-  }
-
-  /**
-   * Generate front page.
-   *
-   * @return String
-   *   The number of pages generated.
-   *
-   * @throws \Exception
-   */
-  public function generateFrontPage() {
-    return $this->generatePage('/front');
   }
 
   /**
@@ -407,20 +364,13 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generatePaths() {
-    $paths_string = $this->configFactory->get('static_generator.settings')->get('generator_paths');
-    $paths = explode(',', $paths_string );
-    foreach($paths as $path) {
-      $this->generatePage($path);
+    $paths_string = $this->configFactory->get('static_generator.settings')->get('paths_generate');
+    if(!empty($paths_string)) {
+      $paths = explode(',', $paths_string );
+      foreach($paths as $path) {
+        $this->generatePage($path);
+      }
     }
-  }
-
-  /**
-   * rSync files.
-   *
-   */
-  public function rsyncFiles() {
-    //$rysncCommand = "rsync -avzhe ssh /var/www/folder1/file5 root@192.168.56.74:/var/www/folder2";
-    //shell_exec($rysncCommand);
   }
 
 }
@@ -432,14 +382,7 @@ class StaticGenerator implements EventSubscriberInterface {
 //    $node_render_array = \Drupal::entityTypeManager()
 //      ->getViewBuilder($entity_type)
 //      ->view($node, $view_mode);
-//    $request = new Request();
 //
-//    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
-//    $response = $renderer->renderResponse($node_render_array, $request, $this->routeMatch);
-//    $content = $response->getContent();
-//    return $content;
-//
-//  }
 //$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
 //    $render = $this->renderer->render($render_array, NULL, NULL);
 //    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
@@ -447,5 +390,4 @@ class StaticGenerator implements EventSubscriberInterface {
 //    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
 //    $entity_type_id = $node->getEntityTypeId();
 //$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
-//$rendered = $this->renderer->
 

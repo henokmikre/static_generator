@@ -59,7 +59,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     // Paths - do not generate.
     $paths_do_not_generate = $form_state->getValue('paths_do_not_generate');
     $this->config('static_generator.settings')
-      ->set('paths_generate', $paths_do_not_generate)
+      ->set('paths_do_not_generate', $paths_do_not_generate)
       ->save();
 
   }
