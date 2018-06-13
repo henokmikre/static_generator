@@ -3,7 +3,7 @@ static_generator.settings:
 
   defaults:
     _form: '\Drupal\static_generator\Form\StaticGeneratorSettingsForm'
-    _title: 'Static Generator'
+    _title: 'Static Generator Settings'
   requirements:
     _permission: 'administer static generator'
 
@@ -14,3 +14,12 @@ static_generator.generate_static_markup_for_page:
     _title: 'Generate'
   requirements:
     _permission: 'administer static generator'
+
+static_generator.type_edit_form:
+  path: '/admin/config/system/static_generator/type/{entity_type_id}'
+  defaults:
+    _form: '\Drupal\static_generator\Form\StaticGeneratorConfigureEntityTypesForm'
+    _title_callback: '\Drupal\static_generator\Form\StaticGeneratorConfigureEntityTypesForm::getTitle'
+  requirements:
+    _permission: 'administer static generator'
+

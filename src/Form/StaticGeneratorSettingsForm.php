@@ -5,6 +5,9 @@ namespace Drupal\static_generator\Form;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+use Drupal\Component\Serialization\Json;
+
 
 /**
  * Class StaticSettingsForm.
@@ -76,9 +79,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
    *   Form definition array.
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $config = $this->config('static_generator.settings');
-    $form['static_generator_settings']['#markup'] = 'Static Generator Settings';
 
+    $config = $this->config('static_generator.settings');
+
+    $entityTypeManager = \Drupal::entityTypeManager();
+    $entityTypeBundleInfo = \Drupal::service('entity_type.bundle.info');
+    
     $form['generator_directory'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Generator directory'),
@@ -92,7 +98,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#description' => $this->t('Specify paths to generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_generate'),
     ];
-
     $form['paths_do_not_generate'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Paths to not Generate'),
@@ -100,6 +105,76 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('paths_do_not_generate'),
     ];
 
+    $header = [
+      'type' => $this->t('Items'),
+      'operations' => $this->t('Operations')
+    ];
+    $form['entity_types_container'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Entity types to generate:'),
+      '#open' => TRUE,
+    ];
+    $form['entity_types_container']['entity_types'] = [
+      '#type' => 'table',
+      '#header' => $header,
+      '#empty' => $this->t('There are no entity types.'),
+    ];
+
+    $entity_types = $entityTypeManager->getDefinitions();
+    foreach ($entity_types as $entity_type) {
+      if (!$this->canGenerateEntitiesOfEntityType($entity_type->id())) {
+        continue;
+      }
+
+      $bundles = [];
+      foreach ($entityTypeBundleInfo->getBundleInfo($entity_type->id()) as $bundle_id => $bundle) {
+          $bundles[$bundle_id] = $bundle['label'];
+      }
+
+      $bundles_list = [
+        '#theme' => 'item_list',
+        '#items' => $bundles,
+        '#context' => ['list_style' => 'comma-list'],
+        '#empty' => $this->t('none'),
+      ];
+
+      $form['entity_types_container']['entity_types'][$entity_type->id()] = [
+        'type' => [
+          '#type' => 'inline_template',
+          '#template' => '<strong>{{ label }}</strong></br><span id="selected-{{ entity_type_id }}">{{ bundles }}</span>',
+          '#context' => [
+            'label' => $this->t('@bundle types', ['@bundle' => $entity_type->getLabel()]),
+            'entity_type_id' => $entity_type->id(),
+            'selected_bundles' => $bundles_list,
+          ]
+        ],
+        'operations' => [
+          '#type' => 'operations',
+          '#links' => [
+            'select' => [
+              'title' => $this->t('Select'),
+              'url' => Url::fromRoute('static_generator.type_edit_form', ['entity_type_id' => $entity_type->id()]),
+              'attributes' => [
+                'class' => ['use-ajax'],
+                'data-dialog-type' => 'modal',
+                'data-dialog-options' => Json::encode([
+                  'width' => 700,
+                ]),
+              ],
+            ],
+          ],
+        ],
+      ];
+    }
     return parent::buildForm($form, $form_state);
   }
+
+  public function canGenerateEntitiesOfEntityType($entity_type) {
+    if($entity_type == 'node' || $entity_type == 'block'){
+      return TRUE;
+    } else {
+      return FALSE;
+    }
+  }
+
 }
