@@ -251,7 +251,7 @@ class StaticGenerator implements EventSubscriberInterface {
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
-    $classname = "block";
+    $classname = 'block';
     $blocks = $finder->query("//div[contains(@class, '$classname')]");
     foreach ($blocks as $block) {
       $id = $block->getAttribute('id');
@@ -333,25 +333,35 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAllPages() {
-    $this->generateBasicPages();
+    $this->generateNodes();
     $this->generatePaths();
   }
 
   /**
-   * Generate all pages.
+   * Generate nodes.
    *
    * @return int
    *   The number of pages generated.
    *
    * @throws \Exception
    */
-  public function generateBasicPages() {
-    $bundle = 'page';
-    $query = \Drupal::entityQuery('node');
-    $query->condition('status', 1);
-    $query->condition('type', $bundle);
-    //$query->condition('field_name.value', 'default', '=');
-    $entity_ids = $query->execute();
+  public function generateNodes() {
+
+    // Get bundles to generate from config.
+    $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
+      ->get('gen_node');
+    $gen_node_bundles = explode(',', $gen_node_bundles_string);
+
+    // Generate each bundle
+    $entity_ids =[];
+    foreach ($gen_node_bundles as $bundle) {
+      $query = \Drupal::entityQuery('node');
+      $query->condition('status', 1);
+      $query->condition('type', $bundle);
+      //$query->condition('field_name.value', 'default', '=');
+      $entity_ids = $query->execute();
+    }
+
     foreach ($entity_ids as $entity_id) {
       $this->generatePage('/node/' . $entity_id);
     }
