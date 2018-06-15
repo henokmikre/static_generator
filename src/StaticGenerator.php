@@ -15,9 +15,9 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\Site\Settings;
 use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
+use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Static Generator Service.
@@ -126,8 +126,8 @@ class StaticGenerator implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-    $events = [];
-    return $events;
+//    $events[KernelEvents::REQUEST][] = array('onKernelRequestPathResolve', 100);
+//    return $events;
   }
 
   /**
@@ -151,14 +151,17 @@ class StaticGenerator implements EventSubscriberInterface {
     }
 
     // Get/Process markup.
-    $markup = $this->getMarkupForPage($path);
+    $markup = $this->markupForPage($path);
     $markup_esi = $this->injectESIs($markup);
 
     // Write page files.
-    $directory = $this->configFactory->get('static_generator.settings')
-        ->get('generator_directory') . $this->directoryFromPath($path);
+    $web_directory =  $this->directoryFromPath($path);
+    $file_name = $this->filenameFromPath($path);
+    $config_directory = $this->configFactory->get('static_generator.settings')
+      ->get('generator_directory');
+    $directory = $config_directory . $web_directory;
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($markup_esi, $directory . '/' . $this->filenameFromPath($path), FILE_EXISTS_REPLACE);
+      file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
     }
   }
 
@@ -225,10 +228,11 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function deletePage($path) {
-    $directory = $this->directoryFromPath($path);
+    $web_directory = $this->directoryFromPath($path);
     $file_name = $this->filenameFromPath($path);
-    file_unmanaged_delete($this->configFactory->get('static_generator.settings')
-        ->get('generator_directory') . $directory . '/' . $file_name);
+    $config_directory = $this->configFactory->get('static_generator.settings')
+      ->get('generator_directory');
+    file_unmanaged_delete($config_directory . $web_directory . '/' . $file_name);
   }
 
   /**
@@ -243,7 +247,7 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception When an Exception occurs during processing
    *
    */
-  public function getMarkupForPage($path) {
+  public function markupForPage($path) {
 
     // Generate as Anonymous user.
     \Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
@@ -370,9 +374,6 @@ class StaticGenerator implements EventSubscriberInterface {
   /**
    * Generate all pages.
    *
-   * @return String
-   *   The number of pages generated.
-   *
    * @throws \Exception
    */
   public function generateAllPages() {
@@ -396,19 +397,15 @@ class StaticGenerator implements EventSubscriberInterface {
     $gen_node_bundles = explode(',', $gen_node_bundles_string);
 
     // Generate each bundle
-    $entity_ids = [];
     foreach ($gen_node_bundles as $bundle) {
       $query = \Drupal::entityQuery('node');
       $query->condition('status', 1);
       $query->condition('type', $bundle);
-      //$query->condition('field_name.value', 'default', '=');
       $entity_ids = $query->execute();
+      foreach ($entity_ids as $entity_id) {
+        $this->generatePage('/node/' . $entity_id);
+      }
     }
-
-    foreach ($entity_ids as $entity_id) {
-      $this->generatePage('/node/' . $entity_id);
-    }
-    return 0;
   }
 
   /**
@@ -426,6 +423,25 @@ class StaticGenerator implements EventSubscriberInterface {
       }
     }
   }
+
+  /**
+   * Resolve the system path based on some arbitrary rules.
+   *
+   * @param Symfony\Component\HttpKernel\Event\GetResponseEvent $event
+   *   The Event to process.
+   */
+//  public function onKernelRequestPathResolve(GetResponseEvent $event) {
+//    $request = $event->getRequest();
+//    $path = $this->extractPath($request);
+
+    // Rewrite community/ to forum/.
+//    if ($path == 'community' || strpos($path, 'community/') === 0) {
+//      $path = 'forum' . substr($path, 9);
+//    }
+//
+//    $this->setPath($request, $path);
+//  }
+
 
 }
 
