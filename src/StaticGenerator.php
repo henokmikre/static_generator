@@ -136,18 +136,16 @@ class StaticGenerator implements EventSubscriberInterface {
    * @param String $path
    *   The page's path.
    *
-   * @return String
-   *   The generated markup.
-   *
    * @throws \Exception
    */
   public function generatePage($path) {
 
     // Return if path is excluded.
-    $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')->get('paths_do_not_generate');
-    if(!empty($paths_do_not_generate_string)){
-      $paths_do_not_generate = explode(',', $paths_do_not_generate_string );
-      if(in_array($path, $paths_do_not_generate)) {
+    $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')
+      ->get('paths_do_not_generate');
+    if (!empty($paths_do_not_generate_string)) {
+      $paths_do_not_generate = explode(',', $paths_do_not_generate_string);
+      if (in_array($path, $paths_do_not_generate)) {
         return;
       }
     }
@@ -157,7 +155,25 @@ class StaticGenerator implements EventSubscriberInterface {
     $markup_esi = $this->injectESIs($markup);
 
     // Write page files.
-    $real_path = '';
+    $directory = $this->configFactory->get('static_generator.settings')
+        ->get('generator_directory') . $this->directoryFromPath($path);
+    if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($markup_esi, $directory . '/' . $this->filenameFromPath($path), FILE_EXISTS_REPLACE);
+    }
+  }
+
+  /**
+   * Get filename from path.
+   *
+   * @param String $path
+   *   The page's path.
+   *
+   * @return String
+   *   The filename.
+   *
+   * @throws \Exception
+   */
+  public function filenameFromPath($path) {
     $front = $this->configFactory->get('system.site')->get('page.front');
     if ($path == $front) {
       $file_name = 'index.html';
@@ -167,17 +183,52 @@ class StaticGenerator implements EventSubscriberInterface {
         ->getAliasByPath($path);
       $file_name = strrchr($alias, '/') . '.html';
       $file_name = substr($file_name, 1);
+    }
+    return $file_name;
+  }
+
+  /**
+   * Get page directory from path.
+   *
+   * @param String $path
+   *   The page's path.
+   *
+   * @return String
+   *   The directory and filename.
+   *
+   * @throws \Exception
+   */
+  public function directoryFromPath($path) {
+    $directory = '';
+    $front = $this->configFactory->get('system.site')->get('page.front');
+    if ($path <> $front) {
+      $alias = \Drupal::service('path.alias_manager')
+        ->getAliasByPath($path);
       $occur = substr_count($alias, '/');
       if ($occur > 1) {
         $last_pos = strrpos($alias, '/');
-        $real_path = substr($alias, 0, $last_pos);
+        $directory = substr($alias, 0, $last_pos);
       }
     }
-    $directory = $this->configFactory->get('static_generator.settings')->get('generator_directory') . $real_path;
-    if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
-    }
-    return $markup_esi;
+    return $directory;
+  }
+
+  /**
+   * Generate markup for a single page.
+   *
+   * @param String $path
+   *   The page's path.
+   *
+   * @return boolean
+   *   A file was deleted.
+   *
+   * @throws \Exception
+   */
+  public function deletePage($path) {
+    $directory = $this->directoryFromPath($path);
+    $file_name = $this->filenameFromPath($path);
+    file_unmanaged_delete($this->configFactory->get('static_generator.settings')
+        ->get('generator_directory') . $directory . '/' . $file_name);
   }
 
   /**
@@ -284,15 +335,6 @@ class StaticGenerator implements EventSubscriberInterface {
           $node->parentNode->removeChild($node);
         }
       }
-
-      // Admin menu
-      //      $admin_menu = $dom->getElementById('toolbar-administration');
-      //      if(!empty($admin_menu)){
-      //        $body = $dom->getElementsByTagName('body');
-      //        $body = $body->item(0);
-      //        $body->removeChild($admin_menu);
-      //      }
-
     }
     $markup_esi = $dom->saveHTML();
     $markup_esi = str_replace('&lt;', '<', $markup_esi);
@@ -318,7 +360,8 @@ class StaticGenerator implements EventSubscriberInterface {
     }
     $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
     $block_markup = $this->renderer->renderRoot($block_render_array);
-    $dir = $this->configFactory->get('static_generator.settings')->get('generator_directory') . '/esi/block';
+    $dir = $this->configFactory->get('static_generator.settings')
+        ->get('generator_directory') . '/esi/block';
     if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($block_markup, 'private://static/esi/block/' . $block_id, FILE_EXISTS_REPLACE);
     }
@@ -353,7 +396,7 @@ class StaticGenerator implements EventSubscriberInterface {
     $gen_node_bundles = explode(',', $gen_node_bundles_string);
 
     // Generate each bundle
-    $entity_ids =[];
+    $entity_ids = [];
     foreach ($gen_node_bundles as $bundle) {
       $query = \Drupal::entityQuery('node');
       $query->condition('status', 1);
@@ -374,10 +417,11 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generatePaths() {
-    $paths_string = $this->configFactory->get('static_generator.settings')->get('paths_generate');
-    if(!empty($paths_string)) {
-      $paths = explode(',', $paths_string );
-      foreach($paths as $path) {
+    $paths_string = $this->configFactory->get('static_generator.settings')
+      ->get('paths_generate');
+    if (!empty($paths_string)) {
+      $paths = explode(',', $paths_string);
+      foreach ($paths as $path) {
         $this->generatePage($path);
       }
     }

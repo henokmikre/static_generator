@@ -37,12 +37,18 @@ function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\Blo
  */
 function static_generator_entity_update(EntityInterface $entity) {
   // Content entities only.
-  if (!($entity->getEntityTypeId() === 'node') || empty($entity->get('moderation_state')) || $entity->get('moderation_state')->value !== 'published') {
+  if (!($entity->getEntityTypeId() === 'node') || empty($entity->get('moderation_state'))) {
     return;
   }
   else {
-    $path = $entity->toUrl()->toString();
-    \Drupal::service('static_generator')->generatePage($path);
+    if ($entity->get('moderation_state')->value == 'published') {
+      $path = $entity->toUrl()->toString();
+      \Drupal::service('static_generator')->generatePage($path);
+    }
+    elseif ($entity->get('moderation_state')->value == 'archived') {
+      $path = $entity->toUrl()->toString();
+      \Drupal::service('static_generator')->deletePage($path);
+    }
   }
 }
 
