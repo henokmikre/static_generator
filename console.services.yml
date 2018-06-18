@@ -1,0 +1,12 @@
+services:
+  static_generator.gen:
+    class: Drupal\static_generator\Command\GenCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }
+
+  static_generator.genpage:
+    class: Drupal\static_generator\Command\GenPageCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }

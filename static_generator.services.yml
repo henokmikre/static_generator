@@ -12,9 +12,3 @@ services:
 #    arguments: ['@request_stack', '@current_route_match','@session_configuration']
 #    tags:
 #      - { name: placeholder_strategy, priority: 1 }
-
-#  static_generator.theme:
-#    class: Drupal\static_generator\Theme\BartikThemeNegotiator
-#    tags:
-#      - { name: theme_negotiator, priority: 10000 }
-
