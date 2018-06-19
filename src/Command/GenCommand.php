@@ -49,7 +49,11 @@ class GenCommand extends ContainerAwareCommand {
    * {@inheritdoc}
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
+    $start_time = time();
     $this->staticGenerator->generateAllPages();
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
     $this->getIo()->info($this->trans('commands.sg.gen.messages.success'));
   }
 

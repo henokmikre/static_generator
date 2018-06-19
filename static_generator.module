@@ -40,20 +40,37 @@ function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\Blo
  * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function static_generator_entity_update(EntityInterface $entity) {
-  // Content entities only.
-  if (!($entity->getEntityTypeId() === 'node') || empty($entity->get('moderation_state'))) {
+
+  if (empty($entity->get('moderation_state'))) {
     return;
   }
-  else {
+
+  // Pages.
+  if ($entity->getEntityTypeId() === 'node') {
+    $path = $entity->toUrl()->toString();
     if ($entity->get('moderation_state')->value == 'published') {
-      $path = $entity->toUrl()->toString();
-      \Drupal::service('static_generator')->generatePage($path);
+      \Drupal::service('static_generator')->generatePage($path, TRUE);
     }
     elseif ($entity->get('moderation_state')->value == 'archived') {
-      $path = $entity->toUrl()->toString();
       \Drupal::service('static_generator')->deletePage($path);
     }
   }
+
+  // Blocks.
+  /*if ($entity->getEntityTypeId() === 'block') {
+    // @todo not sure if we need to handle this.
+    $block_id = $entity->toUrl()->toString();
+    if ($entity->get('moderation_state')->value == 'published') {
+      if (in_array($block_id, \Drupal\static_generator\StaticGenerator::BLOCK_IDS_ESI)) {
+        \Drupal::service('static_generator')->generateBlock($block_id, $generate_blocks);
+      }
+    }
+    elseif ($entity->get('moderation_state')->value == 'archived') {
+      // @todo Not sure if block can be archived.
+      \Drupal::service('static_generator')->deleteBlock($block_id);
+    }
+  }*/
+
 }
 
 /**

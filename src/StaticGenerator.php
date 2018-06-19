@@ -27,6 +27,14 @@ use Symfony\Component\HttpKernel\KernelEvents;
 class StaticGenerator implements EventSubscriberInterface {
 
   /**
+   * File permission check -- File is readable.
+   */
+  const BLOCK_IDS_ESI = [
+    'bartik_branding',
+    //'views_block__content_recent_block_1',
+  ];
+
+  /**
    * The renderer.
    *
    * @var RendererInterface
@@ -126,8 +134,8 @@ class StaticGenerator implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   public static function getSubscribedEvents() {
-//    $events[KernelEvents::REQUEST][] = array('onKernelRequestPathResolve', 100);
-//    return $events;
+    //    $events[KernelEvents::REQUEST][] = array('onKernelRequestPathResolve', 100);
+    //    return $events;
   }
 
   /**
@@ -136,9 +144,12 @@ class StaticGenerator implements EventSubscriberInterface {
    * @param String $path
    *   The page's path.
    *
+   * @param $generate_blocks
+   *   Generate the block fragments referenced by the ESI's.
+   *
    * @throws \Exception
    */
-  public function generatePage($path) {
+  public function generatePage($path, $generate_blocks = FALSE) {
 
     // Return if path is excluded.
     $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')
@@ -152,10 +163,10 @@ class StaticGenerator implements EventSubscriberInterface {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path);
-    $markup_esi = $this->injectESIs($markup);
+    $markup_esi = $this->injectESIs($markup, $generate_blocks);
 
     // Write page files.
-    $web_directory =  $this->directoryFromPath($path);
+    $web_directory = $this->directoryFromPath($path);
     $file_name = $this->filenameFromPath($path);
     $config_directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
@@ -297,12 +308,15 @@ class StaticGenerator implements EventSubscriberInterface {
    * @param String $markup
    *   The markup.
    *
+   * @param bool $generate_blocks
+   *   Generate the block fragments referenced by the ESI's.
+   *
    * @return String
    *   Markup with ESI's injected.
    *
    * @throws \Exception
    */
-  public function injectESIs($markup) {
+  public function injectESIs($markup, $generate_blocks = FALSE) {
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
@@ -325,7 +339,10 @@ class StaticGenerator implements EventSubscriberInterface {
       if (!in_array($block_id, $block_ids_esi)) {
         continue;
       }
-      $this->generateFragment($block_id);
+
+      if ($generate_blocks) {
+        $this->generateBlock($block_id);
+      }
 
       $include_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
       $include = $dom->createElement('span', $include_markup);
@@ -348,17 +365,25 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * Generate a fragment file.
+   * Generate all block fragment files.
+   *
+   * @throws \Exception
+   */
+  public function generateBlocks() {
+    foreach ($this::BLOCK_IDS_ESI as $block_id) {
+      $this->generateBlock($block_id);
+    }
+  }
+
+  /**
+   * Generate a block fragment file.
    *
    * @param string $block_id
    *   The block id.
    *
-   * @return boolean
-   *   The file was successfully generated.
-   *
    * @throws \Exception
    */
-  public function generateFragment($block_id) {
+  public function generateBlock($block_id) {
     if (empty($block_id)) {
       return;
     }
@@ -379,6 +404,7 @@ class StaticGenerator implements EventSubscriberInterface {
   public function generateAllPages() {
     $this->generateNodes();
     $this->generatePaths();
+    $this->generateBlocks();
   }
 
   /**
@@ -403,6 +429,9 @@ class StaticGenerator implements EventSubscriberInterface {
       $query->condition('type', $bundle);
       $entity_ids = $query->execute();
       foreach ($entity_ids as $entity_id) {
+        //$node = \Drupal::entityTypeManager()->getStorage('node')->load($entity_id);
+        //$node->set('moderation_state', 'published');
+        //$node->save();
         $this->generatePage('/node/' . $entity_id);
       }
     }
@@ -430,17 +459,17 @@ class StaticGenerator implements EventSubscriberInterface {
    * @param Symfony\Component\HttpKernel\Event\GetResponseEvent $event
    *   The Event to process.
    */
-//  public function onKernelRequestPathResolve(GetResponseEvent $event) {
-//    $request = $event->getRequest();
-//    $path = $this->extractPath($request);
+  //  public function onKernelRequestPathResolve(GetResponseEvent $event) {
+  //    $request = $event->getRequest();
+  //    $path = $this->extractPath($request);
 
-    // Rewrite community/ to forum/.
-//    if ($path == 'community' || strpos($path, 'community/') === 0) {
-//      $path = 'forum' . substr($path, 9);
-//    }
-//
-//    $this->setPath($request, $path);
-//  }
+  // Rewrite community/ to forum/.
+  //    if ($path == 'community' || strpos($path, 'community/') === 0) {
+  //      $path = 'forum' . substr($path, 9);
+  //    }
+  //
+  //    $this->setPath($request, $path);
+  //  }
 
 
 }

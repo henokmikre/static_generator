@@ -60,7 +60,7 @@ class GenPageCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $path = $input->getArgument('path');
-    $this->staticGenerator->generatePage($path);
+    $this->staticGenerator->generatePage($path, TRUE);
     $this->getIo()->info($this->trans('commands.sg.genpage.messages.success'));
   }
 
