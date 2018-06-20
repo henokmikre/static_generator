@@ -10,14 +10,14 @@ use Drupal\Console\Annotations\DrupalCommand;
 
 
 /**
- * Class StaticGeneratorCommand.
+ * Class GenerateFilesCommand.
  *
  * @DrupalCommand (
  *     extension="static_generator",
  *     extensionType="module"
  * )
  */
-class GenCommand extends ContainerAwareCommand {
+class GenerateFilesCommand extends ContainerAwareCommand {
 
   /**
    * The Static Generator service.
@@ -41,8 +41,9 @@ class GenCommand extends ContainerAwareCommand {
    */
   protected function configure() {
     $this
-      ->setName('sg:gen')
-      ->setDescription($this->trans('commands.sg.gen.description'));
+      ->setName('sg:generate-files')
+      ->setDescription($this->trans('commands.sg.generate-files.description'))
+      ->setAliases(['gf']);
   }
 
   /**
@@ -50,11 +51,11 @@ class GenCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $start_time = time();
-    $this->staticGenerator->generateAllPages();
+    $this->staticGenerator->generateFiles();
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
-    $this->getIo()->info($this->trans('commands.sg.gen.messages.success'));
+    $this->getIo()->info($this->trans('commands.sg.generate-files.messages.success'));
   }
 
 }

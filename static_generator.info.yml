@@ -14,4 +14,5 @@ dependencies:
   - text
   - options
   - node
-  - dynamic_page_cache
+  - workflows
+  - content_moderation

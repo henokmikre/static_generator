@@ -392,7 +392,8 @@ class StaticGenerator implements EventSubscriberInterface {
     $dir = $this->configFactory->get('static_generator.settings')
         ->get('generator_directory') . '/esi/block';
     if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($block_markup, 'private://static/esi/block/' . $block_id, FILE_EXISTS_REPLACE);
+      //file_unmanaged_save_data($block_markup, 'private://static/esi/block/' . $block_id, FILE_EXISTS_REPLACE);
+      file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
     }
   }
 
@@ -454,23 +455,36 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * Resolve the system path based on some arbitrary rules.
+   * Generate files.
    *
-   * @param Symfony\Component\HttpKernel\Event\GetResponseEvent $event
-   *   The Event to process.
+   * @throws \Exception
    */
-  //  public function onKernelRequestPathResolve(GetResponseEvent $event) {
-  //    $request = $event->getRequest();
-  //    $path = $this->extractPath($request);
+  public function wipeFiles() {
+    $dir = $this->configFactory->get('static_generator.settings')
+      ->get('generator_directory');
+    file_unmanaged_delete_recursive($dir, $callback = NULL);
+  }
 
-  // Rewrite community/ to forum/.
-  //    if ($path == 'community' || strpos($path, 'community/') === 0) {
-  //      $path = 'forum' . substr($path, 9);
-  //    }
-  //
-  //    $this->setPath($request, $path);
-  //  }
+    /**
+   * Generate files.
+   *
+   * @throws \Exception
+   */
+  public function generateFiles() {
 
+    // Binary files included with core, modules, and themes.
+    $core_files = 'rsync -zrv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/core /var/www/sg/private/static';
+    exec($core_files);
+    $module_files = 'rsync -zrv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/modules /var/www/sg/private/static';
+    exec($module_files);
+    $theme_files = 'rsync -zrv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/themes /var/www/sg/private/static';
+    exec($theme_files);
+
+    // Public files.
+    exec('mkdir -p /var/www/sg/private/static/sites/default');
+    $public_files = 'rsync -zrv --delete /var/www/sg/docroot/sites/default/files /var/www/sg/private/static/sites/default';
+    exec($public_files);
+  }
 
 }
 

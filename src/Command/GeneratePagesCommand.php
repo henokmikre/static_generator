@@ -3,7 +3,6 @@
 namespace Drupal\static_generator\Command;
 
 use Drupal\static_generator\StaticGenerator;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
@@ -11,14 +10,14 @@ use Drupal\Console\Annotations\DrupalCommand;
 
 
 /**
- * Class StaticGeneratorCommand.
+ * Class GeneratePagesCommand.
  *
  * @DrupalCommand (
  *     extension="static_generator",
  *     extensionType="module"
  * )
  */
-class GenPageCommand extends ContainerAwareCommand {
+class GeneratePagesCommand extends ContainerAwareCommand {
 
   /**
    * The Static Generator service.
@@ -28,7 +27,7 @@ class GenPageCommand extends ContainerAwareCommand {
   protected $staticGenerator;
 
   /**
-   * GenPageCommand constructor.
+   * GenCommand constructor.
    *
    * @param \Drupal\static_generator\StaticGenerator $static_generator
    */
@@ -42,26 +41,21 @@ class GenPageCommand extends ContainerAwareCommand {
    */
   protected function configure() {
     $this
-      ->setName('sg:genpage')
-      ->setDescription($this->trans('commands.sg.genpage.description'))
-      ->addArgument(
-        'path',
-        InputArgument::OPTIONAL,
-         $this->trans('commands.sg.genpage.arguments.path'),
-        '/front'
-      )
-      ->setAliases(['gp']);
+      ->setName('sg:generate-pages')
+      ->setDescription($this->trans('commands.sg.generate-pages.description'))
+      ->setAliases(['g']);
   }
 
   /**
    * {@inheritdoc}
-   *
-   * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $path = $input->getArgument('path');
-    $this->staticGenerator->generatePage($path, TRUE);
-    $this->getIo()->info($this->trans('commands.sg.genpage.messages.success'));
+    $start_time = time();
+    $this->staticGenerator->generateAllPages();
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
+    $this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
   }
 
 }
