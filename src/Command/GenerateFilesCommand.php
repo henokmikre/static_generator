@@ -43,7 +43,7 @@ class GenerateFilesCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-files')
       ->setDescription($this->trans('commands.sg.generate-files.description'))
-      ->setAliases(['gf']);
+      ->setAliases(['genf']);
   }
 
   /**

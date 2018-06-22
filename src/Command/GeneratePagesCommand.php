@@ -43,7 +43,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-pages')
       ->setDescription($this->trans('commands.sg.generate-pages.description'))
-      ->setAliases(['g']);
+      ->setAliases(['gen']);
   }
 
   /**
