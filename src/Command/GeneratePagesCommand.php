@@ -55,7 +55,8 @@ class GeneratePagesCommand extends ContainerAwareCommand {
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
-    $this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
+    //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
+    $this->getIo()->info('Full site static generation complete.');
   }
 
 }

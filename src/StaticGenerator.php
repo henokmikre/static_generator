@@ -158,7 +158,9 @@ class StaticGenerator implements EventSubscriberInterface {
       ->get('paths_do_not_generate');
     if (!empty($paths_do_not_generate_string)) {
       $paths_do_not_generate = explode(',', $paths_do_not_generate_string);
-      if (in_array($path, $paths_do_not_generate)) {
+      $path_alias = \Drupal::service('path.alias_manager')
+        ->getAliasByPath($path);
+      if (in_array($path_alias, $paths_do_not_generate)) {
         return;
       }
     }
@@ -405,8 +407,9 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAll() {
-    //$this->generatePages();
-    //$this->generateBlocks();
+    $this->wipeFiles();
+    $this->generatePages();
+    $this->generateBlocks();
     $this->generateFiles();
   }
 
@@ -496,7 +499,7 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateFiles() {
-    //$this->generateCodeFiles();
+    $this->generateCodeFiles();
     $this->generatePublicFiles();
   }
 
@@ -528,7 +531,7 @@ class StaticGenerator implements EventSubscriberInterface {
     //exec('chmod -R 777 /var/www/sg/private/static/sites/default/files');
 
     // rSync
-    $public_files = "rsync -zr --delete --delete-excluded --exclude-from '/var/www/sg/private/static/exclude_files.txt' --exclude 'php' /var/www/sg/docroot/sites/default/files /var/www/sg/private/static/sites/default";
+    $public_files = 'rsync -zr --delete --delete-excluded --exclude-from "/var/www/sg/private/static/exclude_files.txt" --exclude "php" --exclude ".*" /var/www/sg/docroot/sites/default/files /var/www/sg/private/static/sites/default';
     exec($public_files);
   }
 

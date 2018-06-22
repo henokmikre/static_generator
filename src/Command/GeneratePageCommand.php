@@ -50,7 +50,7 @@ class GeneratePageCommand extends ContainerAwareCommand {
          $this->trans('commands.sg.generate-page.arguments.path'),
         '/front'
       )
-      ->setAliases(['genp']);
+      ->setAliases(['gp']);
   }
 
   /**
