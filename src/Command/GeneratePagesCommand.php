@@ -51,7 +51,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $start_time = time();
-    $this->staticGenerator->generateAllPages();
+    $this->staticGenerator->generateAll();
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');

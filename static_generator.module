@@ -41,22 +41,29 @@ function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\Blo
  */
 function static_generator_entity_update(EntityInterface $entity) {
 
-  if (empty($entity->get('moderation_state'))) {
-    return;
-  }
+  // @todo need some sortof check here?
+  //  if (!isset($entity->get('moderation_state')) {
+  //    return;
+  //  }
 
-  // Pages.
+  // Node.
   if ($entity->getEntityTypeId() === 'node') {
     $path = $entity->toUrl()->toString();
     if ($entity->get('moderation_state')->value == 'published') {
       \Drupal::service('static_generator')->generatePage($path, TRUE);
+      \Drupal::service('static_generator')->generateBlocks($path, TRUE);
     }
     elseif ($entity->get('moderation_state')->value == 'archived') {
       \Drupal::service('static_generator')->deletePage($path);
     }
   }
 
-  // Blocks.
+  // Media.
+  if ($entity->getEntityTypeId() === 'media') {
+    \Drupal::service('static_generator')->generatePublicFiles();
+  }
+
+  // Block.
   /*if ($entity->getEntityTypeId() === 'block') {
     // @todo not sure if we need to handle this.
     $block_id = $entity->toUrl()->toString();

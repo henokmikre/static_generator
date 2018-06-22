@@ -4,6 +4,8 @@ namespace Drupal\static_generator;
 
 use DOMXPath;
 use DOMDocument;
+use Drupal\Core\Url;
+use Drupal\file\Entity\File;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -398,14 +400,24 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * Generate all pages.
+   * Generate all pages/blocks/files.
    *
    * @throws \Exception
    */
-  public function generateAllPages() {
+  public function generateAll() {
+    //$this->generatePages();
+    //$this->generateBlocks();
+    $this->generateFiles();
+  }
+
+  /**
+   * Generate pages.
+   *
+   * @throws \Exception
+   */
+  public function generatePages() {
     $this->generateNodes();
     $this->generatePaths();
-    $this->generateBlocks();
   }
 
   /**
@@ -439,7 +451,7 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * Generate paths.
+   * Generate config paths.
    *
    * @throws \Exception
    */
@@ -455,35 +467,90 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * Generate files.
+   * Delete all generated pages and files.
    *
    * @throws \Exception
    */
   public function wipeFiles() {
-    $dir = $this->configFactory->get('static_generator.settings')
+    $directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
-    file_unmanaged_delete_recursive($dir, $callback = NULL);
+    file_unmanaged_delete_recursive($directory, $callback = NULL);
+    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
   }
 
-    /**
-   * Generate files.
+  /**
+   * Exclude media that is not published (e.g. Draft or Archived).
+   *
+   * @throws \Exception
+   */
+  public function excludeMediaIds() {
+    $query = \Drupal::entityQuery('media');
+    $query->condition('status', 0);
+    $exclude_media_ids = $query->execute();
+    return $exclude_media_ids;
+  }
+
+  /**
+   * Generate all files.
    *
    * @throws \Exception
    */
   public function generateFiles() {
+    //$this->generateCodeFiles();
+    $this->generatePublicFiles();
+  }
 
-    // Binary files included with core, modules, and themes.
-    $core_files = 'rsync -zrv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/core /var/www/sg/private/static';
+  /**
+   * Generate public files.
+   *
+   * @throws \Exception
+   */
+  public function generatePublicFiles() {
+
+    // Files to exclude.
+    $exclude_media_ids = $this->excludeMediaIds();
+    $exclude_files = '';
+    foreach ($exclude_media_ids as $exclude_media_id) {
+      $media = \Drupal::entityTypeManager()
+        ->getStorage('media')
+        ->load($exclude_media_id);
+      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+      $file = File::load($fid);
+      $url = Url::fromUri($file->getFileUri());
+      $uri = $url->getUri();
+      $exclude_file = substr($uri, 9);
+      $exclude_files .= $exclude_file . "\r\n";
+    }
+    file_unmanaged_save_data($exclude_files, 'private://static/exclude_files.txt', FILE_EXISTS_REPLACE);
+
+    // Create files directory if it does not exist.
+    exec('mkdir -p /var/www/sg/private/static/sites/default/files');
+    //exec('chmod -R 777 /var/www/sg/private/static/sites/default/files');
+
+    // rSync
+    $public_files = "rsync -zr --delete --delete-excluded --exclude-from '/var/www/sg/private/static/exclude_files.txt' --exclude 'php' /var/www/sg/docroot/sites/default/files /var/www/sg/private/static/sites/default";
+    exec($public_files);
+  }
+
+  /**
+   * Generate core/modules/themes files.
+   *
+   * @throws \Exception
+   */
+  public function generateCodeFiles() {
+
+    // rSync core.
+    $core_files = 'rsync -zarv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/core /var/www/sg/private/static';
     exec($core_files);
-    $module_files = 'rsync -zrv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/modules /var/www/sg/private/static';
+
+    // rSync modules.
+    $module_files = 'rsync -zarv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/modules /var/www/sg/private/static';
     exec($module_files);
-    $theme_files = 'rsync -zrv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/themes /var/www/sg/private/static';
+
+    // rSync themes.
+    $theme_files = 'rsync -zarv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/themes /var/www/sg/private/static';
     exec($theme_files);
 
-    // Public files.
-    exec('mkdir -p /var/www/sg/private/static/sites/default');
-    $public_files = 'rsync -zrv --delete /var/www/sg/docroot/sites/default/files /var/www/sg/private/static/sites/default';
-    exec($public_files);
   }
 
 }
