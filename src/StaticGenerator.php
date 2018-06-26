@@ -417,9 +417,9 @@ class StaticGenerator implements EventSubscriberInterface {
    */
   public function generateAll() {
     //$this->wipeFiles();
-    //$this->generatePages();
-    //$this->generateBlocks();
-    $this->generateFiles();
+    $this->generatePages();
+    $this->generateBlocks();
+    //$this->generateFiles();
   }
 
   /**
@@ -508,7 +508,7 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateFiles() {
-    //$this->generateCodeFiles();
+    $this->generateCodeFiles();
     $this->generatePublicFiles();
   }
 
