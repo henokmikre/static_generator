@@ -1,18 +1,18 @@
 services:
+  static_generator.generate-all:
+    class: Drupal\static_generator\Command\GenerateAllCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }
+
   static_generator.generate-pages:
     class: Drupal\static_generator\Command\GeneratePagesCommand
     arguments: ['@static_generator']
     tags:
       - { name: drupal.command }
 
-  static_generator.generate-page:
-    class: Drupal\static_generator\Command\GeneratePageCommand
-    arguments: ['@static_generator']
-    tags:
-      - { name: drupal.command }
-
-  static_generator.generate-files:
-    class: Drupal\static_generator\Command\GenerateFilesCommand
+  static_generator.generate-public-files:
+    class: Drupal\static_generator\Command\GeneratePublicFilesCommand
     arguments: ['@static_generator']
     tags:
       - { name: drupal.command }

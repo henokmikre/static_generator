@@ -3,6 +3,7 @@
 namespace Drupal\static_generator\Command;
 
 use Drupal\static_generator\StaticGenerator;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
@@ -10,7 +11,7 @@ use Drupal\Console\Annotations\DrupalCommand;
 
 
 /**
- * Class GeneratePagesCommand.
+ * Class GeneratePageCommand.
  *
  * @DrupalCommand (
  *     extension="static_generator",
@@ -27,7 +28,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
   protected $staticGenerator;
 
   /**
-   * GenCommand constructor.
+   * GenPageCommand constructor.
    *
    * @param \Drupal\static_generator\StaticGenerator $static_generator
    */
@@ -43,20 +44,30 @@ class GeneratePagesCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-pages')
       ->setDescription($this->trans('commands.sg.generate-pages.description'))
-      ->setAliases(['gen']);
+      ->addArgument(
+        'path',
+        InputArgument::OPTIONAL,
+        $this->trans('commands.sg.generate-page.arguments.path')
+      )
+      ->setAliases(['gp']);
   }
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $start_time = time();
-    $this->staticGenerator->generateAll();
-    $end_time = time();
-    $elapsed_time = $end_time - $start_time;
-    $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
-    //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
-    $this->getIo()->info('Full site static generation complete.');
+    $path = $input->getArgument('path');
+    if (empty($path)) {
+      $this->staticGenerator->generatePages();
+    }
+    else {
+      $this->staticGenerator->generatePage($path);
+    }
+    $this->getIo()
+      ->info($this->trans('commands.sg.generate-page.messages.success'));
+    $this->staticGenerator->generateBlocks();
   }
 
 }

@@ -17,7 +17,7 @@ use Drupal\Console\Annotations\DrupalCommand;
  *     extensionType="module"
  * )
  */
-class GenerateFilesCommand extends ContainerAwareCommand {
+class GeneratePublicFilesCommand extends ContainerAwareCommand {
 
   /**
    * The Static Generator service.
@@ -41,9 +41,9 @@ class GenerateFilesCommand extends ContainerAwareCommand {
    */
   protected function configure() {
     $this
-      ->setName('sg:generate-files')
+      ->setName('sg:generate-public-files')
       ->setDescription($this->trans('commands.sg.generate-files.description'))
-      ->setAliases(['gf']);
+      ->setAliases(['gpf']);
   }
 
   /**
@@ -51,7 +51,7 @@ class GenerateFilesCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $start_time = time();
-    $this->staticGenerator->generateFiles();
+    $this->staticGenerator->generatePublicFiles();
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
