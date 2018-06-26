@@ -4,6 +4,7 @@ namespace Drupal\static_generator;
 
 use DOMXPath;
 use DOMDocument;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -100,6 +101,13 @@ class StaticGenerator implements EventSubscriberInterface {
   protected $configFactory;
 
   /**
+   * File system service.
+   *
+   * @var \Drupal\Core\File\FileSystemInterface
+   */
+  protected $fileSystem;
+
+  /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
@@ -121,7 +129,7 @@ class StaticGenerator implements EventSubscriberInterface {
    *   The configuration object factory.
    *
    */
-  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory) {
+  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system) {
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
@@ -130,6 +138,7 @@ class StaticGenerator implements EventSubscriberInterface {
     $this->themeManager = $theme_manager;
     $this->themeInitialization = $theme_initialization;
     $this->configFactory = $config_factory;
+    $this->fileSystem = $file_system;
   }
 
   /**
@@ -172,9 +181,9 @@ class StaticGenerator implements EventSubscriberInterface {
     // Write page files.
     $web_directory = $this->directoryFromPath($path);
     $file_name = $this->filenameFromPath($path);
-    $config_directory = $this->configFactory->get('static_generator.settings')
+    $generator_directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
-    $directory = $config_directory . $web_directory;
+    $directory = $generator_directory . $web_directory;
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
     }
@@ -407,9 +416,9 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAll() {
-    $this->wipeFiles();
-    $this->generatePages();
-    $this->generateBlocks();
+    //$this->wipeFiles();
+    //$this->generatePages();
+    //$this->generateBlocks();
     $this->generateFiles();
   }
 
@@ -499,7 +508,7 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateFiles() {
-    $this->generateCodeFiles();
+    //$this->generateCodeFiles();
     $this->generatePublicFiles();
   }
 
@@ -530,9 +539,17 @@ class StaticGenerator implements EventSubscriberInterface {
     exec('mkdir -p /var/www/sg/private/static/sites/default/files');
     //exec('chmod -R 777 /var/www/sg/private/static/sites/default/files');
 
+    $public_files_directory = $this->fileSystem->realpath('public://');
+    $generator_directory = $this->configFactory->get('static_generator.settings')
+      ->get('generator_directory');
+    $generator_directory = $this->fileSystem->realpath($generator_directory);
+
     // rSync
-    $public_files = 'rsync -zr --delete --delete-excluded --exclude-from "/var/www/sg/private/static/exclude_files.txt" --exclude "php" --exclude ".*" /var/www/sg/docroot/sites/default/files /var/www/sg/private/static/sites/default';
+    $rsync_public = $this->configFactory->get('static_generator.settings')
+      ->get('rsync_public');
+    $public_files = 'rsync -zr --delete --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
     exec($public_files);
+
   }
 
   /**
@@ -542,16 +559,22 @@ class StaticGenerator implements EventSubscriberInterface {
    */
   public function generateCodeFiles() {
 
+    $generator_directory = $this->configFactory->get('static_generator.settings')
+      ->get('generator_directory');
+    $generator_directory = $this->fileSystem->realpath($generator_directory);
+    $rsync_code = $this->configFactory->get('static_generator.settings')
+      ->get('rsync_code');
+
     // rSync core.
-    $core_files = 'rsync -zarv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/core /var/www/sg/private/static';
+    $core_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
     exec($core_files);
 
     // rSync modules.
-    $module_files = 'rsync -zarv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/modules /var/www/sg/private/static';
+    $module_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
     exec($module_files);
 
     // rSync themes.
-    $theme_files = 'rsync -zarv --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*" /var/www/sg/docroot/themes /var/www/sg/private/static';
+    $theme_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
     exec($theme_files);
 
   }

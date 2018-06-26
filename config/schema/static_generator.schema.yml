@@ -19,3 +19,8 @@ static_generator.settings:
     gen_node:
       type: string
       label: 'Node bundles to generate.'
+    rsync_public:
+          type: string
+          label: 'rSync for generating Drupal public files..'
+
+

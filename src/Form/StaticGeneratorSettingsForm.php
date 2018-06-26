@@ -92,6 +92,20 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#description' => $this->t('The static generator target directory.'),
     ];
 
+    $form['rsync_public'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('rSync public'),
+      '#default_value' => $config->get('rsync_public'),
+      '#description' => $this->t('rSync command for public files.'),
+    ];
+
+    $form['rsync_code'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('rSync code'),
+      '#default_value' => $config->get('rsync_code'),
+      '#description' => $this->t('rSync command for code files.'),
+    ];
+
     $form['paths_generate'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Paths to Generate'),
@@ -103,6 +117,19 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#title' => $this->t('Paths to not Generate'),
       '#description' => $this->t('Specify paths to not generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_do_not_generate'),
+    ];
+
+    $form['blocks_esi'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Blocks to ESI'),
+      '#description' => $this->t('Specify block ids to ESI include - comma separated, no spaces.'),
+      '#default_value' => $config->get('blocks_esi'),
+    ];
+    $form['blocks_no_esi'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Blocks to not ESI'),
+      '#description' => $this->t('Specify block ids to not ESI include - comma separated, no spaces.'),
+      '#default_value' => $config->get('blocks_no_esi'),
     ];
 
     $header = [
