@@ -4,6 +4,7 @@ namespace Drupal\static_generator;
 
 use DOMXPath;
 use DOMDocument;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
@@ -108,6 +109,13 @@ class StaticGenerator implements EventSubscriberInterface {
   protected $fileSystem;
 
   /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
@@ -129,7 +137,7 @@ class StaticGenerator implements EventSubscriberInterface {
    *   The configuration object factory.
    *
    */
-  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system) {
+  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager) {
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
@@ -139,6 +147,7 @@ class StaticGenerator implements EventSubscriberInterface {
     $this->themeInitialization = $theme_initialization;
     $this->configFactory = $config_factory;
     $this->fileSystem = $file_system;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -389,12 +398,40 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
+   * Generate a redirect page file.
+   *
+   * @param string $source_url
+   *   The source url.
+   * @param string $target_url
+   *   The target url.
+   *
+   * @throws \Exception
+   *
+   */
+  public function generateRedirect($source_url, $target_url) {
+    if (empty($source_url) || empty($target_url)) {
+      return;
+    }
+    $redirect_markup = '<html><head><meta http-equiv="refresh" content="0;URL=' . $target_url . '"></head><body><a href="' . $target_url . '">Page has moved to this location.</a></body></html>';
+    // Write redirect page files.
+    $web_directory = $this->directoryFromPath($source_url);
+    $file_name = $this->filenameFromPath($source_url);
+    $generator_directory = $this->configFactory->get('static_generator.settings')
+      ->get('generator_directory');
+    $directory = $generator_directory . $web_directory;
+    if (file_prepare_directory($directory,FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($redirect_markup,$directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    }
+  }
+
+  /**
    * Generate a block fragment file.
    *
    * @param string $block_id
    *   The block id.
    *
    * @throws \Exception
+   *
    */
   public function generateBlock($block_id) {
     if (empty($block_id)) {
@@ -405,7 +442,6 @@ class StaticGenerator implements EventSubscriberInterface {
     $dir = $this->configFactory->get('static_generator.settings')
         ->get('generator_directory') . '/esi/block';
     if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
-      //file_unmanaged_save_data($block_markup, 'private://static/esi/block/' . $block_id, FILE_EXISTS_REPLACE);
       file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
     }
   }
@@ -416,10 +452,30 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAll() {
-    //$this->wipeFiles();
-    $this->generatePages();
-    $this->generateBlocks();
-    //$this->generateFiles();
+//    $this->wipeFiles();
+//    $this->generatePages();
+//    $this->generateBlocks();
+//    $this->generateFiles();
+    $this->generateRedirects();
+  }
+
+  /**
+   * Generate redirects.
+   *
+   * @throws \Exception
+   */
+  public function generateRedirects() {
+    $storage = $this->entityTypeManager->getStorage('redirect');
+    $ids = $storage->getQuery()
+      ->execute();
+    $redirects = $storage->loadMultiple($ids);
+    foreach ($redirects as $redirect) {
+      $source_url = $redirect->getSourceUrl();
+      $target_array = $redirect->getRedirect();
+      $target_uri = $target_array['uri'];
+      $target_url = substr($target_uri,9);
+      $this->generateRedirect($source_url,$target_url);
+    }
   }
 
   /**
