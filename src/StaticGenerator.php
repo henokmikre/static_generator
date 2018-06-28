@@ -452,10 +452,10 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function generateAll() {
-//    $this->wipeFiles();
-//    $this->generatePages();
-//    $this->generateBlocks();
-//    $this->generateFiles();
+    $this->wipeFiles();
+    $this->generatePages();
+    $this->generateBlocks();
+    $this->generateFiles();
     $this->generateRedirects();
   }
 
