@@ -13,9 +13,12 @@ static_generator.settings:
     paths_do_not_generate:
       type: string
       label: 'Paths to not generate.'
-    gen_block:
+    blocks_esi:
       type: string
-      label: 'Block bundles to generate.'
+      label: 'Block ids to generate.'
+    blocks_no_esi:
+      type: string
+      label: 'Block ids to not generate.'
     gen_node:
       type: string
       label: 'Node bundles to generate.'

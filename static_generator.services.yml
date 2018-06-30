@@ -3,8 +3,7 @@ services:
   static_generator:
     class: Drupal\static_generator\StaticGenerator
     tags:
-      - { name: static_generator, priority: 200 }
-      - { name: event_subscriber }
+      - { name: static_generator, priority: 1000 }
     arguments: ['@renderer', '@current_route_match', '@class_resolver', '@request_stack', '@http_kernel', '@theme.manager', '@theme.initialization', '@config.factory', '@file_system', '@entity_type.manager']
 
 #  placeholder_strategy.static_generator:

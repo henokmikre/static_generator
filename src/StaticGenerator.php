@@ -4,6 +4,7 @@ namespace Drupal\static_generator;
 
 use DOMXPath;
 use DOMDocument;
+use Drupal\block\Entity\Block;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Url;
@@ -21,22 +22,13 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
-use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Static Generator Service.
  *
  * Manages static generation process.
  */
-class StaticGenerator implements EventSubscriberInterface {
-
-  /**
-   * File permission check -- File is readable.
-   */
-  const BLOCK_IDS_ESI = [
-    'bartik_branding',
-    //'views_block__content_recent_block_1',
-  ];
+class StaticGenerator {
 
   /**
    * The renderer.
@@ -151,11 +143,72 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * {@inheritdoc}
+   * Generate all pages/blocks/files.
+   *
+   * @throws \Exception
    */
-  public static function getSubscribedEvents() {
-    //    $events[KernelEvents::REQUEST][] = array('onKernelRequestPathResolve', 100);
-    //    return $events;
+  public function generateAll() {
+    $this->wipeFiles();
+    $this->generatePages();
+    $this->generateBlocks();
+    $this->generateFiles();
+    $this->generateRedirects();
+  }
+
+  /**
+   * Generate pages.
+   *
+   * @throws \Exception
+   */
+  public function generatePages() {
+    $this->generateNodes();
+    $this->generatePaths();
+  }
+
+  /**
+   * Generate nodes.
+   *
+   * @return int
+   *   The number of pages generated.
+   *
+   * @throws \Exception
+   */
+  public function generateNodes() {
+
+    // Get bundles to generate from config.
+    $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
+      ->get('gen_node');
+    $gen_node_bundles = explode(',', $gen_node_bundles_string);
+
+    // Generate each bundle
+    foreach ($gen_node_bundles as $bundle) {
+      $query = \Drupal::entityQuery('node');
+      $query->condition('status', 1);
+      $query->condition('type', $bundle);
+      $entity_ids = $query->execute();
+      foreach ($entity_ids as $entity_id) {
+        //$node = \Drupal::entityTypeManager()->getStorage('node')->load($entity_id);
+        //$node->set('moderation_state', 'published');
+        //$node->save();
+        $this->generatePage('/node/' . $entity_id);
+      }
+    }
+  }
+
+  /**
+   * Generate config paths.
+   *
+   * @throws \Exception
+   */
+  public function generatePaths() {
+    $paths_string = $this->configFactory->get('static_generator.settings')
+      ->get('paths_generate');
+    if (!empty($paths_string)) {
+      $paths = explode(',', $paths_string);
+      foreach ($paths as $path) {
+        $this->generatePage($path);
+      }
+    }
   }
 
   /**
@@ -190,11 +243,183 @@ class StaticGenerator implements EventSubscriberInterface {
     // Write page files.
     $web_directory = $this->directoryFromPath($path);
     $file_name = $this->filenameFromPath($path);
-    $generator_directory = $this->configFactory->get('static_generator.settings')
-      ->get('generator_directory');
-    $directory = $generator_directory . $web_directory;
+    $directory = $this->generatorDirectory() . $web_directory;
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    }
+  }
+
+  /**
+   * Generate all block fragment files.
+   *
+   * @throws \Exception
+   */
+  public function generateBlocks() {
+    $blocks_esi = $this->configFactory->get('static_generator.settings')
+      ->get('blocks_esi');
+    if (empty($blocks_esi)) {
+      // Get all block id's
+      $storage = $this->entityTypeManager->getStorage('block');
+      $ids = $storage->getQuery()
+        ->execute();
+      $blocks_esi = $storage->loadMultiple($ids);
+    }
+    else {
+      $blocks_esi = explode(',', $blocks_esi);
+    }
+    foreach ($blocks_esi as $block_id) {
+      $this->generateBlock($block_id);
+    }
+  }
+
+  /**
+   * Generate a block fragment file.
+   *
+   * @param string $block_id
+   *   The block id.
+   *
+   * @throws \Exception
+   *
+   */
+  public function generateBlock($block_id) {
+    if (empty($block_id)) {
+      return;
+    }
+    if ($block_id instanceof Block) {
+      $block_id = $block_id->id();
+    }
+
+    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
+      ->get('blocks_no_esi');
+    $blocks_no_esi = explode(',', $blocks_no_esi);
+    if (in_array($block_id, $blocks_no_esi)) {
+      return;
+    }
+    $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
+    $block_markup = $this->renderer->renderRoot($block_render_array);
+    $dir = $this->generatorDirectory() . '/esi/block';
+    if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
+    }
+  }
+
+  /**
+   * Generate all files.
+   *
+   * @throws \Exception
+   */
+  public function generateFiles() {
+    $this->generateCodeFiles();
+    $this->generatePublicFiles();
+  }
+
+  /**
+   * Generate public files.
+   *
+   * @throws \Exception
+   */
+  public function generatePublicFiles() {
+
+    // Files to exclude.
+    $exclude_media_ids = $this->excludeMediaIds();
+    $exclude_files = '';
+    foreach ($exclude_media_ids as $exclude_media_id) {
+      $media = \Drupal::entityTypeManager()
+        ->getStorage('media')
+        ->load($exclude_media_id);
+      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+      $file = File::load($fid);
+      $url = Url::fromUri($file->getFileUri());
+      $uri = $url->getUri();
+      $exclude_file = substr($uri, 9);
+      $exclude_files .= $exclude_file . "\r\n";
+    }
+    file_unmanaged_save_data($exclude_files, 'private://static/exclude_files.txt', FILE_EXISTS_REPLACE);
+
+    // Create files directory if it does not exist.
+    $public_files_directory = $this->fileSystem->realpath('public://');
+    $generator_directory = $this->generatorDirectory(TRUE);
+    exec('mkdir -p ' . $generator_directory . '/sites/default/files');
+
+    // rSync
+    $rsync_public = $this->configFactory->get('static_generator.settings')
+      ->get('rsync_public');
+    $public_files = 'rsync -zr --delete --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
+    exec($public_files);
+
+  }
+
+  /**
+   * Generate core/modules/themes files.
+   *
+   * @throws \Exception
+   */
+  public function generateCodeFiles() {
+
+    $rsync_code = $this->configFactory->get('static_generator.settings')
+      ->get('rsync_code');
+    $generator_directory = $this->generatorDirectory(TRUE);
+
+    // rSync core.
+    $core_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
+    exec($core_files);
+
+    // rSync modules.
+    $module_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
+    exec($module_files);
+
+    // rSync themes.
+    $theme_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
+    exec($theme_files);
+
+  }
+
+  /**
+   * Generate redirects - requires redirect module.
+   *
+   * @throws \Exception
+   */
+  public function generateRedirects() {
+    if (\Drupal::moduleHandler()->moduleExists('redirect')) {
+      $storage = $this->entityTypeManager->getStorage('redirect');
+      $ids = $storage->getQuery()
+        ->execute();
+      $redirects = $storage->loadMultiple($ids);
+      foreach ($redirects as $redirect) {
+        $source_url = $redirect->getSourceUrl();
+        $target_array = $redirect->getRedirect();
+        $target_uri = $target_array['uri'];
+        $target_url = substr($target_uri, 9);
+        $this->generateRedirect($source_url, $target_url);
+      }
+    }
+  }
+
+  /**
+   * Generate a redirect page file.
+   *
+   * @param string $source_url
+   *   The source url.
+   * @param string $target_url
+   *   The target url.
+   *
+   * @throws \Exception
+   *
+   */
+  public function generateRedirect($source_url, $target_url) {
+    if (empty($source_url) || empty($target_url)) {
+      return;
+    }
+
+    // Get the redirect markup.
+    $redirect_markup = '<html><head><meta http-equiv="refresh" content="0;URL=' . $target_url . '"></head><body><a href="' . $target_url . '">Page has moved to this location.</a></body></html>';
+
+    // Write redirect page files.
+    $web_directory = $this->directoryFromPath($source_url);
+    $file_name = $this->filenameFromPath($source_url);
+    $directory = $this->generatorDirectory() . $web_directory;
+    if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($redirect_markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
     }
   }
 
@@ -263,9 +488,7 @@ class StaticGenerator implements EventSubscriberInterface {
   public function deletePage($path) {
     $web_directory = $this->directoryFromPath($path);
     $file_name = $this->filenameFromPath($path);
-    $config_directory = $this->configFactory->get('static_generator.settings')
-      ->get('generator_directory');
-    file_unmanaged_delete($config_directory . $web_directory . '/' . $file_name);
+    file_unmanaged_delete($this->generatorDirectory() . $web_directory . '/' . $file_name);
   }
 
   /**
@@ -339,12 +562,26 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function injectESIs($markup, $generate_blocks = FALSE) {
+
+    // Find all of the blocks in the markup.
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
-    $classname = 'block';
-    $blocks = $finder->query("//div[contains(@class, '$classname')]");
+    $blocks = $finder->query("//div[contains(@class, 'block')]");
+
+    // Get list of blocks to ESI and not to ESI.
+    $blocks_esi = $this->configFactory->get('static_generator.settings')
+      ->get('blocks_esi');
+    $blocks_esi = explode(',',$blocks_esi);
+    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
+      ->get('blocks_no_esi');
+    $blocks_no_esi = explode(',',$blocks_no_esi);
+
+    // Replace each block with ESI if it is on the list of ESI blocks, or if
+    // ESI block list is empty. Skip any blocks on the "no ESI" list.
     foreach ($blocks as $block) {
+
+      // Construct block id.
       $id = $block->getAttribute('id');
       if ($id == '') {
         continue;
@@ -354,31 +591,30 @@ class StaticGenerator implements EventSubscriberInterface {
         //str_replace('views_block_', 'views_block__', $block_id);
         $block_id = 'views_block__' . substr($block_id, 12);
       }
-      $block_ids_esi = [
-        'bartik_branding',
-        'views_block__content_recent_block_1',
-      ];
-      if (!in_array($block_id, $block_ids_esi)) {
+
+      // Replace block if ESI blocks is empty or if block id is in ESI blocks.
+      if (!empty($blocks_esi) && !in_array($block_id, $blocks_esi)) {
         continue;
       }
 
+      // Do not replace block if listed in "no ESI blocks".
+      if (in_array($block_id, $blocks_no_esi)) {
+        continue;
+      }
+
+      // Conditionally generate block.
       if ($generate_blocks) {
         $this->generateBlock($block_id);
       }
 
-      $include_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
-      $include = $dom->createElement('span', $include_markup);
-      $block->parentNode->replaceChild($include, $block);
+      // Create the ESI and then replace the block with the ESI.
+      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
+      $esi = $dom->createElement('span', $esi_markup);
+      $block->parentNode->replaceChild($esi, $block);
 
-      $dom->validateOnParse = FALSE;
-      $xp = new DOMXPath($dom);
-      $col = $xp->query('//div[ @id="toolbar-administration" ]');
-      if (!empty($col)) {
-        foreach ($col as $node) {
-          $node->parentNode->removeChild($node);
-        }
-      }
     }
+
+    // Return markup with ESI's.
     $markup_esi = $dom->saveHTML();
     $markup_esi = str_replace('&lt;', '<', $markup_esi);
     $markup_esi = str_replace('&gt;', '>', $markup_esi);
@@ -387,151 +623,20 @@ class StaticGenerator implements EventSubscriberInterface {
   }
 
   /**
-   * Generate all block fragment files.
+   * Get generator directory.
    *
-   * @throws \Exception
+   * @param bool $real
+   *   Get the real path.
+   *
+   * @return string
    */
-  public function generateBlocks() {
-    foreach ($this::BLOCK_IDS_ESI as $block_id) {
-      $this->generateBlock($block_id);
-    }
-  }
-
-  /**
-   * Generate a redirect page file.
-   *
-   * @param string $source_url
-   *   The source url.
-   * @param string $target_url
-   *   The target url.
-   *
-   * @throws \Exception
-   *
-   */
-  public function generateRedirect($source_url, $target_url) {
-    if (empty($source_url) || empty($target_url)) {
-      return;
-    }
-    $redirect_markup = '<html><head><meta http-equiv="refresh" content="0;URL=' . $target_url . '"></head><body><a href="' . $target_url . '">Page has moved to this location.</a></body></html>';
-    // Write redirect page files.
-    $web_directory = $this->directoryFromPath($source_url);
-    $file_name = $this->filenameFromPath($source_url);
+  public function generatorDirectory($real = FALSE) {
     $generator_directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
-    $directory = $generator_directory . $web_directory;
-    if (file_prepare_directory($directory,FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($redirect_markup,$directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    if ($real) {
+      $generator_directory = $this->fileSystem->realpath($generator_directory);
     }
-  }
-
-  /**
-   * Generate a block fragment file.
-   *
-   * @param string $block_id
-   *   The block id.
-   *
-   * @throws \Exception
-   *
-   */
-  public function generateBlock($block_id) {
-    if (empty($block_id)) {
-      return;
-    }
-    $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
-    $block_markup = $this->renderer->renderRoot($block_render_array);
-    $dir = $this->configFactory->get('static_generator.settings')
-        ->get('generator_directory') . '/esi/block';
-    if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
-    }
-  }
-
-  /**
-   * Generate all pages/blocks/files.
-   *
-   * @throws \Exception
-   */
-  public function generateAll() {
-    $this->wipeFiles();
-    $this->generatePages();
-    $this->generateBlocks();
-    $this->generateFiles();
-    $this->generateRedirects();
-  }
-
-  /**
-   * Generate redirects.
-   *
-   * @throws \Exception
-   */
-  public function generateRedirects() {
-    $storage = $this->entityTypeManager->getStorage('redirect');
-    $ids = $storage->getQuery()
-      ->execute();
-    $redirects = $storage->loadMultiple($ids);
-    foreach ($redirects as $redirect) {
-      $source_url = $redirect->getSourceUrl();
-      $target_array = $redirect->getRedirect();
-      $target_uri = $target_array['uri'];
-      $target_url = substr($target_uri,9);
-      $this->generateRedirect($source_url,$target_url);
-    }
-  }
-
-  /**
-   * Generate pages.
-   *
-   * @throws \Exception
-   */
-  public function generatePages() {
-    $this->generateNodes();
-    $this->generatePaths();
-  }
-
-  /**
-   * Generate nodes.
-   *
-   * @return int
-   *   The number of pages generated.
-   *
-   * @throws \Exception
-   */
-  public function generateNodes() {
-
-    // Get bundles to generate from config.
-    $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
-      ->get('gen_node');
-    $gen_node_bundles = explode(',', $gen_node_bundles_string);
-
-    // Generate each bundle
-    foreach ($gen_node_bundles as $bundle) {
-      $query = \Drupal::entityQuery('node');
-      $query->condition('status', 1);
-      $query->condition('type', $bundle);
-      $entity_ids = $query->execute();
-      foreach ($entity_ids as $entity_id) {
-        //$node = \Drupal::entityTypeManager()->getStorage('node')->load($entity_id);
-        //$node->set('moderation_state', 'published');
-        //$node->save();
-        $this->generatePage('/node/' . $entity_id);
-      }
-    }
-  }
-
-  /**
-   * Generate config paths.
-   *
-   * @throws \Exception
-   */
-  public function generatePaths() {
-    $paths_string = $this->configFactory->get('static_generator.settings')
-      ->get('paths_generate');
-    if (!empty($paths_string)) {
-      $paths = explode(',', $paths_string);
-      foreach ($paths as $path) {
-        $this->generatePage($path);
-      }
-    }
+    return $generator_directory;
   }
 
   /**
@@ -540,10 +645,9 @@ class StaticGenerator implements EventSubscriberInterface {
    * @throws \Exception
    */
   public function wipeFiles() {
-    $directory = $this->configFactory->get('static_generator.settings')
-      ->get('generator_directory');
-    file_unmanaged_delete_recursive($directory, $callback = NULL);
-    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+    $generator_directory = $this->generatorDirectory(TRUE);
+    file_unmanaged_delete_recursive($generator_directory, $callback = NULL);
+    file_prepare_directory($generator_directory, FILE_CREATE_DIRECTORY);
   }
 
   /**
@@ -556,83 +660,6 @@ class StaticGenerator implements EventSubscriberInterface {
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();
     return $exclude_media_ids;
-  }
-
-  /**
-   * Generate all files.
-   *
-   * @throws \Exception
-   */
-  public function generateFiles() {
-    $this->generateCodeFiles();
-    $this->generatePublicFiles();
-  }
-
-  /**
-   * Generate public files.
-   *
-   * @throws \Exception
-   */
-  public function generatePublicFiles() {
-
-    // Files to exclude.
-    $exclude_media_ids = $this->excludeMediaIds();
-    $exclude_files = '';
-    foreach ($exclude_media_ids as $exclude_media_id) {
-      $media = \Drupal::entityTypeManager()
-        ->getStorage('media')
-        ->load($exclude_media_id);
-      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
-      $file = File::load($fid);
-      $url = Url::fromUri($file->getFileUri());
-      $uri = $url->getUri();
-      $exclude_file = substr($uri, 9);
-      $exclude_files .= $exclude_file . "\r\n";
-    }
-    file_unmanaged_save_data($exclude_files, 'private://static/exclude_files.txt', FILE_EXISTS_REPLACE);
-
-    // Create files directory if it does not exist.
-    exec('mkdir -p /var/www/sg/private/static/sites/default/files');
-    //exec('chmod -R 777 /var/www/sg/private/static/sites/default/files');
-
-    $public_files_directory = $this->fileSystem->realpath('public://');
-    $generator_directory = $this->configFactory->get('static_generator.settings')
-      ->get('generator_directory');
-    $generator_directory = $this->fileSystem->realpath($generator_directory);
-
-    // rSync
-    $rsync_public = $this->configFactory->get('static_generator.settings')
-      ->get('rsync_public');
-    $public_files = 'rsync -zr --delete --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
-    exec($public_files);
-
-  }
-
-  /**
-   * Generate core/modules/themes files.
-   *
-   * @throws \Exception
-   */
-  public function generateCodeFiles() {
-
-    $generator_directory = $this->configFactory->get('static_generator.settings')
-      ->get('generator_directory');
-    $generator_directory = $this->fileSystem->realpath($generator_directory);
-    $rsync_code = $this->configFactory->get('static_generator.settings')
-      ->get('rsync_code');
-
-    // rSync core.
-    $core_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
-    exec($core_files);
-
-    // rSync modules.
-    $module_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
-    exec($module_files);
-
-    // rSync themes.
-    $theme_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
-    exec($theme_files);
-
   }
 
 }
@@ -653,3 +680,12 @@ class StaticGenerator implements EventSubscriberInterface {
 //    $entity_type_id = $node->getEntityTypeId();
 //$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
 
+// Remove admin menu.
+//      $dom->validateOnParse = FALSE;
+//      $xp = new DOMXPath($dom);
+//      $col = $xp->query('//div[ @id="toolbar-administration" ]');
+//      if (!empty($col)) {
+//        foreach ($col as $node) {
+//          $node->parentNode->removeChild($node);
+//        }
+//      }

@@ -122,7 +122,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $form['blocks_esi'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Blocks to ESI'),
-      '#description' => $this->t('Specify block ids to ESI include - comma separated, no spaces.'),
+      '#description' => $this->t('Specify block ids to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
       '#default_value' => $config->get('blocks_esi'),
     ];
     $form['blocks_no_esi'] = [
