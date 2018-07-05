@@ -151,7 +151,7 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function generateAll() {
-    $elapsed_time = $this->wipeFiles();
+    $elapsed_time = $this->deleteAll();
     $elapsed_time += $this->generatePages();
     $elapsed_time += $this->generateFiles();
     return $elapsed_time;
@@ -167,8 +167,8 @@ class StaticGenerator {
    */
   public function generatePages() {
     \Drupal::logger('static_generator')->notice('Begin generatePages()');
-    //$elapsed_time = $this->wipePages();
-    $elapsed_time = $this->generateNodes();
+    $elapsed_time = $this->deletePages();
+    $elapsed_time += $this->generateNodes();
     $elapsed_time += $this->generatePaths();
     $elapsed_time += $this->generateBlocks();
     $elapsed_time += $this->generateRedirects();
@@ -749,7 +749,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function wipeFiles() {
+  public function deleteAll() {
     $start_time = time();
 
     $generator_directory = $this->generatorDirectory(TRUE);
@@ -759,38 +759,48 @@ class StaticGenerator {
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
+    \Drupal::logger('static_generator')
+      ->notice('deleteAll() elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
 
   /**
-   * Delete all generated pages.  Deletes the pages but leaves the files.
+   * Delete all generated pages.  Deletes all generated *.html files,
+   * and ESI include files.
    *
    * @return int
    *   Execution time in seconds.
    *
    * @throws \Exception
    */
-  public function wipePages() {
+  public function deletePages() {
     $start_time = time();
     $generator_directory = $this->generatorDirectory(TRUE);
 
     // Delete .html files
-    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
-    foreach ($files as $file) {
-      file_unmanaged_delete_recursive($file, $callback = NULL);
-    }
+//    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
+//    foreach ($files as $file) {
+//      file_unmanaged_delete_recursive($file, $callback = NULL);
+//    }
 
-    // Delete directories
     $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
-      file_unmanaged_delete_recursive($file, $callback = NULL);
+      $filename = $file->filename;
+      $html_file = substr($filename,-strlen('html')) == 'html';
+      if($html_file) {
+        file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+      }  else {
+        if (!in_array($filename, ['core', 'modules', 'themes', 'sites'])) {
+          file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+        }
+      }
     }
 
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     \Drupal::logger('static_generator')
-      ->notice('wipePages() elapsed time: ' . $elapsed_time . ' seconds.');
+      ->notice('deletePages() elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
 
