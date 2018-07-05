@@ -60,14 +60,15 @@ class GeneratePagesCommand extends ContainerAwareCommand {
   protected function execute(InputInterface $input, OutputInterface $output) {
     $path = $input->getArgument('path');
     if (empty($path)) {
-      $this->staticGenerator->generatePages();
+      $elapsed_time = $this->staticGenerator->generatePages();
     }
     else {
-      $this->staticGenerator->generatePage($path);
+      $elapsed_time = $this->staticGenerator->generatePage($path);
+      $this->staticGenerator->generateBlocks();
     }
+    $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
     $this->getIo()
       ->info($this->trans('commands.sg.generate-page.messages.success'));
-    $this->staticGenerator->generateBlocks();
   }
 
 }

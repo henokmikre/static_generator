@@ -65,6 +65,24 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('paths_do_not_generate', $paths_do_not_generate)
       ->save();
 
+    // Blocks - ESI.
+    $blocks_esi = $form_state->getValue('blocks_esi');
+    $this->config('static_generator.settings')
+      ->set('blocks_esi', $blocks_esi)
+      ->save();
+
+    // Blocks - No ESI.
+    $blocks_no_esi = $form_state->getValue('blocks_no_esi');
+    $this->config('static_generator.settings')
+      ->set('blocks_no_esi', $blocks_no_esi)
+      ->save();
+
+    // Verbose Logging
+    $verbose_logging = $form_state->getValue('verbose_logging');
+    $this->config('static_generator.settings')
+      ->set('verbose_logging', $verbose_logging)
+      ->save();
+
   }
 
   /**
@@ -193,6 +211,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
         ],
       ];
     }
+    $form['verbose_logging'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Verbose logging'),
+      '#default_value' => $config->get('verbose_logging'),
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 

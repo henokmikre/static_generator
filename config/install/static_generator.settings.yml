@@ -2,4 +2,5 @@ generator_directory: 'private://static'
 rsync_public: '--exclude "php" --exclude ".*"'
 rsync_code: '--include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*"'
 blocks_esi:
-blocks_no_esi: 'bartik_branding'
+blocks_no_esi:
+verbose_logging: false

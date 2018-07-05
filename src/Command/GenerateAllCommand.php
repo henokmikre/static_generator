@@ -50,10 +50,7 @@ class GenerateAllCommand extends ContainerAwareCommand {
    * {@inheritdoc}
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $start_time = time();
-    $this->staticGenerator->generateAll();
-    $end_time = time();
-    $elapsed_time = $end_time - $start_time;
+    $elapsed_time = $this->staticGenerator->generateAll();
     $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
     //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
     $this->getIo()->info('Full site static generation complete.');

@@ -9,7 +9,6 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -127,7 +126,8 @@ class StaticGenerator {
    *   The theme initialization.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The configuration object factory.
-   *
+   * @param \Drupal\Core\File\FileSystemInterface $file_system
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    */
   public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager) {
     $this->renderer = $renderer;
@@ -143,37 +143,50 @@ class StaticGenerator {
   }
 
   /**
-   * Generate all pages/blocks/files.
+   * Generate all pages and files.
+   *
+   * @return int
+   *   Execution time in seconds.
    *
    * @throws \Exception
    */
   public function generateAll() {
-    $this->wipeFiles();
-    $this->generatePages();
-    $this->generateBlocks();
-    $this->generateFiles();
-    $this->generateRedirects();
+    $elapsed_time = $this->wipeFiles();
+    $elapsed_time += $this->generatePages();
+    $elapsed_time += $this->generateFiles();
+    return $elapsed_time;
   }
 
   /**
    * Generate pages.
    *
+   * @return int
+   *   Execution time in seconds.
+   *
    * @throws \Exception
    */
   public function generatePages() {
-    $this->generateNodes();
-    $this->generatePaths();
+    \Drupal::logger('static_generator')->notice('Begin generatePages()');
+    //$elapsed_time = $this->wipePages();
+    $elapsed_time = $this->generateNodes();
+    $elapsed_time += $this->generatePaths();
+    $elapsed_time += $this->generateBlocks();
+    $elapsed_time += $this->generateRedirects();
+    \Drupal::logger('static_generator')
+      ->notice('End generatePages(), elapsed time: ' . $elapsed_time . ' seconds.');
+    return $elapsed_time;
   }
 
   /**
    * Generate nodes.
    *
    * @return int
-   *   The number of pages generated.
+   *   Execution time in seconds.
    *
    * @throws \Exception
    */
   public function generateNodes() {
+    $elapsed_time_total = 0;
 
     // Get bundles to generate from config.
     $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
@@ -182,25 +195,42 @@ class StaticGenerator {
 
     // Generate each bundle
     foreach ($gen_node_bundles as $bundle) {
+      $start_time = time();
       $query = \Drupal::entityQuery('node');
       $query->condition('status', 1);
       $query->condition('type', $bundle);
+      //$query->range(1,50);
+
       $entity_ids = $query->execute();
       foreach ($entity_ids as $entity_id) {
-        //$node = \Drupal::entityTypeManager()->getStorage('node')->load($entity_id);
-        //$node->set('moderation_state', 'published');
-        //$node->save();
+        //        $node = \Drupal::entityTypeManager()
+        //          ->getStorage('node')
+        //          ->load($entity_id);
+        //        $node->set('moderation_state', 'published');
+        //        $node->save();
         $this->generatePage('/node/' . $entity_id);
       }
+      // Elapsed time.
+      $end_time = time();
+      $elapsed_time = $end_time - $start_time;
+      \Drupal::logger('static_generator')
+        ->notice('generateNodes() bundle: ' . $bundle . ' , elapsed time: ' . $elapsed_time . ' seconds.');
+      $elapsed_time_total += $elapsed_time;
     }
+    return $elapsed_time_total;
   }
 
   /**
-   * Generate config paths.
+   * Generate paths specified in settings.
+   *
+   * @return int
+   *   Execution time in seconds.
    *
    * @throws \Exception
    */
   public function generatePaths() {
+    $start_time = time();
+
     $paths_string = $this->configFactory->get('static_generator.settings')
       ->get('paths_generate');
     if (!empty($paths_string)) {
@@ -209,6 +239,13 @@ class StaticGenerator {
         $this->generatePage($path);
       }
     }
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    \Drupal::logger('static_generator')
+      ->notice('generatePaths() elapsed time: ' . $elapsed_time . ' seconds.');
+    return $elapsed_time;
   }
 
   /**
@@ -252,9 +289,14 @@ class StaticGenerator {
   /**
    * Generate all block fragment files.
    *
+   * @return int
+   *   Execution time in seconds.
+   *
    * @throws \Exception
    */
   public function generateBlocks() {
+    $start_time = time();
+
     $blocks_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_esi');
     if (empty($blocks_esi)) {
@@ -270,6 +312,15 @@ class StaticGenerator {
     foreach ($blocks_esi as $block_id) {
       $this->generateBlock($block_id);
     }
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateBlocks() elapsed time: ' . $elapsed_time . ' seconds.');
+    }
+    return $elapsed_time;
   }
 
   /**
@@ -279,7 +330,6 @@ class StaticGenerator {
    *   The block id.
    *
    * @throws \Exception
-   *
    */
   public function generateBlock($block_id) {
     if (empty($block_id)) {
@@ -289,12 +339,14 @@ class StaticGenerator {
       $block_id = $block_id->id();
     }
 
+    // Return if block on "no esi" in settings.
     $blocks_no_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_no_esi');
     $blocks_no_esi = explode(',', $blocks_no_esi);
     if (in_array($block_id, $blocks_no_esi)) {
       return;
     }
+
     $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
     $block_markup = $this->renderer->renderRoot($block_render_array);
     $dir = $this->generatorDirectory() . '/esi/block';
@@ -306,19 +358,30 @@ class StaticGenerator {
   /**
    * Generate all files.
    *
+   * @return int
+   *   Execution time in seconds.
+   *
    * @throws \Exception
    */
   public function generateFiles() {
-    $this->generateCodeFiles();
-    $this->generatePublicFiles();
+    \Drupal::logger('static_generator')->notice('Begin generateFiles()');
+    $elapsed_time = $this->generateCodeFiles();
+    $elapsed_time += $this->generatePublicFiles();
+    \Drupal::logger('static_generator')
+      ->notice('End generateFiles(), elapsed time: ' . $elapsed_time . ' seconds.');
+    return $elapsed_time;
   }
 
   /**
    * Generate public files.
    *
+   * @return int
+   *   Execution time in seconds.
+   *
    * @throws \Exception
    */
   public function generatePublicFiles() {
+    $start_time = time();
 
     // Files to exclude.
     $exclude_media_ids = $this->excludeMediaIds();
@@ -347,14 +410,26 @@ class StaticGenerator {
     $public_files = 'rsync -zr --delete --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
     exec($public_files);
 
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generatePublicFiles() elapsed time: ' . $elapsed_time . ' seconds.');
+    }
+    return $elapsed_time;
   }
 
   /**
-   * Generate core/modules/themes files.
+   * Generate files for core, modules, and themes.
+   *
+   * @return int
+   *   Execution time in seconds.
    *
    * @throws \Exception
    */
   public function generateCodeFiles() {
+    $start_time = time();
 
     $rsync_code = $this->configFactory->get('static_generator.settings')
       ->get('rsync_code');
@@ -372,14 +447,27 @@ class StaticGenerator {
     $theme_files = 'rsync -zarv --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
     exec($theme_files);
 
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateCodeFiles() elapsed time: ' . $elapsed_time . ' seconds.');
+    }
+    return $elapsed_time;
   }
 
   /**
    * Generate redirects - requires redirect module.
    *
+   * @return int
+   *   Execution time in seconds.
+   *
    * @throws \Exception
    */
   public function generateRedirects() {
+    $start_time = time();
+
     if (\Drupal::moduleHandler()->moduleExists('redirect')) {
       $storage = $this->entityTypeManager->getStorage('redirect');
       $ids = $storage->getQuery()
@@ -393,6 +481,11 @@ class StaticGenerator {
         $this->generateRedirect($source_url, $target_url);
       }
     }
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    return $elapsed_time;
   }
 
   /**
@@ -475,13 +568,10 @@ class StaticGenerator {
   }
 
   /**
-   * Generate markup for a single page.
+   * Delete a single page.
    *
    * @param String $path
    *   The page's path.
-   *
-   * @return boolean
-   *   A file was deleted.
    *
    * @throws \Exception
    */
@@ -572,10 +662,10 @@ class StaticGenerator {
     // Get list of blocks to ESI and not to ESI.
     $blocks_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_esi');
-    $blocks_esi = explode(',',$blocks_esi);
+    $blocks_esi = explode(',', $blocks_esi);
     $blocks_no_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_no_esi');
-    $blocks_no_esi = explode(',',$blocks_no_esi);
+    $blocks_no_esi = explode(',', $blocks_no_esi);
 
     // Replace each block with ESI if it is on the list of ESI blocks, or if
     // ESI block list is empty. Skip any blocks on the "no ESI" list.
@@ -623,31 +713,85 @@ class StaticGenerator {
   }
 
   /**
+   * Get verbose logging setting.
+   *
+   * @return boolean;
+   */
+  public function verboseLogging() {
+    $verbose_logging = $this->configFactory->get('static_generator.settings')
+      ->get('verbose_logging');
+    return $verbose_logging;
+  }
+
+  /**
    * Get generator directory.
    *
-   * @param bool $real
+   * @param bool $real_path
    *   Get the real path.
    *
    * @return string
    */
-  public function generatorDirectory($real = FALSE) {
+  public function generatorDirectory($real_path = FALSE) {
     $generator_directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
-    if ($real) {
+    if ($real_path) {
       $generator_directory = $this->fileSystem->realpath($generator_directory);
     }
     return $generator_directory;
   }
 
   /**
-   * Delete all generated pages and files.
+   * Delete all generated pages and files.  This is done by deleting the top
+   * level directory and then re-creating it.
+   *
+   * @return int
+   *   Execution time in seconds.
    *
    * @throws \Exception
    */
   public function wipeFiles() {
+    $start_time = time();
+
     $generator_directory = $this->generatorDirectory(TRUE);
     file_unmanaged_delete_recursive($generator_directory, $callback = NULL);
     file_prepare_directory($generator_directory, FILE_CREATE_DIRECTORY);
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    return $elapsed_time;
+  }
+
+  /**
+   * Delete all generated pages.  Deletes the pages but leaves the files.
+   *
+   * @return int
+   *   Execution time in seconds.
+   *
+   * @throws \Exception
+   */
+  public function wipePages() {
+    $start_time = time();
+    $generator_directory = $this->generatorDirectory(TRUE);
+
+    // Delete .html files
+    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
+    foreach ($files as $file) {
+      file_unmanaged_delete_recursive($file, $callback = NULL);
+    }
+
+    // Delete directories
+    $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
+    foreach ($files as $file) {
+      file_unmanaged_delete_recursive($file, $callback = NULL);
+    }
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    \Drupal::logger('static_generator')
+      ->notice('wipePages() elapsed time: ' . $elapsed_time . ' seconds.');
+    return $elapsed_time;
   }
 
   /**
@@ -655,7 +799,8 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function excludeMediaIds() {
+  public
+  function excludeMediaIds() {
     $query = \Drupal::entityQuery('media');
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();

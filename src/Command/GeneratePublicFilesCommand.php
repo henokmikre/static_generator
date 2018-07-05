@@ -50,12 +50,10 @@ class GeneratePublicFilesCommand extends ContainerAwareCommand {
    * {@inheritdoc}
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $start_time = time();
-    $this->staticGenerator->generatePublicFiles();
-    $end_time = time();
-    $elapsed_time = $end_time - $start_time;
+    $elapsed_time = $this->staticGenerator->generatePublicFiles();
     $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
-    $this->getIo()->info($this->trans('commands.sg.generate-files.messages.success'));
+    //$this->getIo()->info($this->trans('commands.sg.generate-files.messages.success'));
+    $this->getIo()->info($this->trans('Public files generation complete.'));
   }
 
 }
