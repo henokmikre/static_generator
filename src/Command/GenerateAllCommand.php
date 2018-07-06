@@ -3,6 +3,7 @@
 namespace Drupal\static_generator\Command;
 
 use Drupal\static_generator\StaticGenerator;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
@@ -43,17 +44,26 @@ class GenerateAllCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-all')
       ->setDescription($this->trans('commands.sg.generate-pages.description'))
+      ->addArgument(
+        'limit',
+        InputArgument::OPTIONAL,
+        $this->trans('commands.sg.generate-all.arguments.limit'))
       ->setAliases(['g']);
   }
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $elapsed_time = $this->staticGenerator->generateAll();
-    $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
+    $limit = $input->getArgument('limit');
+    if (empty($limit)) {
+      $elapsed_time = $this->staticGenerator->generateAll();
+    } else {
+      $elapsed_time = $this->staticGenerator->generateAll($limit);
+    }
     //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
-    $this->getIo()->info('Full site static generation complete.');
+    $this->getIo()->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
   }
-
 }

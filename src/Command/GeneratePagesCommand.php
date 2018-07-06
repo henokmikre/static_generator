@@ -47,8 +47,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
       ->addArgument(
         'path',
         InputArgument::OPTIONAL,
-        $this->trans('commands.sg.generate-page.arguments.path')
-      )
+        $this->trans('commands.sg.generate-page.arguments.path'))
       ->setAliases(['gp']);
   }
 

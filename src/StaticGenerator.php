@@ -145,30 +145,39 @@ class StaticGenerator {
   /**
    * Generate all pages and files.
    *
+   * @param int $limit
+   * Limit the number of nodes generated for each bundle.
+   *
    * @return int
    *   Execution time in seconds.
    *
    * @throws \Exception
    */
-  public function generateAll() {
+  public function generateAll($limit = 0) {
+    \Drupal::logger('static_generator')->notice('Begin generateAll()');
     $elapsed_time = $this->deleteAll();
-    $elapsed_time += $this->generatePages();
+    $elapsed_time += $this->generatePages($limit);
     $elapsed_time += $this->generateFiles();
+    \Drupal::logger('static_generator')
+      ->notice('End generateAll(), elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
 
   /**
    * Generate pages.
    *
+   * @param int $limit
+   * Limit the number of nodes generated for each bundle.
+   *
    * @return int
    *   Execution time in seconds.
    *
    * @throws \Exception
    */
-  public function generatePages() {
+  public function generatePages($limit = 0) {
     \Drupal::logger('static_generator')->notice('Begin generatePages()');
     $elapsed_time = $this->deletePages();
-    $elapsed_time += $this->generateNodes();
+    $elapsed_time += $this->generateNodes($limit);
     $elapsed_time += $this->generatePaths();
     $elapsed_time += $this->generateBlocks();
     $elapsed_time += $this->generateRedirects();
@@ -180,12 +189,15 @@ class StaticGenerator {
   /**
    * Generate nodes.
    *
+   * @param int $limit
+   * Limit the number of nodes generated for each bundle.
+   *
    * @return int
    *   Execution time in seconds.
    *
    * @throws \Exception
    */
-  public function generateNodes() {
+  public function generateNodes($limit = 0) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config.
@@ -199,9 +211,13 @@ class StaticGenerator {
       $query = \Drupal::entityQuery('node');
       $query->condition('status', 1);
       $query->condition('type', $bundle);
-      //$query->range(1,50);
+      if ($limit > 0) {
+        $query->range(1, $limit);
+      }
 
       $entity_ids = $query->execute();
+      $count = count($entity_ids);
+
       foreach ($entity_ids as $entity_id) {
         //        $node = \Drupal::entityTypeManager()
         //          ->getStorage('node')
@@ -214,7 +230,7 @@ class StaticGenerator {
       $end_time = time();
       $elapsed_time = $end_time - $start_time;
       \Drupal::logger('static_generator')
-        ->notice('generateNodes() bundle: ' . $bundle . ' , elapsed time: ' . $elapsed_time . ' seconds.');
+        ->notice('generateNodes() bundle: ' . $bundle . ', count: ' . $count . ', elapsed time: ' . $elapsed_time . ' seconds.');
       $elapsed_time_total += $elapsed_time;
     }
     return $elapsed_time_total;
@@ -778,18 +794,19 @@ class StaticGenerator {
     $generator_directory = $this->generatorDirectory(TRUE);
 
     // Delete .html files
-//    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
-//    foreach ($files as $file) {
-//      file_unmanaged_delete_recursive($file, $callback = NULL);
-//    }
+    //    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
+    //    foreach ($files as $file) {
+    //      file_unmanaged_delete_recursive($file, $callback = NULL);
+    //    }
 
     $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
-      $html_file = substr($filename,-strlen('html')) == 'html';
-      if($html_file) {
+      $html_file = substr($filename, -strlen('html')) == 'html';
+      if ($html_file) {
         file_unmanaged_delete_recursive($file->uri, $callback = NULL);
-      }  else {
+      }
+      else {
         if (!in_array($filename, ['core', 'modules', 'themes', 'sites'])) {
           file_unmanaged_delete_recursive($file->uri, $callback = NULL);
         }
