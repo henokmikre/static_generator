@@ -48,6 +48,10 @@ class GeneratePagesCommand extends ContainerAwareCommand {
         'path',
         InputArgument::OPTIONAL,
         $this->trans('commands.sg.generate-page.arguments.path'))
+      ->addArgument(
+        'limit',
+        InputArgument::OPTIONAL,
+        $this->trans('commands.sg.generate-all.arguments.limit'))
       ->setAliases(['gp']);
   }
 
@@ -58,16 +62,16 @@ class GeneratePagesCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $path = $input->getArgument('path');
+    $limit = $input->getArgument('limit');
     if (empty($path)) {
-      $elapsed_time = $this->staticGenerator->generatePages();
+      $elapsed_time = $this->staticGenerator->generatePages($limit);
     }
     else {
       $elapsed_time = $this->staticGenerator->generatePage($path);
       $this->staticGenerator->generateBlocks();
     }
     $this->getIo()->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
-//    $this->getIo()
-//      ->info($this->trans('commands.sg.generate-page.messages.success'));
+//    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));
   }
 
 }

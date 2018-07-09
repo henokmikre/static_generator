@@ -11,8 +11,14 @@ services:
     tags:
       - { name: drupal.command }
 
-  static_generator.generate-public-files:
-    class: Drupal\static_generator\Command\GeneratePublicFilesCommand
+  static_generator.generate-files:
+    class: Drupal\static_generator\Command\GenerateFilesCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }
+
+  static_generator.generate-blocks:
+    class: Drupal\static_generator\Command\GenerateBlocksCommand
     arguments: ['@static_generator']
     tags:
       - { name: drupal.command }

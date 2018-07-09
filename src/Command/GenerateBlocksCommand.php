@@ -3,6 +3,7 @@
 namespace Drupal\static_generator\Command;
 
 use Drupal\static_generator\StaticGenerator;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
@@ -10,14 +11,14 @@ use Drupal\Console\Annotations\DrupalCommand;
 
 
 /**
- * Class GenerateFilesCommand.
+ * Class GenerateBlocksCommand.
  *
  * @DrupalCommand (
  *     extension="static_generator",
  *     extensionType="module"
  * )
  */
-class GeneratePublicFilesCommand extends ContainerAwareCommand {
+class GenerateBlocksCommand extends ContainerAwareCommand {
 
   /**
    * The Static Generator service.
@@ -27,7 +28,7 @@ class GeneratePublicFilesCommand extends ContainerAwareCommand {
   protected $staticGenerator;
 
   /**
-   * GenCommand constructor.
+   * GenPageCommand constructor.
    *
    * @param \Drupal\static_generator\StaticGenerator $static_generator
    */
@@ -41,19 +42,20 @@ class GeneratePublicFilesCommand extends ContainerAwareCommand {
    */
   protected function configure() {
     $this
-      ->setName('sg:generate-public-files')
-      ->setDescription($this->trans('commands.sg.generate-files.description'))
-      ->setAliases(['gpf']);
+      ->setName('sg:generate-blocks')
+      ->setDescription($this->trans('commands.sg.generate-blocks.description'))
+      ->setAliases(['gb']);
   }
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $elapsed_time = $this->staticGenerator->generatePublicFiles();
-    $this->getIo()->info('Elapsed time: ' . $elapsed_time . ' seconds.');
-    //$this->getIo()->info($this->trans('commands.sg.generate-files.messages.success'));
-    $this->getIo()->info($this->trans('Public files generation complete.'));
+    $elapsed_time = $this->staticGenerator->generateBlocks();
+    $this->getIo()->info('Generate blocks completed, elapsed time: ' . $elapsed_time . ' seconds.');
+//    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
   }
 
 }

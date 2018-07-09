@@ -44,10 +44,6 @@ class GenerateAllCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-all')
       ->setDescription($this->trans('commands.sg.generate-pages.description'))
-      ->addArgument(
-        'limit',
-        InputArgument::OPTIONAL,
-        $this->trans('commands.sg.generate-all.arguments.limit'))
       ->setAliases(['g']);
   }
 
@@ -57,12 +53,7 @@ class GenerateAllCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $limit = $input->getArgument('limit');
-    if (empty($limit)) {
-      $elapsed_time = $this->staticGenerator->generateAll();
-    } else {
-      $elapsed_time = $this->staticGenerator->generateAll($limit);
-    }
+    $elapsed_time = $this->staticGenerator->generateAll();
     //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
     $this->getIo()->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
   }

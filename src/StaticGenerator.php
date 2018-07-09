@@ -153,10 +153,10 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function generateAll($limit = 0) {
+  public function generateAll() {
     \Drupal::logger('static_generator')->notice('Begin generateAll()');
     $elapsed_time = $this->deleteAll();
-    $elapsed_time += $this->generatePages($limit);
+    $elapsed_time += $this->generatePages();
     $elapsed_time += $this->generateFiles();
     \Drupal::logger('static_generator')
       ->notice('End generateAll(), elapsed time: ' . $elapsed_time . ' seconds.');
@@ -211,13 +211,16 @@ class StaticGenerator {
       $query = \Drupal::entityQuery('node');
       $query->condition('status', 1);
       $query->condition('type', $bundle);
-      if ($limit > 0) {
+      if (!empty($limit)) {
+        $limit = intval($limit);
         $query->range(1, $limit);
       }
 
       $entity_ids = $query->execute();
-      $count = count($entity_ids);
+      //$count = count($entity_ids);
+      $count = 0;
 
+      // Generate pages for bundle.
       foreach ($entity_ids as $entity_id) {
         //        $node = \Drupal::entityTypeManager()
         //          ->getStorage('node')
@@ -225,7 +228,9 @@ class StaticGenerator {
         //        $node->set('moderation_state', 'published');
         //        $node->save();
         $this->generatePage('/node/' . $entity_id);
+        $count ++;
       }
+
       // Elapsed time.
       $end_time = time();
       $elapsed_time = $end_time - $start_time;
@@ -413,7 +418,7 @@ class StaticGenerator {
       $exclude_file = substr($uri, 9);
       $exclude_files .= $exclude_file . "\r\n";
     }
-    file_unmanaged_save_data($exclude_files, 'private://static/exclude_files.txt', FILE_EXISTS_REPLACE);
+    file_unmanaged_save_data($exclude_files, $this->generatorDirectory() . '/exclude_files.txt', FILE_EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
     $public_files_directory = $this->fileSystem->realpath('public://');
