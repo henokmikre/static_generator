@@ -22,3 +22,9 @@ services:
     arguments: ['@static_generator']
     tags:
       - { name: drupal.command }
+
+  static_generator.generate-redirects:
+    class: Drupal\static_generator\Command\GenerateRedirectsCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }
