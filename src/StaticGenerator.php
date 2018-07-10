@@ -549,19 +549,16 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function filenameFromPath($path) {
-    $path = \Drupal::service('path.alias_manager')
+    $path_alias = \Drupal::service('path.alias_manager')
       ->getAliasByPath($path);
     $front = $this->configFactory->get('system.site')->get('page.front');
-    $front = \Drupal::service('path.alias_manager')
+    $front_alias = \Drupal::service('path.alias_manager')
       ->getAliasByPath($front);
-    \Drupal::logger('static_generator')
-      ->notice('system.site: ' . $front . ', path: ' . $path);
-    if ($path == $front) {
+    if ($path_alias == $front_alias) {
       $file_name = 'index.html';
     }
     else {
-
-      $file_name = strrchr($alias, '/') . '.html';
+      $file_name = strrchr($path_alias, '/') . '.html';
       $file_name = substr($file_name, 1);
     }
     return $file_name;
