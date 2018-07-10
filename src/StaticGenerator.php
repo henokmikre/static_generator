@@ -228,7 +228,7 @@ class StaticGenerator {
         //        $node->set('moderation_state', 'published');
         //        $node->save();
         $this->generatePage('/node/' . $entity_id);
-        $count ++;
+        $count++;
       }
 
       // Elapsed time.
@@ -549,13 +549,18 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function filenameFromPath($path) {
+    $path = \Drupal::service('path.alias_manager')
+      ->getAliasByPath($path);
     $front = $this->configFactory->get('system.site')->get('page.front');
+    $front = \Drupal::service('path.alias_manager')
+      ->getAliasByPath($front);
+    \Drupal::logger('static_generator')
+      ->notice('system.site: ' . $front . ', path: ' . $path);
     if ($path == $front) {
       $file_name = 'index.html';
     }
     else {
-      $alias = \Drupal::service('path.alias_manager')
-        ->getAliasByPath($path);
+
       $file_name = strrchr($alias, '/') . '.html';
       $file_name = substr($file_name, 1);
     }
@@ -831,8 +836,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public
-  function excludeMediaIds() {
+  public function excludeMediaIds() {
     $query = \Drupal::entityQuery('media');
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();
