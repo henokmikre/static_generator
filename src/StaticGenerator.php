@@ -405,20 +405,20 @@ class StaticGenerator {
     $start_time = time();
 
     // Files to exclude.
-    $exclude_media_ids = $this->excludeMediaIds();
-    $exclude_files = '';
-    foreach ($exclude_media_ids as $exclude_media_id) {
-      $media = \Drupal::entityTypeManager()
-        ->getStorage('media')
-        ->load($exclude_media_id);
-      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
-      $file = File::load($fid);
-      $url = Url::fromUri($file->getFileUri());
-      $uri = $url->getUri();
-      $exclude_file = substr($uri, 9);
-      $exclude_files .= $exclude_file . "\r\n";
-    }
-    file_unmanaged_save_data($exclude_files, $this->generatorDirectory() . '/exclude_files.txt', FILE_EXISTS_REPLACE);
+//    $exclude_media_ids = $this->excludeMediaIds();
+//    $exclude_files = '';
+//    foreach ($exclude_media_ids as $exclude_media_id) {
+//      $media = \Drupal::entityTypeManager()
+//        ->getStorage('media')
+//        ->load($exclude_media_id);
+//      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+//      $file = File::load($fid);
+//      $url = Url::fromUri($file->getFileUri());
+//      $uri = $url->getUri();
+//      $exclude_file = substr($uri, 9);
+//      $exclude_files .= $exclude_file . "\r\n";
+//    }
+//    file_unmanaged_save_data($exclude_files, $this->generatorDirectory() . '/exclude_files.txt', FILE_EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
     $public_files_directory = $this->fileSystem->realpath('public://');
@@ -428,7 +428,8 @@ class StaticGenerator {
     // rSync
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
+    //$public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
+    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' '  . $public_files_directory . ' ' . $generator_directory . '/sites/default';
     exec($public_files);
 
     // Elapsed time.

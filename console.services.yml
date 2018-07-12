@@ -28,3 +28,9 @@ services:
     arguments: ['@static_generator']
     tags:
       - { name: drupal.command }
+
+  static_generator.delete-all:
+    class: Drupal\static_generator\Command\DeleteAllCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }
