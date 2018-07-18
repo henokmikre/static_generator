@@ -67,7 +67,7 @@ class DeleteCommand extends ContainerAwareCommand {
       $elapsed_time = $this->staticGenerator->deleteAll();
     }
     $this->getIo()
-      ->info('Delete all completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      ->info('Delete completed, elapsed time: ' . $elapsed_time . ' seconds.');
     //    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
   }
 

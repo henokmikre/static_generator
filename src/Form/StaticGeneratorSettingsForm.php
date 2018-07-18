@@ -77,6 +77,18 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('blocks_no_esi', $blocks_no_esi)
       ->save();
 
+    // Drupal
+    $drupal = $form_state->getValue('drupal');
+    $this->config('static_generator.settings')
+      ->set('drupal', $drupal)
+      ->save();
+
+    // Non Drupal
+    $non_drupal = $form_state->getValue('non_drupal');
+    $this->config('static_generator.settings')
+      ->set('non_drupal', $non_drupal)
+      ->save();
+
     // Verbose Logging
     $verbose_logging = $form_state->getValue('verbose_logging');
     $this->config('static_generator.settings')
@@ -153,14 +165,14 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $form['drupal'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Drupal files and directories.'),
-      '#description' => $this->t('Specify files and directories from which to rsync.'),
-      '#default_value' => $config->get('blocks_esi'),
+      '#description' => $this->t('Specify files and directories from which to rsync - comma separated, no spaces.'),
+      '#default_value' => $config->get('drupal'),
     ];
-    $form['not_drupal'] = [
+    $form['non_drupal'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Non-Drupal files and directories.'),
-      '#description' => $this->t('Specify files and directories that should never be deleted.'),
-      '#default_value' => $config->get('blocks_esi'),
+      '#description' => $this->t('Specify files and directories that should never be deleted - comma separated, no spaces.'),
+      '#default_value' => $config->get('non_drupal'),
     ];
 
     $header = [

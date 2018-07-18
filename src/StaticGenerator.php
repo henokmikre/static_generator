@@ -761,15 +761,10 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function deleteAll() {
-    $start_time = time();
-
-    $generator_directory = $this->generatorDirectory(TRUE);
-    file_unmanaged_delete_recursive($generator_directory, $callback = NULL);
-    file_prepare_directory($generator_directory, FILE_CREATE_DIRECTORY);
+    $elapsed_time = $this->deletePages();
+    $elapsed_time += $this->deleteDrupal();
 
     // Elapsed time.
-    $end_time = time();
-    $elapsed_time = $end_time - $start_time;
     \Drupal::logger('static_generator')
       ->notice('deleteAll() elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
@@ -794,15 +789,31 @@ class StaticGenerator {
     //      file_unmanaged_delete_recursive($file, $callback = NULL);
     //    }
 
+    // Get Drupal dirs setting.
+    $drupal = $this->configFactory->get('static_generator.settings')
+      ->get('drupal');
+    $drupal_array = [];
+    if (!empty($drupal)) {
+      $drupal_array = explode(',', $drupal);
+    }
+
+    // Get Non Drupal dirs setting.
+    $non_drupal = $this->configFactory->get('static_generator.settings')
+      ->get('non_drupal');
+    $non_drupal_array = [];
+    if (!empty($drupal)) {
+      $non_drupal_array = explode(',', $non_drupal);
+    }
+
     $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
       $html_file = substr($filename, -strlen('html')) == 'html';
-      if ($html_file) {
+      if ($html_file && !in_array($filename, $non_drupal_array)) {
         file_unmanaged_delete_recursive($file->uri, $callback = NULL);
       }
       else {
-        if (!in_array($filename, ['core', 'modules', 'themes', 'sites'])) {
+        if (!in_array($filename, $drupal_array) && !in_array($filename, $non_drupal_array)) {
           if ($filename == 'node') {
             $node_files = file_scan_directory($generator_directory . '/node', '/.*/', ['recurse' => TRUE]);
             foreach ($node_files as $node_file) {
@@ -827,11 +838,50 @@ class StaticGenerator {
   }
 
   /**
+   * Delete Drupal directories.
+   *
+   * @return int
+   *   Execution time in seconds.
+   *
+   * @throws \Exception
+   */
+  public function deleteDrupal() {
+
+    $start_time = time();
+
+    // Get Drupal dirs setting.
+    $drupal = $this->configFactory->get('static_generator.settings')
+      ->get('drupal');
+    $drupal_array = [];
+    if (!empty($drupal)) {
+      $drupal_array = explode(',', $drupal);
+    }
+
+    $generator_directory = $this->generatorDirectory(TRUE);
+    $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
+    foreach ($files as $file) {
+      $filename = $file->filename;
+      if (in_array($filename, $drupal_array)) {
+        file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+        exec('rm -rf ' . $file->uri);
+      }
+    }
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    \Drupal::logger('static_generator')
+      ->notice('deleteDrupal() elapsed time: ' . $elapsed_time . ' seconds.');
+    return $elapsed_time;
+  }
+
+  /**
    * Exclude media that is not published (e.g. Draft or Archived).
    *
    * @throws \Exception
    */
-  public function excludeMediaIds() {
+  public
+  function excludeMediaIds() {
     $query = \Drupal::entityQuery('media');
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();
@@ -846,7 +896,8 @@ class StaticGenerator {
    * @return string
    * @throws \Exception
    */
-  public function fileInfo($path) {
+  public
+  function fileInfo($path) {
     $file_name = $this->generatorDirectory(TRUE) . $this->directoryFromPath($path) . '/' .
       $this->filenameFromPath($path);
     if (file_exists($file_name)) {
