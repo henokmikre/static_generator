@@ -1,16 +1,15 @@
 static_generator.settings:
   path: '/admin/config/system/static_generator'
-
   defaults:
     _form: '\Drupal\static_generator\Form\StaticGeneratorSettingsForm'
     _title: 'Static Generator Settings'
   requirements:
     _permission: 'administer static generator'
 
-static_generator.generate_static_markup_for_page:
-  path: '/gen'
+static_generator.test_route:
+  path: '/sgtest'
   defaults:
-    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generate'
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::sgTest'
     _title: 'Generate'
   requirements:
     _permission: 'administer static generator'
@@ -20,6 +19,14 @@ static_generator.type_edit_form:
   defaults:
     _form: '\Drupal\static_generator\Form\StaticGeneratorConfigureEntityTypesForm'
     _title_callback: '\Drupal\static_generator\Form\StaticGeneratorConfigureEntityTypesForm::getTitle'
+  requirements:
+    _permission: 'administer static generator'
+
+static_generator.generate_node:
+  path: '/node/{nid}/gen'
+  defaults:
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generateNode'
+    _title: 'Generate Node'
   requirements:
     _permission: 'administer static generator'
 

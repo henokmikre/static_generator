@@ -150,6 +150,19 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('blocks_no_esi'),
     ];
 
+    $form['drupal'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Drupal files and directories.'),
+      '#description' => $this->t('Specify files and directories from which to rsync.'),
+      '#default_value' => $config->get('blocks_esi'),
+    ];
+    $form['not_drupal'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Non-Drupal files and directories.'),
+      '#description' => $this->t('Specify files and directories that should never be deleted.'),
+      '#default_value' => $config->get('blocks_esi'),
+    ];
+
     $header = [
       'type' => $this->t('Items'),
       'operations' => $this->t('Operations')

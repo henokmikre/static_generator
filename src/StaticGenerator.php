@@ -405,20 +405,20 @@ class StaticGenerator {
     $start_time = time();
 
     // Files to exclude.
-//    $exclude_media_ids = $this->excludeMediaIds();
-//    $exclude_files = '';
-//    foreach ($exclude_media_ids as $exclude_media_id) {
-//      $media = \Drupal::entityTypeManager()
-//        ->getStorage('media')
-//        ->load($exclude_media_id);
-//      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
-//      $file = File::load($fid);
-//      $url = Url::fromUri($file->getFileUri());
-//      $uri = $url->getUri();
-//      $exclude_file = substr($uri, 9);
-//      $exclude_files .= $exclude_file . "\r\n";
-//    }
-//    file_unmanaged_save_data($exclude_files, $this->generatorDirectory() . '/exclude_files.txt', FILE_EXISTS_REPLACE);
+    //    $exclude_media_ids = $this->excludeMediaIds();
+    //    $exclude_files = '';
+    //    foreach ($exclude_media_ids as $exclude_media_id) {
+    //      $media = \Drupal::entityTypeManager()
+    //        ->getStorage('media')
+    //        ->load($exclude_media_id);
+    //      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+    //      $file = File::load($fid);
+    //      $url = Url::fromUri($file->getFileUri());
+    //      $uri = $url->getUri();
+    //      $exclude_file = substr($uri, 9);
+    //      $exclude_files .= $exclude_file . "\r\n";
+    //    }
+    //    file_unmanaged_save_data($exclude_files, $this->generatorDirectory() . '/exclude_files.txt', FILE_EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
     $public_files_directory = $this->fileSystem->realpath('public://');
@@ -429,7 +429,7 @@ class StaticGenerator {
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
     //$public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
-    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' '  . $public_files_directory . ' ' . $generator_directory . '/sites/default';
+    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
     exec($public_files);
 
     // Elapsed time.
@@ -646,19 +646,6 @@ class StaticGenerator {
 
     return $markup;
 
-    // Get a response.
-    //    $request = Request::create($path);
-    //    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-    //    $request->server->set('SCRIPT_FILENAME', 'index.php');
-    //    $response = $this->httpKernel->handle($request);
-
-    //\Drupal::service('account_switcher')->switchBack();
-    //\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
-    //$request = $this->requestStack->getCurrentRequest();
-    //$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
-    //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-    //$session_manager = Drupal::service('session_manager');
-    //$request->setSession(new AnonymousUserSession());
   }
 
   /**
@@ -816,7 +803,17 @@ class StaticGenerator {
       }
       else {
         if (!in_array($filename, ['core', 'modules', 'themes', 'sites'])) {
-          file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+          if ($filename == 'node') {
+            $node_files = file_scan_directory($generator_directory . '/node', '/.*/', ['recurse' => TRUE]);
+            foreach ($node_files as $node_file) {
+              file_unmanaged_delete_recursive($node_file->uri, $callback = NULL);
+            }
+            file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+          }
+          else {
+            file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+            exec('rm -rf ' . $file->uri);
+          }
         }
       }
     }
@@ -839,6 +836,26 @@ class StaticGenerator {
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();
     return $exclude_media_ids;
+  }
+
+  /**
+   * List file name and update time for a path.
+   *
+   * @param $path
+   *
+   * @return string
+   * @throws \Exception
+   */
+  public function fileInfo($path) {
+    $file_name = $this->generatorDirectory(TRUE) . $this->directoryFromPath($path) . '/' .
+      $this->filenameFromPath($path);
+    if (file_exists($file_name)) {
+      $return_string = $file_name . ' -- ' . date("F j, Y, g:i a", filemtime($file_name));
+    }
+    else {
+      $return_string = 'Static page file not found.';
+    }
+    return $return_string;
   }
 
 }
@@ -868,3 +885,17 @@ class StaticGenerator {
 //          $node->parentNode->removeChild($node);
 //        }
 //      }
+
+// Get a response.
+//    $request = Request::create($path);
+//    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+//    $request->server->set('SCRIPT_FILENAME', 'index.php');
+//    $response = $this->httpKernel->handle($request);
+
+//\Drupal::service('account_switcher')->switchBack();
+//\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
+//$request = $this->requestStack->getCurrentRequest();
+//$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
+//$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+//$session_manager = Drupal::service('session_manager');
+//$request->setSession(new AnonymousUserSession());

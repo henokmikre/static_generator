@@ -4,3 +4,5 @@ rsync_code: '--include="*/" --include="*.svg" --include="*.png" --include="*.jpg
 blocks_esi:
 blocks_no_esi:
 verbose_logging: false
+drupal: 'sites,modules,themes,core'
+non_drupal: 'non_drupal'

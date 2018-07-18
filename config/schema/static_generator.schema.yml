@@ -19,6 +19,12 @@ static_generator.settings:
     blocks_no_esi:
       type: string
       label: 'Block ids to not generate.'
+    drupal:
+      type: string
+      label: 'Drupal directories and files.'
+    non_drupal:
+      type: string
+      label: 'Non Drupal directories and files.'
     gen_node:
       type: string
       label: 'Node bundles to generate.'

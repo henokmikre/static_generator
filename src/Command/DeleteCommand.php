@@ -5,6 +5,7 @@ namespace Drupal\static_generator\Command;
 use Drupal\static_generator\StaticGenerator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
 use Drupal\Console\Annotations\DrupalCommand;
@@ -18,7 +19,7 @@ use Drupal\Console\Annotations\DrupalCommand;
  *     extensionType="module"
  * )
  */
-class DeleteAllCommand extends ContainerAwareCommand {
+class DeleteCommand extends ContainerAwareCommand {
 
   /**
    * The Static Generator service.
@@ -42,9 +43,15 @@ class DeleteAllCommand extends ContainerAwareCommand {
    */
   protected function configure() {
     $this
-      ->setName('sg:delete-all')
+      ->setName('sg:delete')
       ->setDescription($this->trans('commands.sg.delete-all.description'))
-      ->setAliases(['da']);
+      ->addOption(
+        'pages',
+        NULL,
+        InputOption::VALUE_NONE,
+        $this->trans('commands.sg.delete.options.pages')
+      )
+      ->setAliases(['gd']);
   }
 
   /**
@@ -53,9 +60,15 @@ class DeleteAllCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $elapsed_time = $this->staticGenerator->deleteAll();
-    $this->getIo()->info('Delete all completed, elapsed time: ' . $elapsed_time . ' seconds.');
-//    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
+    if ($input->getOption('pages')) {
+      $elapsed_time = $this->staticGenerator->deletePages();
+    }
+    else {
+      $elapsed_time = $this->staticGenerator->deleteAll();
+    }
+    $this->getIo()
+      ->info('Delete all completed, elapsed time: ' . $elapsed_time . ' seconds.');
+    //    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
   }
 
 }
