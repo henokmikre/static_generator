@@ -53,8 +53,12 @@ class GenerateAllCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $elapsed_time = $this->staticGenerator->generateAll();
-    //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
-    $this->getIo()->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
+    $answer = $this->getIo()
+      ->ask('Delete and re-generate entire static site (yes/no)? ');
+    if (strtolower($answer) == 'yes') {
+      $elapsed_time = $this->staticGenerator->generateAll();
+      $this->getIo()->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
+      //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
+    }
   }
 }

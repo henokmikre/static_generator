@@ -275,12 +275,15 @@ class StaticGenerator {
    * @param String $path
    *   The page's path.
    *
-   * @param $generate_blocks
+   * @param bool $generate_blocks
    *   Generate the block fragments referenced by the ESI's.
+   *
+   * @param bool $log
+   *   Should a log message be written to dblog.
    *
    * @throws \Exception
    */
-  public function generatePage($path, $generate_blocks = FALSE) {
+  public function generatePage($path, $generate_blocks = FALSE, $log = FALSE) {
 
     // Return if path is excluded.
     $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')
@@ -304,6 +307,10 @@ class StaticGenerator {
     $directory = $this->generatorDirectory() . $web_directory;
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+      if ($log) {
+        \Drupal::logger('static_generator')
+          ->notice('generatePage() file: ' . $directory . '/' . $file_name );
+      }
     }
   }
 
@@ -501,6 +508,10 @@ class StaticGenerator {
         $target_uri = $target_array['uri'];
         $target_url = substr($target_uri, 9);
         $this->generateRedirect($source_url, $target_url);
+        if ($this->verboseLogging()) {
+          \Drupal::logger('static_generator')
+            ->notice('generateRedirects() source: ' . $source_url . ' target: ' .  $target_url);
+        }
       }
     }
 
@@ -589,20 +600,6 @@ class StaticGenerator {
       }
     }
     return $directory;
-  }
-
-  /**
-   * Delete a single page.
-   *
-   * @param String $path
-   *   The page's path.
-   *
-   * @throws \Exception
-   */
-  public function deletePage($path) {
-    $web_directory = $this->directoryFromPath($path);
-    $file_name = $this->filenameFromPath($path);
-    file_unmanaged_delete($this->generatorDirectory() . $web_directory . '/' . $file_name);
   }
 
   /**
@@ -835,6 +832,23 @@ class StaticGenerator {
     \Drupal::logger('static_generator')
       ->notice('deletePages() elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
+  }
+
+  /**
+   * Delete a single page.
+   *
+   * @param String $path
+   *   The page's path.
+   *
+   * @throws \Exception
+   */
+  public function deletePage($path) {
+    $web_directory = $this->directoryFromPath($path);
+    $file_name = $this->filenameFromPath($path);
+    $full_file_name = $this->generatorDirectory() . $web_directory . '/' . $file_name;
+    file_unmanaged_delete($full_file_name);
+    \Drupal::logger('static_generator')
+      ->notice('deletePage() file: ' . $full_file_name );
   }
 
   /**

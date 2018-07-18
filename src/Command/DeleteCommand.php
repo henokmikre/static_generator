@@ -61,13 +61,22 @@ class DeleteCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     if ($input->getOption('pages')) {
-      $elapsed_time = $this->staticGenerator->deletePages();
+      $answer = $this->getIo()->ask('Delete all pages (yes/no)? ');
+      if(strtolower($answer) == 'yes') {
+        $elapsed_time = $this->staticGenerator->deletePages();
+        $this->getIo()
+          ->info('Delete all generated pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      }
     }
     else {
-      $elapsed_time = $this->staticGenerator->deleteAll();
+      $answer = $this->getIo()->ask('Delete all pages (yes/no)? ');
+      if(strtolower($answer) == 'yes') {
+        $elapsed_time = $this->staticGenerator->deleteAll();
+        $this->getIo()
+          ->info('Delete all generated files and pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      }
     }
-    $this->getIo()
-      ->info('Delete completed, elapsed time: ' . $elapsed_time . ' seconds.');
+
     //    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
   }
 

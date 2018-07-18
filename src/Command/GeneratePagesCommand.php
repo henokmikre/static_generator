@@ -64,14 +64,23 @@ class GeneratePagesCommand extends ContainerAwareCommand {
     $path = $input->getArgument('path');
     $limit = $input->getArgument('limit');
     if (empty($path)) {
-      $elapsed_time = $this->staticGenerator->generatePages($limit);
+      $answer = $this->getIo()
+        ->ask('Delete and re-generate all pages (yes/no)? ');
+      if (strtolower($answer) == 'yes') {
+        $elapsed_time = $this->staticGenerator->generatePages($limit);
+        $this->getIo()
+          ->info('Generation of all pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+        $this->getIo()
+          ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      }
     }
     else {
       $elapsed_time = $this->staticGenerator->generatePage($path);
+      $this->getIo()
+        ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      //    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));
       //$this->staticGenerator->generateBlocks();
     }
-    $this->getIo()->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
-//    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));
   }
 
 }

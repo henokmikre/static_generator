@@ -10,6 +10,11 @@ use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
  * Implements hook_help().
+ *
+ * @param $route_name
+ * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+ *
+ * @return string
  */
 function static_generator_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
@@ -27,6 +32,9 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
 
 /**
  * Implements hook_block_view_alter().
+ *
+ * @param array $build
+ * @param \Drupal\Core\Block\BlockPluginInterface $block
  */
 function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
   //$build['#cache']['max-age'] = -1;
@@ -50,7 +58,7 @@ function static_generator_entity_update(EntityInterface $entity) {
   if ($entity->getEntityTypeId() === 'node') {
     $path = $entity->toUrl()->toString();
     if ($entity->get('moderation_state')->value == 'published') {
-      \Drupal::service('static_generator')->generatePage($path, TRUE);
+      \Drupal::service('static_generator')->generatePage($path, TRUE, TRUE);
       \Drupal::service('static_generator')->generateBlocks($path, TRUE);
     }
     elseif ($entity->get('moderation_state')->value == 'archived') {
@@ -99,7 +107,13 @@ function static_generator_entity_delete(EntityInterface $entity) {
 }
 
 
-
+/**
+ * Implements hook_form_alter().
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
 function static_generator_form_alter(&$form, $form_state, $form_id) {
 
   if (in_array($form_id, ['node_page_edit_form'])) {
@@ -111,7 +125,7 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
       '#description' => t(''),
       '#group' => 'advanced',
       '#open' => FALSE,
-      'markup' => ['#markup' => '<br>' . $file_info . '</br>'. '<a href="/node/' . $node->id() . '/gen' .'">Generate Page</a>' .'</p>'],
+      'markup' => ['#markup' => '<br>' . $file_info . '</br></br>'. '<a  target="_blank" href="/node/' . $node->id() . '/gen' .'">Generate Page</a>' .'</p>'],
       'button' =>
         [
           '#type' => 'button',
