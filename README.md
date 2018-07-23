@@ -16,8 +16,9 @@ A static page generator for Drupal
     + [Files Generation](#files-generation)
     
 ## Installation
-- Install this module using normal Drupal module installation.
+- Install this module using the normal Drupal module installation process.
 - Configure a private directory in settings.php.
+- Configure static generation settings at /admin/config/system/static_generator.
 
 ### Requirements
 
@@ -25,16 +26,15 @@ A static page generator for Drupal
 - PHP 7.2 or greater
 
 ## Settings
-- Generator Directory
--- Determines where the generated files are placed.
-- rSync Public
--- The rSync command line options for public file generation.
-- rSync Code
--- The rSync command line options for code file generation.- Paths to generate
-- Paths to not generate -- Specify which paths to generate.  If left blank, all paths are generated.
-- Blocks to ESI -- Specify which blocks to ESI include. If left blank, all blocks are ESI included.
-- Blocks to not ESI -- Specify blocks that should not be ESI included.
-- Entity Types -- Specify which entity types to generate.
+ 
+- The settings page is located at: /admin/config/system/static_generator.
+- Generator Directory: Determines where the generated files are placed.
+- rSync Public: The rSync command line options for public file generation.
+- rSync Code: The rSync command line options for code file generation.- Paths to generate
+- Paths to not generate: Specify which paths to generate.  If left blank, all paths are generated.
+- Blocks to ESI: Specify which blocks to ESI include. If left blank, all blocks are ESI included.
+- Blocks to not ESI: Specify blocks that should not be ESI included.
+- Entity Types: Specify which entity types to generate.
 
 ## Generation
 ## Overview
@@ -46,61 +46,73 @@ are generated.
 ### Full Site Generation
 To generate the entire site, including pages, ESI's, and files:
 ```
-drupal g
+drupal sg
 ```
 ### Page Generation
 
 To generate all pages:
 ```
-drupal gp
+drupal sgp
 ```
 
 To generate a specific page:
 
 ```
-drupal gp '/node/123'
+drupal sgp '/node/123'
 ```
 
 To generate a test sample of a specified number of pages (e.g. 50 pages)
 ```
-drupal gp '' '50'
+drupal sgp '' '50'
 ```
 
 ### Blocks
 To generate all blocks:
 ```
-drupal gb
+drupal sgb
+```
+
+To generate a specific block:
+
+```
+drupal sgp 'block_id'
+```
+
+To generate frequently changing blocks:
+
+```
+drupal sgp --frequent
 ```
 
 ### Redirects
 To generate redirects (requires the redirect module be installed):
 ```
-drupal gr
+drupal sgr
 ```
 
 ### Files
 
 To generate all files:
 ```
-drupal gf
+drupal sgf
 ```
 To generate public files:
 ```
-drupal gf -- public
+drupal sgf -- public
 ```
 To generate private files:
 ```
-drupal gf -- private
+drupal sgf -- private
 ```
 
 ### Deleting
 To delete all generated files:
 ```
-drupal gd
+drupal sgd
 ```
 To delete all generated pages:
 ```
-drupal gd -- pages
+drupal sgd -- pages
 ```
 
 ### Workflow Integration
