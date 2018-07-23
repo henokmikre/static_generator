@@ -44,7 +44,7 @@ class GenerateRedirectsCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-redirects')
       ->setDescription($this->trans('commands.sg.generate-blocks.description'))
-      ->setAliases(['gr']);
+      ->setAliases(['sgr']);
   }
 
   /**

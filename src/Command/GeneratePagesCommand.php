@@ -52,7 +52,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
         'limit',
         InputArgument::OPTIONAL,
         $this->trans('commands.sg.generate-all.arguments.limit'))
-      ->setAliases(['gp']);
+      ->setAliases(['sgp']);
   }
 
   /**
@@ -79,7 +79,6 @@ class GeneratePagesCommand extends ContainerAwareCommand {
       $this->getIo()
         ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
       //    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));
-      //$this->staticGenerator->generateBlocks();
     }
   }
 

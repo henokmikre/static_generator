@@ -77,6 +77,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('blocks_no_esi', $blocks_no_esi)
       ->save();
 
+    // Blocks - frequent.
+    $blocks_frequent = $form_state->getValue('blocks_frequent');
+    $this->config('static_generator.settings')
+      ->set('blocks_frequent', $blocks_frequent)
+      ->save();
+
     // Drupal
     $drupal = $form_state->getValue('drupal');
     $this->config('static_generator.settings')
@@ -160,6 +166,13 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#title' => $this->t('Blocks to not ESI'),
       '#description' => $this->t('Specify block ids to not ESI include - comma separated, no spaces.'),
       '#default_value' => $config->get('blocks_no_esi'),
+    ];
+
+    $form['blocks_frequent'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Blocks to generate frequently'),
+      '#description' => $this->t('Specify block ids generate frequently - comma separated, no spaces.'),
+      '#default_value' => $config->get('blocks_frequent'),
     ];
 
     $form['drupal'] = [

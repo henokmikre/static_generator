@@ -317,28 +317,44 @@ class StaticGenerator {
   /**
    * Generate all block fragment files.
    *
+   * @param bool $frequent_only
+   *   Generate frequent blocks only.  Frequent blocks are defined in settings.
+   *
    * @return int
    *   Execution time in seconds.
-   *
+   *`
    * @throws \Exception
    */
-  public function generateBlocks() {
+  public function generateBlocks($frequent_only = FALSE) {
     $start_time = time();
 
-    $blocks_esi = $this->configFactory->get('static_generator.settings')
-      ->get('blocks_esi');
-    if (empty($blocks_esi)) {
-      // Get all block id's
-      $storage = $this->entityTypeManager->getStorage('block');
-      $ids = $storage->getQuery()
-        ->execute();
-      $blocks_esi = $storage->loadMultiple($ids);
-    }
-    else {
-      $blocks_esi = explode(',', $blocks_esi);
-    }
-    foreach ($blocks_esi as $block_id) {
-      $this->generateBlock($block_id);
+    if (!$frequent_only) {
+      $blocks_esi = $this->configFactory->get('static_generator.settings')
+        ->get('blocks_esi');
+      if (empty($blocks_esi)) {
+        // Get all block id's
+        $storage = $this->entityTypeManager->getStorage('block');
+        $ids = $storage->getQuery()
+          ->execute();
+        $blocks_esi = $storage->loadMultiple($ids);
+      }
+      else {
+        $blocks_esi = explode(',', $blocks_esi);
+      }
+      foreach ($blocks_esi as $block_id) {
+        $this->generateBlock($block_id);
+      }
+    } else {
+      // Generate frequent blocks only.
+      $blocks_frequent = $this->configFactory->get('static_generator.settings')
+        ->get('blocks_frequent');
+      $blocks_frequent = explode(',', $blocks_frequent);
+
+      if (!empty($blocks_frequent)) {
+        foreach ($blocks_frequent as $block_id) {
+          $this->generateBlock($block_id);
+        }
+      }
     }
 
     // Elapsed time.

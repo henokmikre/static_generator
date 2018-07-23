@@ -19,6 +19,9 @@ static_generator.settings:
     blocks_no_esi:
       type: string
       label: 'Block ids to not generate.'
+    blocks_frequent:
+      type: string
+      label: 'Block ids to not generate.'
     drupal:
       type: string
       label: 'Drupal directories and files.'

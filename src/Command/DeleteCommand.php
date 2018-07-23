@@ -51,7 +51,7 @@ class DeleteCommand extends ContainerAwareCommand {
         InputOption::VALUE_NONE,
         $this->trans('commands.sg.delete.options.pages')
       )
-      ->setAliases(['gd']);
+      ->setAliases(['sgd']);
   }
 
   /**

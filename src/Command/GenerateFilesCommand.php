@@ -56,7 +56,7 @@ class GenerateFilesCommand extends ContainerAwareCommand {
         InputOption::VALUE_NONE,
         $this->trans('commands.sg.generate-files.options.code')
       )
-      ->setAliases(['gf']);
+      ->setAliases(['sgf']);
   }
 
   /**
