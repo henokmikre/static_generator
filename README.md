@@ -28,12 +28,16 @@ A static page generator for Drupal
 ## Settings
  
 - The settings page is located at: /admin/config/system/static_generator.
-- Generator Directory: Determines where the generated files are placed.
+- Generator Directory: Determines where the generated files are placed. The default setting is to generate files in the
+  private files directory.  To generate files in a directory that is within the private files directory,
+  specify that directory in the setting, e.g. private://<generator_directory>.
 - rSync Public: The rSync command line options for public file generation.
-- rSync Code: The rSync command line options for code file generation.- Paths to generate
-- Paths to not generate: Specify which paths to generate.  If left blank, all paths are generated.
+- rSync Code: The rSync command line options for code file generation.
+- Paths to generate: Specify which paths to generate.  If left blank, all paths are generated.
+- Paths to not generate: Specify which paths to never generate.
 - Blocks to ESI: Specify which blocks to ESI include. If left blank, all blocks are ESI included.
 - Blocks to not ESI: Specify blocks that should not be ESI included.
+- Frequently changing blocks: Specify blocks that change frequently.
 - Entity Types: Specify which entity types to generate.
 
 ## Generation

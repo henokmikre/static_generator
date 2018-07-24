@@ -45,6 +45,10 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-blocks')
       ->setDescription($this->trans('commands.sg.generate-blocks.description'))
+      ->addArgument(
+        'block_id',
+        InputArgument::OPTIONAL,
+        $this->trans('commands.sg.generate-blocks.arguments.path'))
       ->addOption(
         'frequent',
         NULL,
@@ -60,15 +64,25 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    if (empty($input->getOption('frequent'))) {
-      $elapsed_time = $this->staticGenerator->generateBlocks(FALSE);
-    }
-    else {
-      $elapsed_time = $this->staticGenerator->generateBlocks(TRUE);
-    }
-    $this->getIo()
-      ->info('Generate blocks completed, elapsed time: ' . $elapsed_time . ' seconds.');
-    //    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
-  }
+    $block_id = $input->getArgument('block_id');
 
+    if (empty($block_id)) {
+      if (empty($input->getOption('frequent'))) {
+        // Generate all blocks.
+        $elapsed_time = $this->staticGenerator->generateBlocks(FALSE);
+      }
+      else {
+        // Generate frequent blocks.
+        $elapsed_time = $this->staticGenerator->generateBlocks(TRUE);
+      }
+      $this->getIo()
+        ->info('Generate blocks completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      //    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
+    } else {
+      // Generate single block.
+      $this->staticGenerator->generateBlock($block_id);
+      $this->getIo()
+        ->info('Generate of block ' . $block_id . ' complete.');
+    }
+  }
 }
