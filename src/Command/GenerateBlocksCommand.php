@@ -48,7 +48,11 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
       ->addArgument(
         'block_id',
         InputArgument::OPTIONAL,
-        $this->trans('commands.sg.generate-blocks.arguments.path'))
+        $this->trans('commands.sg.generate-blocks.arguments.block_id'))
+      ->addArgument(
+        'generate_test_blocks_count',
+        InputArgument::OPTIONAL,
+        $this->trans('commands.sg.generate-blocks.arguments.generate_test_blocks_count'))
       ->addOption(
         'frequent',
         NULL,
@@ -64,10 +68,17 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $block_id = $input->getArgument('block_id');
+    //$block_id = $input->getArgument('block_id');
+    //$generate_test_blocks_count = $input->getArgument('generate_test_blocks_count');
+    $this->staticGenerator->generateTestBlocks(1);
+    $elapsed_time = $this->staticGenerator->generateBlocks(FALSE);
 
+    return;
     if (empty($block_id)) {
       if (empty($input->getOption('frequent'))) {
+        if (!empty($generate_test_blocks_count)) {
+          $this->staticGenerator->generateTestBlocks($generate_test_blocks_count);
+        }
         // Generate all blocks.
         $elapsed_time = $this->staticGenerator->generateBlocks(FALSE);
       }

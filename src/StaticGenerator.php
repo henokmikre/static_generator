@@ -5,10 +5,13 @@ namespace Drupal\static_generator;
 use DOMXPath;
 use DOMDocument;
 use Drupal\block\Entity\Block;
+use Drupal\block_content\Entity\BlockContent;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
-use Drupal\Core\Url;
-use Drupal\file\Entity\File;
+
+//use Drupal\Core\Url;
+//use Drupal\file\Entity\File;
+use Drupal\Tests\block\Traits\BlockCreationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -28,6 +31,8 @@ use Drupal\Core\Theme\ThemeManagerInterface;
  * Manages static generation process.
  */
 class StaticGenerator {
+
+  use BlockCreationTrait;
 
   /**
    * The renderer.
@@ -309,7 +314,7 @@ class StaticGenerator {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
       if ($log) {
         \Drupal::logger('static_generator')
-          ->notice('generatePage() file: ' . $directory . '/' . $file_name );
+          ->notice('generatePage() file: ' . $directory . '/' . $file_name);
       }
     }
   }
@@ -344,7 +349,8 @@ class StaticGenerator {
       foreach ($blocks_esi as $block_id) {
         $this->generateBlock($block_id);
       }
-    } else {
+    }
+    else {
       // Generate frequent blocks only.
       $blocks_frequent = $this->configFactory->get('static_generator.settings')
         ->get('blocks_frequent');
@@ -397,6 +403,29 @@ class StaticGenerator {
     if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
     }
+  }
+
+  /**
+   * Generate test blocks.
+   *
+   * @param int $count
+   *   Number of test blocks to generate.
+   *
+   * @throws \Exception
+   */
+  public function generateTestBlocks($count) {
+
+//    for ($i = 0; $i < $count; $i++) {
+//      $block_content = BlockContent::create([
+//        'info' => 'Test block' . substr(uniqid(), 0, 10),
+//        'type' => 'basic',
+//       ]);
+//       $block_content->save();
+//       $id = $block_content->id();
+       $this->placeBlock('system_powered_by_block', 'test-blocks');
+       $this->placeBlock('system_powered_by_block', 'test-blocks');
+       $this->placeBlock('system_powered_by_block', 'test-blocks');
+//     }
   }
 
   /**
@@ -526,7 +555,7 @@ class StaticGenerator {
         $this->generateRedirect($source_url, $target_url);
         if ($this->verboseLogging()) {
           \Drupal::logger('static_generator')
-            ->notice('generateRedirects() source: ' . $source_url . ' target: ' .  $target_url);
+            ->notice('generateRedirects() source: ' . $source_url . ' target: ' . $target_url);
         }
       }
     }
@@ -864,7 +893,7 @@ class StaticGenerator {
     $full_file_name = $this->generatorDirectory() . $web_directory . '/' . $file_name;
     file_unmanaged_delete($full_file_name);
     \Drupal::logger('static_generator')
-      ->notice('deletePage() file: ' . $full_file_name );
+      ->notice('deletePage() file: ' . $full_file_name);
   }
 
   /**

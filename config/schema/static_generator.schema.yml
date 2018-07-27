@@ -33,7 +33,10 @@ static_generator.settings:
       label: 'Node bundles to generate.'
     rsync_public:
       type: string
-      label: 'rSync for generating Drupal public files..'
+      label: 'rSync for generating Drupal public files.'
+    rsync_code:
+      type: string
+      label: 'rSync for generating Drupal code files.'
     verbose_logging:
       type: boolean
       label: 'Turn on verbose logging.'
