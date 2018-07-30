@@ -111,8 +111,9 @@ To generate private files:
 drupal sgf -- private
 ```
 
-### Deleting
-To delete all generated files:
+## Deleting
+To delete all generated pages, ESI's, public files, and code files 
+(everything except files specified in settings as "non-Drupal"):
 ```
 drupal sgd
 ```
@@ -122,3 +123,8 @@ drupal sgd -- pages
 ```
 
 ### Workflow Integration
+
+Once the Drupal core workflow module has been installed, and workflow 
+has been enabled for a specific content type at /admin/config/workflow/workflows,
+page files will be automatically generated whenever a new version of 
+the page is published.
