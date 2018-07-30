@@ -48,10 +48,12 @@ in the settings. The pages are rendered for the Annonymous user.  Only published
 are generated.
 
 ### Full Site Generation
-To generate the entire site, including pages, ESI's, and files:
+To generate the entire site, including pages, ESI's, and public files and code files:
 ```
 drupal sg
 ```
+Note that whatever files are in the static directory are deleted first, 
+except for those files or directories specified in settings as "non-Drupal".
 ### Page Generation
 
 To generate all pages:
