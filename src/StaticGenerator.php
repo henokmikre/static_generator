@@ -11,7 +11,6 @@ use Drupal\Core\File\FileSystemInterface;
 
 //use Drupal\Core\Url;
 //use Drupal\file\Entity\File;
-use Drupal\Tests\block\Traits\BlockCreationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -31,8 +30,6 @@ use Drupal\Core\Theme\ThemeManagerInterface;
  * Manages static generation process.
  */
 class StaticGenerator {
-
-  use BlockCreationTrait;
 
   /**
    * The renderer.
@@ -415,18 +412,79 @@ class StaticGenerator {
    */
   public function generateTestBlocks($count) {
 
-//    for ($i = 0; $i < $count; $i++) {
-//      $block_content = BlockContent::create([
-//        'info' => 'Test block' . substr(uniqid(), 0, 10),
-//        'type' => 'basic',
-//       ]);
-//       $block_content->save();
-//       $id = $block_content->id();
-       $this->placeBlock('system_powered_by_block', 'test-blocks');
-       $this->placeBlock('system_powered_by_block', 'test-blocks');
-       $this->placeBlock('system_powered_by_block', 'test-blocks');
-//     }
+    for ($i = 0; $i < 100; $i++) {
+      //      $block_content = BlockContent::create([
+      //        'info' => 'Test block' . substr(uniqid(), 0, 10),
+      //        'type' => 'basic',
+      //       ]);
+      //       $block_content->save();
+      //       $id = $block_content->id();
+      $this->placeBlock('system_powered_by_block');
+    }
   }
+
+  /**
+   * Creates a block instance based on default settings.
+   *
+   * @param string $plugin_id
+   *   The plugin ID of the block type for this block instance.
+   * @param array $settings
+   *   (optional) An associative array of settings for the block entity.
+   *   Override the defaults by specifying the key and value in the array, for
+   *   example:
+   *
+   * @code
+   *     $this->drupalPlaceBlock('system_powered_by_block', array(
+   *       'label' => t('Hello, world!'),
+   *     ));
+   * @endcode
+   *   The following defaults are provided:
+   *   - label: Random string.
+   *   - ID: Random string.
+   *   - region: 'sidebar_first'.
+   *   - theme: The default theme.
+   *   - visibility: Empty array.
+   *
+   * @return \Drupal\block\Entity\Block
+   *   The block entity.
+   *
+   * @todo
+   *   Add support for creating custom block instances.
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   */
+//  public function placeBlock($plugin_id, array $settings = []) {
+//    $config = \Drupal::configFactory();
+//    $settings += [
+//      'plugin' => $plugin_id,
+//      'region' => 'sidebar_first',
+//      'id' => strtolower(substr(uniqid(), 0, 8)) . time(),
+//      'theme' => $config->get('system.theme')->get('default'),
+//      //'label' => substr(uniqid(), 0, 8),
+//      'label' => 'test label',
+//      'visibility' => [],
+//      'weight' => 0,
+//    ];
+//    $values = [];
+//    foreach ([
+//               'region',
+//               'id',
+//               'theme',
+//               'plugin',
+//               'weight',
+//               'visibility',
+//             ] as $key) {
+//      $values[$key] = $settings[$key];
+//      // Remove extra values that do not belong in the settings array.
+//      unset($settings[$key]);
+//    }
+//    foreach ($values['visibility'] as $id => $visibility) {
+//      $values['visibility'][$id]['id'] = $id;
+//    }
+//    $values['settings'] = $settings;
+//    $block = Block::create($values);
+//    //$block->save();
+//    return $block;
+//  }
 
   /**
    * Generate all files.
@@ -939,8 +997,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public
-  function excludeMediaIds() {
+  public function excludeMediaIds() {
     $query = \Drupal::entityQuery('media');
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();
@@ -955,8 +1012,7 @@ class StaticGenerator {
    * @return string
    * @throws \Exception
    */
-  public
-  function fileInfo($path) {
+  public function fileInfo($path) {
     $file_name = $this->generatorDirectory(TRUE) . $this->directoryFromPath($path) . '/' .
       $this->filenameFromPath($path);
     if (file_exists($file_name)) {
