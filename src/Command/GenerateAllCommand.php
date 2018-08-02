@@ -5,6 +5,7 @@ namespace Drupal\static_generator\Command;
 use Drupal\static_generator\StaticGenerator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
 use Drupal\Console\Annotations\DrupalCommand;
@@ -44,7 +45,12 @@ class GenerateAllCommand extends ContainerAwareCommand {
     $this
       ->setName('sg:generate-all')
       ->setDescription($this->trans('commands.sg.generate-pages.description'))
-      ->setAliases(['sg']);
+      ->setAliases(['sg'])
+      ->addOption(
+        'quite',
+        NULL,
+        InputOption::VALUE_NONE,
+        $this->trans('commands.sg.generate-all.options.quite'));
   }
 
   /**
@@ -53,12 +59,19 @@ class GenerateAllCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    $answer = $this->getIo()
-      ->ask('Delete and re-generate entire static site (yes/no)? ');
+    if (empty($input->getOption('quite'))) {
+      $answer = $this->getIo()
+        ->ask('Delete and re-generate entire static site (yes/no)? ');
+    }
+    else {
+      $answer = 'yes';
+    }
     if (strtolower($answer) == 'yes') {
       $elapsed_time = $this->staticGenerator->generateAll();
-      $this->getIo()->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
+      $this->getIo()
+        ->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
       //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
     }
   }
+
 }

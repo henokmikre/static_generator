@@ -47,6 +47,12 @@ in the appropriate directory within the static generation directory, which is sp
 in the settings. The pages are rendered for the Annonymous user.  Only published pages 
 are generated.
 
+
+The Drupal 8 Static Generator module generates four types of files, all of which are placed in the directory specified in the setting "Generator Directory"
+
+creates ESI includes for blocks, so that if a block is used on many pages, only the block fragment would need to be re-generated.
+
+
 ### Full Site Generation
 To generate the entire site, including pages, ESI's, and public files and code files:
 ```
@@ -128,3 +134,6 @@ Once the Drupal core workflow module has been installed, and workflow
 has been enabled for a specific content type at /admin/config/workflow/workflows,
 page files will be automatically generated whenever a new version of 
 the page is published.
+
+### Example cron settngs
+
