@@ -9,6 +9,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
 use Drupal\Console\Annotations\DrupalCommand;
+use Drupal\static_generator\StaticGeneratorBlockCreationTrait;
 
 
 /**
@@ -20,6 +21,8 @@ use Drupal\Console\Annotations\DrupalCommand;
  * )
  */
 class GenerateBlocksCommand extends ContainerAwareCommand {
+
+  use StaticGeneratorBlockCreationTrait;
 
   /**
    * The Static Generator service.
@@ -50,6 +53,11 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
         InputArgument::OPTIONAL,
         $this->trans('commands.sg.generate-blocks.arguments.block_id'))
       ->addOption(
+        'test',
+        NULL,
+        InputOption::VALUE_NONE,
+        $this->trans('commands.sg.generate-blocks.options.test'))
+      ->addOption(
         'frequent',
         NULL,
         InputOption::VALUE_NONE,
@@ -65,14 +73,27 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
 
+    $elapsed_time = 0;
     if (empty($block_id)) {
-      if (empty($input->getOption('frequent'))) {
-        // Generate all blocks.
-        $elapsed_time = $this->staticGenerator->generateBlocks(FALSE);
+      if (!empty($input->getOption('test'))) {
+        for ($i = 0; $i < 5000; $i++) {
+          $this->placeBlock('system_powered_by_block', [
+            'id' => 'bartik_powered_A' . $i,
+            'theme' => 'bartik',
+            'weight' => 2,
+          ]);
+        }
       }
       else {
-        // Generate frequent blocks.
-        $elapsed_time = $this->staticGenerator->generateBlocks(TRUE);
+        if (empty($input->getOption('frequent'))) {
+          // Generate all blocks.
+          $elapsed_time = $this->staticGenerator->generateBlocks(FALSE);
+        }
+
+        else {
+          // Generate frequent blocks.
+          $elapsed_time = $this->staticGenerator->generateBlocks(TRUE);
+        }
       }
       $this->getIo()
         ->info('Generate blocks completed, elapsed time: ' . $elapsed_time . ' seconds.');

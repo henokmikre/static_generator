@@ -16,14 +16,22 @@ A static page generator for Drupal
     + [Files Generation](#files-generation)
     
 ## Installation
-- Install this module using the normal Drupal module installation process.
-- Configure a private directory in settings.php.
-- Configure static generation settings at /admin/config/system/static_generator.
+
+Typically the Static Generator module is installed on a Drupal site that is located behind a firewall.
+That way content editors can edit the content in a more secure environment.  As content editors 
+publish content, it is pushed out to a public facing static site in real time.
 
 ### Requirements
 
 - Drupal 8.5 or greater
 - PHP 7.2 or greater
+
+### Steps
+- Install this module using the normal Drupal module installation process.
+- Configure a private directory in settings.php.
+- Configure static generation settings at /admin/config/system/static_generator.
+- Create a script that uses rsync to push generated files to a public facing server that serves
+the static files.
 
 ## Settings
  
@@ -137,3 +145,15 @@ the page is published.
 
 ### Example cron settngs
 
+0 * * * * apache cd /var/www/my_project/docroot && /var/www/my_project/vendor/drupal/console/bin/drupal sgb
+* * * * * apache cd /var/www/my_project/docroot &&  /var/www/my_project/vendor/drupal/console/bin/drupal sgb --frequent
+*/5 * * * * wmb_web /var/www/rsync.sh > /dev/null 2>&1
+
+The first entry does a full generation of all blocks at the top of each hour.  This assures that any
+blocks that change are regenerated, as some may not regenerate in real time.  This is because only Custom
+Blocks, which can be published using the core workflow module, are generated in real time.
+
+The second entry generates each minute frequently changing blocks.  For example, if you had a block
+that displayed the current temperature using a web service, then the temperature would never be more
+than one minute out of date. The third entry is a custom script that pushes, using rsync, the generated static files
+to the static production server.
