@@ -539,7 +539,7 @@ class StaticGenerator {
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
     //$public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' ' . $public_files_directory . ' ' . $generator_directory . '/sites/default';
+    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
     exec($public_files);
 
     // Elapsed time.
