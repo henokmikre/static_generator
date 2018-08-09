@@ -6,7 +6,6 @@ use Drupal;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\simpletest\BlockCreationTrait;
 
-
 /**
  * Tests generating blocks.
  *
