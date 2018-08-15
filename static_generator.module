@@ -57,9 +57,13 @@ function static_generator_entity_update(EntityInterface $entity) {
   // Node.
   if ($entity->getEntityTypeId() === 'node') {
     $path = $entity->toUrl()->toString();
+    \Drupal::logger('static_generator')
+      ->notice(' static_generator_entity_update() ' . $entity->get('moderation_state')->value );
     if ($entity->get('moderation_state')->value == 'published') {
-      \Drupal::service('static_generator')->generatePage($path, TRUE, TRUE);
-      \Drupal::service('static_generator')->generateBlocks($path, TRUE);
+      \Drupal::logger('static_generator')
+        ->notice(' static_generator_entity_update() ' . $path);
+      \Drupal::service('static_generator')->generatePage($path, FALSE, TRUE);
+      //\Drupal::service('static_generator')->generateBlocks($path, TRUE);
     }
     elseif ($entity->get('moderation_state')->value == 'archived') {
       \Drupal::service('static_generator')->deletePage($path);
@@ -105,7 +109,6 @@ function static_generator_entity_delete(EntityInterface $entity) {
     \Drupal::service('static_generator')->deletePage($path);
   }
 }
-
 
 /**
  * Implements hook_form_alter().

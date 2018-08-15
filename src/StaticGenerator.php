@@ -295,6 +295,10 @@ class StaticGenerator {
       $path_alias = \Drupal::service('path.alias_manager')
         ->getAliasByPath($path);
       if (in_array($path_alias, $paths_do_not_generate)) {
+        if ($this->verboseLogging()) {
+          \Drupal::logger('static_generator')
+            ->notice('generatePage() skipping excluded file' . $path_alias);
+        }
         return;
       }
     }
@@ -452,39 +456,39 @@ class StaticGenerator {
    *   Add support for creating custom block instances.
    * @throws \Drupal\Core\Entity\EntityStorageException
    */
-//  public function placeBlock($plugin_id, array $settings = []) {
-//    $config = \Drupal::configFactory();
-//    $settings += [
-//      'plugin' => $plugin_id,
-//      'region' => 'sidebar_first',
-//      'id' => strtolower(substr(uniqid(), 0, 8)) . time(),
-//      'theme' => $config->get('system.theme')->get('default'),
-//      //'label' => substr(uniqid(), 0, 8),
-//      'label' => 'test label',
-//      'visibility' => [],
-//      'weight' => 0,
-//    ];
-//    $values = [];
-//    foreach ([
-//               'region',
-//               'id',
-//               'theme',
-//               'plugin',
-//               'weight',
-//               'visibility',
-//             ] as $key) {
-//      $values[$key] = $settings[$key];
-//      // Remove extra values that do not belong in the settings array.
-//      unset($settings[$key]);
-//    }
-//    foreach ($values['visibility'] as $id => $visibility) {
-//      $values['visibility'][$id]['id'] = $id;
-//    }
-//    $values['settings'] = $settings;
-//    $block = Block::create($values);
-//    //$block->save();
-//    return $block;
-//  }
+  //  public function placeBlock($plugin_id, array $settings = []) {
+  //    $config = \Drupal::configFactory();
+  //    $settings += [
+  //      'plugin' => $plugin_id,
+  //      'region' => 'sidebar_first',
+  //      'id' => strtolower(substr(uniqid(), 0, 8)) . time(),
+  //      'theme' => $config->get('system.theme')->get('default'),
+  //      //'label' => substr(uniqid(), 0, 8),
+  //      'label' => 'test label',
+  //      'visibility' => [],
+  //      'weight' => 0,
+  //    ];
+  //    $values = [];
+  //    foreach ([
+  //               'region',
+  //               'id',
+  //               'theme',
+  //               'plugin',
+  //               'weight',
+  //               'visibility',
+  //             ] as $key) {
+  //      $values[$key] = $settings[$key];
+  //      // Remove extra values that do not belong in the settings array.
+  //      unset($settings[$key]);
+  //    }
+  //    foreach ($values['visibility'] as $id => $visibility) {
+  //      $values['visibility'][$id]['id'] = $id;
+  //    }
+  //    $values['settings'] = $settings;
+  //    $block = Block::create($values);
+  //    //$block->save();
+  //    return $block;
+  //  }
 
   /**
    * Generate all files.
