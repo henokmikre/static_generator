@@ -47,7 +47,7 @@ function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\Blo
  *
  */
 function static_generator_entity_insert(EntityInterface $entity) {
-  $this->process_workflow($entity);
+  process_workflow($entity);
 }
 
 /**
@@ -57,7 +57,7 @@ function static_generator_entity_insert(EntityInterface $entity) {
  *
  */
 function static_generator_entity_update(EntityInterface $entity) {
-  $this->process_workflow($entity);
+  process_workflow($entity);
 }
 
 function process_workflow(EntityInterface $entity) {

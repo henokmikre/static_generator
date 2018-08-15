@@ -367,10 +367,10 @@ class StaticGenerator {
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
-    if ($this->verboseLogging()) {
-      \Drupal::logger('static_generator')
-        ->notice('generateBlocks() elapsed time: ' . $elapsed_time . ' seconds.');
-    }
+//    if ($this->verboseLogging()) {
+//      \Drupal::logger('static_generator')
+//        ->notice('generateBlocks() elapsed time: ' . $elapsed_time . ' seconds.');
+//    }
     return $elapsed_time;
   }
 
