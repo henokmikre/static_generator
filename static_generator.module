@@ -41,13 +41,26 @@ function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\Blo
 }
 
 /**
+ * Implements hook_entity_create().
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *
+ */
+function static_generator_entity_create(EntityInterface $entity) {
+  $this->process_workflow($entity);
+}
+
+/**
  * Implements hook_entity_update().
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *
- * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function static_generator_entity_update(EntityInterface $entity) {
+  $this->process_workflow($entity);
+}
+
+function process_workflow(EntityInterface $entity) {
 
   // @todo need some sortof check here?
   //  if (!isset($entity->get('moderation_state')) {
@@ -58,7 +71,7 @@ function static_generator_entity_update(EntityInterface $entity) {
   if ($entity->getEntityTypeId() === 'node') {
     $path = $entity->toUrl()->toString();
     \Drupal::logger('static_generator')
-      ->notice(' static_generator_entity_update() ' . $entity->get('moderation_state')->value );
+      ->notice(' static_generator_entity_update() ' . $entity->get('moderation_state')->value);
     if ($entity->get('moderation_state')->value == 'published') {
       \Drupal::logger('static_generator')
         ->notice(' static_generator_entity_update() ' . $path);
@@ -121,14 +134,15 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
 
   if (in_array($form_id, ['node_page_edit_form'])) {
     $node = $form_state->getFormObject()->getEntity();
-    $file_info = \Drupal::service('static_generator')->fileInfo('/node/' . $node->id());
-    $form['example'] = array(
+    $file_info = \Drupal::service('static_generator')
+      ->fileInfo('/node/' . $node->id());
+    $form['example'] = [
       '#type' => 'details',
       '#title' => t('Static Generation'),
       '#description' => t(''),
       '#group' => 'advanced',
       '#open' => FALSE,
-      'markup' => ['#markup' => '<br>' . $file_info . '</br></br>'. '<a  target="_blank" href="/node/' . $node->id() . '/gen' .'">Generate Page</a>' .'</p>'],
+      'markup' => ['#markup' => '<br>' . $file_info . '</br></br>' . '<a  target="_blank" href="/node/' . $node->id() . '/gen' . '">Generate Page</a>' . '</p>'],
       'button' =>
         [
           '#type' => 'button',
@@ -136,8 +150,8 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
           //'#value' => $this->t('Ajax refresh'),
           //'#ajax' => ['callback' => [$this, 'ajaxCallback']],
         ],
-    '#weight' => 1000,
-    );
+      '#weight' => 1000,
+    ];
   }
 }
 
