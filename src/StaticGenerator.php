@@ -287,29 +287,31 @@ class StaticGenerator {
    */
   public function generatePage($path, $generate_blocks = FALSE, $log = FALSE) {
 
+    // Get path alias for path.
+    $path_alias = \Drupal::service('path.alias_manager')
+      ->getAliasByPath($path);
+
     // Return if path is excluded.
     $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')
       ->get('paths_do_not_generate');
     if (!empty($paths_do_not_generate_string)) {
       $paths_do_not_generate = explode(',', $paths_do_not_generate_string);
-      $path_alias = \Drupal::service('path.alias_manager')
-        ->getAliasByPath($path);
       if (in_array($path_alias, $paths_do_not_generate)) {
         if ($this->verboseLogging()) {
           \Drupal::logger('static_generator')
-            ->notice('generatePage() skipping excluded file' . $path_alias);
+            ->notice('generatePage() Skipping generation of excluded page:' . $path_alias);
         }
         return;
       }
     }
 
     // Get/Process markup.
-    $markup = $this->markupForPage($path);
+    $markup = $this->markupForPage($path_alias);
     $markup_esi = $this->injectESIs($markup, $generate_blocks);
 
     // Write page files.
-    $web_directory = $this->directoryFromPath($path);
-    $file_name = $this->filenameFromPath($path);
+    $web_directory = $this->directoryFromPath($path_alias);
+    $file_name = $this->filenameFromPath($path_alias);
     $directory = $this->generatorDirectory() . $web_directory;
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);

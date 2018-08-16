@@ -7,7 +7,7 @@
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-
+use Drupal\pathauto\PathautoGenerator;
 /**
  * Implements hook_help().
  *
@@ -41,12 +41,12 @@ function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\Blo
 }
 
 /**
- * Implements hook_entity_create().
+ * Implements hook_ENTITY_postsave().
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *
  */
-function static_generator_entity_insert(EntityInterface $entity) {
+function static_generator_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
   process_workflow($entity);
 }
 
@@ -60,6 +60,14 @@ function static_generator_entity_update(EntityInterface $entity) {
   process_workflow($entity);
 }
 
+/**
+ * Utility function fo hand workflow real time generation.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *
+ * @throws \Drupal\Core\Entity\EntityMalformedException
+ * @throws \Drupal\Core\Entity\EntityStorageException
+ */
 function process_workflow(EntityInterface $entity) {
 
   // @todo need some sortof check here?
@@ -69,14 +77,11 @@ function process_workflow(EntityInterface $entity) {
 
   // Node.
   if ($entity->getEntityTypeId() === 'node') {
-    $path = $entity->toUrl()->toString();
-    \Drupal::logger('static_generator')
-      ->notice(' static_generator_entity_update() ' . $entity->get('moderation_state')->value);
+    //$path = $entity->toUrl()->toString();
+    $path_array = \Drupal::service('pathauto.generator')->createEntityAlias($entity, 'insert');
+    $path = $path_array['alias'];
     if ($entity->get('moderation_state')->value == 'published') {
-      \Drupal::logger('static_generator')
-        ->notice(' static_generator_entity_update() ' . $path);
       \Drupal::service('static_generator')->generatePage($path, FALSE, TRUE);
-      //\Drupal::service('static_generator')->generateBlocks($path, TRUE);
     }
     elseif ($entity->get('moderation_state')->value == 'archived') {
       \Drupal::service('static_generator')->deletePage($path);
@@ -143,13 +148,13 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
       '#group' => 'advanced',
       '#open' => FALSE,
       'markup' => ['#markup' => '<br>' . $file_info . '</br></br>' . '<a  target="_blank" href="/node/' . $node->id() . '/gen' . '">Generate Page</a>' . '</p>'],
-      'button' =>
-        [
-          '#type' => 'button',
-          '#value' => 'Generate Page',
-          //'#value' => $this->t('Ajax refresh'),
-          //'#ajax' => ['callback' => [$this, 'ajaxCallback']],
-        ],
+//      'button' =>
+//        [
+//          '#type' => 'button',
+//          '#value' => 'Generate Page',
+//          //'#value' => $this->t('Ajax refresh'),
+//          //'#ajax' => ['callback' => [$this, 'ajaxCallback']],
+//        ],
       '#weight' => 1000,
     ];
   }
