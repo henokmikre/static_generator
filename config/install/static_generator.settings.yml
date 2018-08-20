@@ -1,9 +1,8 @@
 generator_directory: 'private://'
 rsync_public: '--exclude "php" --exclude ".*"'
 rsync_code: '--include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*"'
-blocks_esi:
-blocks_no_esi:
-blocks_frequent:
+paths_generate: '/node'
+blocks_no_esi: 'logo'
 drupal: 'sites,modules,themes,core'
-non_drupal:
 verbose_logging: false
+static_url: 'http://uspto.gov'

@@ -101,6 +101,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('verbose_logging', $verbose_logging)
       ->save();
 
+    // Static URL
+    $static_url = $form_state->getValue('static_url');
+    $this->config('static_generator.settings')
+      ->set('static_url', $static_url)
+      ->save();
+
   }
 
   /**
@@ -249,10 +255,19 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
         ],
       ];
     }
+
+    // Verbose Logging
     $form['verbose_logging'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Verbose logging'),
       '#default_value' => $config->get('verbose_logging'),
+    ];
+
+    // Static URL
+    $form['static_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Static URL'),
+      '#default_value' => $config->get('static_url'),
     ];
 
     return parent::buildForm($form, $form_state);

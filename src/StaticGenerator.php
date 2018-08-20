@@ -1022,7 +1022,7 @@ class StaticGenerator {
     $file_name = $this->generatorDirectory(TRUE) . $this->directoryFromPath($path) . '/' .
       $this->filenameFromPath($path);
     if (file_exists($file_name)) {
-      $return_string = $file_name . ' -- ' . date("F j, Y, g:i a", filemtime($file_name));
+      $return_string = $file_name . '<br/>' . date("F j, Y, g:i a", filemtime($file_name));
     }
     else {
       $return_string = 'Static page file not found.';

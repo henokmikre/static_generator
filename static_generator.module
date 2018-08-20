@@ -139,15 +139,29 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
 
   if (in_array($form_id, ['node_page_edit_form'])) {
     $node = $form_state->getFormObject()->getEntity();
+
+    // Name and date info for static file.
     $file_info = \Drupal::service('static_generator')
       ->fileInfo('/node/' . $node->id());
+
+    // Get path alias for path.
+    $path_alias = \Drupal::service('path.alias_manager')
+      ->getAliasByPath('/node/' . $node->id());
+
+    // Get static URL setting.
+    $configuration = \Drupal::service('config.factory')
+      ->get('static_generator.settings');
+    $static_url = $configuration->get('static_url');
+
     $form['example'] = [
       '#type' => 'details',
       '#title' => t('Static Generation'),
       '#description' => t(''),
       '#group' => 'advanced',
       '#open' => FALSE,
-      'markup' => ['#markup' => '<br>' . $file_info . '</br></br>' . '<a  target="_blank" href="/node/' . $node->id() . '/gen' . '">Generate Page</a>' . '</p>'],
+      'markup' => ['#markup' => '<br/>' . $file_info . '<br/><br/>' .
+        '<a  target="_blank" href="/node/' . $node->id() . '/gen' . '">Generate Static Page</a><br/><br/>' .
+        '<a  target="_blank" href="' . $static_url . '/' . $path_alias .'">View Static Page</a>'],
 //      'button' =>
 //        [
 //          '#type' => 'button',
