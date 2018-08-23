@@ -8,6 +8,7 @@
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\pathauto\PathautoGenerator;
+
 /**
  * Implements hook_help().
  *
@@ -78,7 +79,8 @@ function process_workflow(EntityInterface $entity) {
   // Node.
   if ($entity->getEntityTypeId() === 'node') {
     //$path = $entity->toUrl()->toString();
-    $path_array = \Drupal::service('pathauto.generator')->createEntityAlias($entity, 'insert');
+    $path_array = \Drupal::service('pathauto.generator')
+      ->createEntityAlias($entity, 'insert');
     $path = $path_array['alias'];
     if ($entity->get('moderation_state')->value == 'published') {
       \Drupal::service('static_generator')->generatePage($path, FALSE, TRUE);
@@ -136,44 +138,12 @@ function static_generator_entity_delete(EntityInterface $entity) {
  * @param $form_id
  */
 function static_generator_form_alter(&$form, $form_state, $form_id) {
-
   if (in_array($form_id, ['node_page_edit_form'])) {
     $node = $form_state->getFormObject()->getEntity();
-
-    // Name and date info for static file.
-    $file_info = \Drupal::service('static_generator')
-      ->fileInfo('/node/' . $node->id());
-
-    // Get path alias for path.
-    $path_alias = \Drupal::service('path.alias_manager')
-      ->getAliasByPath('/node/' . $node->id());
-
-    // Get static URL setting.
-    $configuration = \Drupal::service('config.factory')
-      ->get('static_generator.settings');
-    $static_url = $configuration->get('static_url');
-
-    $form['example'] = [
-      '#type' => 'details',
-      '#title' => t('Static Generation'),
-      '#description' => t(''),
-      '#group' => 'advanced',
-      '#open' => FALSE,
-      'markup' => ['#markup' => '<br/>' . $file_info . '<br/><br/>' .
-        '<a  target="_blank" href="/node/' . $node->id() . '/gen' . '">Generate Static Page</a><br/><br/>' .
-        '<a  target="_blank" href="' . $static_url . '/' . $path_alias .'">View Static Page</a>'],
-//      'button' =>
-//        [
-//          '#type' => 'button',
-//          '#value' => 'Generate Page',
-//          //'#value' => $this->t('Ajax refresh'),
-//          //'#ajax' => ['callback' => [$this, 'ajaxCallback']],
-//        ],
-      '#weight' => 1000,
-    ];
+    \Drupal::service('static_generator')
+      ->generationInfoForm('/node/' . $node->id(), $form, TRUE);
   }
 }
-
 
 // as seen in the content_moderation_notifications.
 // Implementing these hooks gives you a single place to react to content states changes.

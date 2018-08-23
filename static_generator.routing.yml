@@ -30,3 +30,12 @@ static_generator.generate_node:
   requirements:
     _permission: 'administer static generator'
 
+static_generator.generation_info_node:
+  path: '/node/{node}/sg'
+  defaults:
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generationInfoNode'
+    _title: 'Static'
+  requirements:
+    _permission: 'administer static generator'
+  options:
+      _admin_route: TRUE

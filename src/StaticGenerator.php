@@ -369,10 +369,10 @@ class StaticGenerator {
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
-//    if ($this->verboseLogging()) {
-//      \Drupal::logger('static_generator')
-//        ->notice('generateBlocks() elapsed time: ' . $elapsed_time . ' seconds.');
-//    }
+    //    if ($this->verboseLogging()) {
+    //      \Drupal::logger('static_generator')
+    //        ->notice('generateBlocks() elapsed time: ' . $elapsed_time . ' seconds.');
+    //    }
     return $elapsed_time;
   }
 
@@ -1030,7 +1030,75 @@ class StaticGenerator {
     return $return_string;
   }
 
+  /**
+   * Get generation info for a page.
+   *
+   * @param $path
+   *
+   * @param array $form
+   *
+   * @param bool $details
+   *
+   * @return array
+   *
+   * @throws \Exception
+   */
+  public function generationInfoForm($path, &$form = [], $details = FALSE) {
+
+    // Name and date info for static file.
+    $file_info = $this->fileInfo($path);
+
+    // Get path alias for path.
+    $path_alias = \Drupal::service('path.alias_manager')
+      ->getAliasByPath($path);
+
+    // Get static URL setting.
+    $configuration = \Drupal::service('config.factory')
+      ->get('static_generator.settings');
+    $static_url = $configuration->get('static_url');
+
+    $form['static_generator'] = [
+      '#title' => t('Static Generation'),
+      '#description' => t(''),
+      '#group' => 'advanced',
+      '#open' => FALSE,
+      'markup' => [
+        '#markup' => '<br/>' . $file_info . '<br/><br/>' .
+          '<a  target="_blank" href="' . $path . '/gen' . '">Generate Static Page</a><br/><br/>' .
+          '<a  target="_blank" href="' . $static_url . '/' . $path_alias . '">View Static Page</a>',
+      ],
+      //      'button' =>
+      //        [
+      //          '#type' => 'button',
+      //          '#value' => 'Generate Page',
+      //          //'#value' => $this->t('Ajax refresh'),
+      //          //'#ajax' => ['callback' => [$this, 'ajaxCallback']],
+      //        ],
+      '#weight' => 1000,
+    ];
+
+    // Create form details.
+    if ($details) {
+      $form['static_generator']['#type'] = 'details';
+    }
+
+    return $form;
+  }
+
+  /**
+   * @param $path
+   *
+   * @return \Drupal\Component\Render\MarkupInterface
+   * @throws \Exception
+   */
+  public function generationInfo($path) {
+    $form = $this->generationInfoForm($path);
+    $markup = $this->renderer->render($form);
+    return $markup;
+  }
+
 }
+
 
 
 //    $entity_type = 'node';

@@ -4,5 +4,4 @@ rsync_code: '--include="*/" --include="*.svg" --include="*.png" --include="*.jpg
 paths_generate: '/node'
 blocks_no_esi: 'logo'
 drupal: 'sites,modules,themes,core'
-verbose_logging: false
-static_url: 'http://uspto.gov'
+verbose_logging: true

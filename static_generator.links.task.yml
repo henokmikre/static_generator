@@ -1,5 +1,12 @@
-# Static settings
+# Static Generator settings.
 static_generator.settings_tab:
   route_name: static_generator.settings
   title: 'Settings'
   base_route: static_generator.settings
+
+# Generation info for a node.
+static_generator.generation_info_node:
+  route_name: static_generator.generation_info_node
+  title: 'Static'
+  base_route: entity.node.canonical
+  weight: 100

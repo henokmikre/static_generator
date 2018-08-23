@@ -69,7 +69,7 @@ class DeleteCommand extends ContainerAwareCommand {
       }
     }
     else {
-      $answer = $this->getIo()->ask('Delete all pages (yes/no)? ');
+      $answer = $this->getIo()->ask('Delete all files and pages (yes/no)? ');
       if(strtolower($answer) == 'yes') {
         $elapsed_time = $this->staticGenerator->deleteAll();
         $this->getIo()
