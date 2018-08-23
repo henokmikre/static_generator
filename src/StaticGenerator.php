@@ -1065,7 +1065,7 @@ class StaticGenerator {
       'markup' => [
         '#markup' => '<br/>' . $file_info . '<br/><br/>' .
           '<a  target="_blank" href="' . $path . '/gen' . '">Generate Static Page</a><br/><br/>' .
-          '<a  target="_blank" href="' . $static_url . '/' . $path_alias . '">View Static Page</a>',
+          '<a  target="_blank" href="' . $static_url . $path_alias . '">View Static Page</a>',
       ],
       //      'button' =>
       //        [
