@@ -181,21 +181,18 @@ class StaticGenerator {
   /**
    * Generate pages.
    *
-   * @param int $limit
-   * Limit the number of nodes generated for each bundle.
-   *
    * @return int
    *   Execution time in seconds.
    *
    * @throws \Exception
    */
-  public function generatePages($limit = 0) {
+  public function generatePages() {
     \Drupal::logger('static_generator')->notice('Begin generatePages()');
     $elapsed_time = $this->deletePages();
-    $elapsed_time += $this->generateNodes($limit);
-    //$elapsed_time += $this->generatePaths();
-    //$elapsed_time += $this->generateBlocks();
-    //$elapsed_time += $this->generateRedirects();
+    $elapsed_time += $this->generateNodes();
+    $elapsed_time += $this->generatePaths();
+    $elapsed_time += $this->generateBlocks();
+    $elapsed_time += $this->generateRedirects();
     \Drupal::logger('static_generator')
       ->notice('End generatePages(), elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
@@ -213,7 +210,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function generateNodes($type, $start = 0, $length = 1000) {
+  public function generateNodes($type = '', $start = 0, $length = 1000) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
@@ -270,17 +267,12 @@ class StaticGenerator {
       // Elapsed time.
       $end_time = time();
       $elapsed_time = $end_time - $start_time;
-      if (empty($type)) {
-        \Drupal::logger('static_generator')
-          ->notice('Generated bundle: ' . $bundle . ', count: ' . $count_gen .
-            ', elapsed time: ' . $elapsed_time .
-            ' seconds. Start:' . $start . ' Length: ' . $length);
-      }
-      else {
-        \Drupal::logger('static_generator')
-          ->notice('Generated bundle: ' . $bundle . ', count: ' . $count_gen . ', elapsed time: ' . $elapsed_time . ' seconds.');
-      }
       $elapsed_time_total += $elapsed_time;
+
+      \Drupal::logger('static_generator')
+        ->notice('Generated bundle: ' . $bundle . ', count: ' . $count_gen .
+          ', elapsed time: ' . $elapsed_time .
+          ' seconds. Start:' . $start . ' Length: ' . $length);
     }
     return $elapsed_time_total;
   }

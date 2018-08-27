@@ -5,6 +5,7 @@ namespace Drupal\static_generator\Command;
 use Drupal\static_generator\StaticGenerator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
 use Drupal\Console\Annotations\DrupalCommand;
@@ -48,10 +49,11 @@ class GeneratePagesCommand extends ContainerAwareCommand {
         'path',
         InputArgument::OPTIONAL,
         $this->trans('commands.sg.generate-pages.arguments.path'))
-      ->addArgument(
-        'limit',
-        InputArgument::OPTIONAL,
-        $this->trans('commands.sg.generate-pages.arguments.limit'))
+      ->addOption(
+        'quite',
+        NULL,
+        InputOption::VALUE_NONE,
+        $this->trans('commands.sg.generate-all.options.quite'))
       ->setAliases(['sgp']);
   }
 
@@ -62,22 +64,26 @@ class GeneratePagesCommand extends ContainerAwareCommand {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $path = $input->getArgument('path');
-    $limit = $input->getArgument('limit');
     if (empty($path)) {
-      $answer = $this->getIo()
-        ->ask('Delete and re-generate all pages (yes/no)? ');
-      if (strtolower($answer) == 'yes') {
-        $elapsed_time = $this->staticGenerator->generatePages($limit);
-        $this->getIo()
-          ->info('Generation of all pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      if (empty($input->getOption('quite'))) {
+        $answer = $this->getIo()
+          ->ask('Delete and re-generate all pages (yes/no)? ');
+        if (strtolower($answer) == 'yes') {
+          $elapsed_time = $this->staticGenerator->generatePages();
+          $this->getIo()
+            ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+        }
+      }
+      else {
+        $elapsed_time = $this->staticGenerator->generatePages();
         $this->getIo()
           ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
       }
     }
     else {
-      $elapsed_time = $this->staticGenerator->generatePage($path);
+      $this->staticGenerator->generatePage($path);
       $this->getIo()
-        ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+        ->info('Generate page for . ' . $path . ' complete.');
       //    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));
     }
   }
