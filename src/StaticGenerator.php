@@ -23,6 +23,8 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
+use Drupal\Core\Path\PathMatcherInterface;
+
 
 /**
  * Static Generator Service.
@@ -109,6 +111,13 @@ class StaticGenerator {
   protected $entityTypeManager;
 
   /**
+   * The path matcher.
+   *
+   * @var \Drupal\Core\Path\PathMatcherInterface
+   */
+  protected $pathMatcher;
+
+  /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
@@ -129,9 +138,13 @@ class StaticGenerator {
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The configuration object factory.
    * @param \Drupal\Core\File\FileSystemInterface $file_system
+   *   File system.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   Entity type manager.
+   * @param \Drupal\Core\Path\PathMatcherInterface $path_matcher
+   *   Path matcher.
    */
-  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager, PathMatcherInterface $path_matcher) {
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
@@ -142,12 +155,12 @@ class StaticGenerator {
     $this->configFactory = $config_factory;
     $this->fileSystem = $file_system;
     $this->entityTypeManager = $entity_type_manager;
+    $this->pathMatcher = $path_matcher;
   }
 
   /**
    * Generate all pages and files.
    *
-   * @param int $limit
    * Limit the number of nodes generated for each bundle.
    *
    * @return int
@@ -180,9 +193,9 @@ class StaticGenerator {
     \Drupal::logger('static_generator')->notice('Begin generatePages()');
     $elapsed_time = $this->deletePages();
     $elapsed_time += $this->generateNodes($limit);
-    $elapsed_time += $this->generatePaths();
-    $elapsed_time += $this->generateBlocks();
-    $elapsed_time += $this->generateRedirects();
+    //$elapsed_time += $this->generatePaths();
+    //$elapsed_time += $this->generateBlocks();
+    //$elapsed_time += $this->generateRedirects();
     \Drupal::logger('static_generator')
       ->notice('End generatePages(), elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
@@ -191,53 +204,82 @@ class StaticGenerator {
   /**
    * Generate nodes.
    *
-   * @param int $limit
-   * Limit the number of nodes generated for each bundle.
+   * @param $type
+   * @param int $start
+   * @param int $length
    *
    * @return int
    *   Execution time in seconds.
    *
    * @throws \Exception
    */
-  public function generateNodes($limit = 0) {
+  public function generateNodes($type, $start = 0, $length = 1000) {
     $elapsed_time_total = 0;
 
-    // Get bundles to generate from config.
-    $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
-      ->get('gen_node');
-    $gen_node_bundles = explode(',', $gen_node_bundles_string);
+    // Get bundles to generate from config if not specified in $type.
+    if (empty($type)) {
+      $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
+        ->get('gen_node');
+      $gen_node_bundles = explode(',', $gen_node_bundles_string);
+    }
+    else {
+      $gen_node_bundles = [$type];
+    }
 
     // Generate each bundle
     foreach ($gen_node_bundles as $bundle) {
       $start_time = time();
+
       $query = \Drupal::entityQuery('node');
       $query->condition('status', 1);
       $query->condition('type', $bundle);
-      if (!empty($limit)) {
-        $limit = intval($limit);
-        $query->range(1, $limit);
-      }
+      $count = $query->count()->execute();
 
-      $entity_ids = $query->execute();
-      //$count = count($entity_ids);
-      $count = 0;
+      $count_gen = 0;
 
-      // Generate pages for bundle.
-      foreach ($entity_ids as $entity_id) {
-        //        $node = \Drupal::entityTypeManager()
-        //          ->getStorage('node')
-        //          ->load($entity_id);
-        //        $node->set('moderation_state', 'published');
-        //        $node->save();
-        $this->generatePage('/node/' . $entity_id);
-        $count++;
+      for ($i = $start; $i <= $count; $i = $i + $length) {
+
+        // Reset memory
+        //        drupal_static_reset();
+        //        $manager = \Drupal::entityManager();
+        //        foreach ($manager->getDefinitions() as $id => $definition) {
+        //          $manager->getStorage($id)->resetCache();
+        //        }
+        // Run garbage collector to further reduce memory.
+        //        gc_collect_cycles();
+        // @TODO Can we reset container?
+
+        $query = \Drupal::entityQuery('node');
+        $query->condition('status', 1);
+        $query->condition('type', $bundle);
+        $query->range($i, $length);
+        $entity_ids = $query->execute();
+
+        // Generate pages for bundle.
+        foreach ($entity_ids as $entity_id) {
+          $this->generatePage('/node/' . $entity_id);
+          $count_gen++;
+        }
+
+        // Exit if single run for specified content type
+        if (!empty($type)) {
+          break;
+        }
       }
 
       // Elapsed time.
       $end_time = time();
       $elapsed_time = $end_time - $start_time;
-      \Drupal::logger('static_generator')
-        ->notice('generateNodes() bundle: ' . $bundle . ', count: ' . $count . ', elapsed time: ' . $elapsed_time . ' seconds.');
+      if (empty($type)) {
+        \Drupal::logger('static_generator')
+          ->notice('Generated bundle: ' . $bundle . ', count: ' . $count_gen .
+            ', elapsed time: ' . $elapsed_time .
+            ' seconds. Start:' . $start . ' Length: ' . $length);
+      }
+      else {
+        \Drupal::logger('static_generator')
+          ->notice('Generated bundle: ' . $bundle . ', count: ' . $count_gen . ', elapsed time: ' . $elapsed_time . ' seconds.');
+      }
       $elapsed_time_total += $elapsed_time;
     }
     return $elapsed_time_total;
@@ -292,18 +334,12 @@ class StaticGenerator {
       ->getAliasByPath($path);
 
     // Return if path is excluded.
-    $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')
-      ->get('paths_do_not_generate');
-    if (!empty($paths_do_not_generate_string)) {
-      $paths_do_not_generate = explode(',', $paths_do_not_generate_string);
-      if (in_array($path_alias, $paths_do_not_generate)) {
-        if ($this->verboseLogging()) {
-          \Drupal::logger('static_generator')
-            ->notice('generatePage() Skipping generation of excluded page:' . $path_alias);
-        }
-        return;
-      }
+    if ($this->excludePath($path)) {
+      return;
     }
+
+    //    \Drupal::logger('static_generator_pages')
+    //      ->notice('GP: ' . $path);
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias);
@@ -316,10 +352,39 @@ class StaticGenerator {
     if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
       if ($log) {
-        \Drupal::logger('static_generator')
-          ->notice('generatePage() file: ' . $directory . '/' . $file_name);
+        \Drupal::logger('static_generator_pages')
+          ->notice('PG:' . $directory . '/' . $file_name);
       }
     }
+  }
+
+  /**
+   * Generate all block fragment files.
+   *
+   * @return boolean
+   *   Return true if path is excluded, false otherwise.
+   *`
+   * @throws \Exception
+   */
+  public function excludePath($path) {
+
+    $path_alias = \Drupal::service('path.alias_manager')
+      ->getAliasByPath($path);
+
+    // Get paths to exclude (not generate)
+    $paths_do_not_generate_string = $this->configFactory->get('static_generator.settings')
+      ->get('paths_do_not_generate');
+    if (empty($paths_do_not_generate_string)) {
+      return FALSE;
+    }
+    $paths_do_not_generate = explode(',', $paths_do_not_generate_string);
+
+    foreach ($paths_do_not_generate as $path_dng) {
+      if ($this->pathMatcher->matchPath($path_alias, $path_dng)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**

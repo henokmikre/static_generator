@@ -11,6 +11,12 @@ services:
     tags:
       - { name: drupal.command }
 
+  static_generator.generate-pages-type:
+    class: Drupal\static_generator\Command\GeneratePagesTypeCommand
+    arguments: ['@static_generator']
+    tags:
+      - { name: drupal.command }
+
   static_generator.generate-files:
     class: Drupal\static_generator\Command\GenerateFilesCommand
     arguments: ['@static_generator']

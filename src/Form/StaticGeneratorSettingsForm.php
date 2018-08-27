@@ -134,6 +134,13 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#description' => $this->t('The static generator target directory.'),
     ];
 
+    // Static URL
+    $form['static_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Static URL'),
+      '#default_value' => $config->get('static_url'),
+    ];
+
     $form['rsync_public'] = [
       '#type' => 'textfield',
       '#title' => $this->t('rSync public'),
@@ -148,6 +155,13 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#description' => $this->t('rSync command for code files.'),
     ];
 
+    // Verbose Logging
+    $form['verbose_logging'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Verbose logging'),
+      '#default_value' => $config->get('verbose_logging'),
+    ];
+
     $form['paths_generate'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Paths to Generate'),
@@ -156,8 +170,8 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     ];
     $form['paths_do_not_generate'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Paths to not Generate'),
-      '#description' => $this->t('Specify paths to not generate - comma separated, no spaces.'),
+      '#title' => $this->t('Paths and Patterns to not Generate'),
+      '#description' => $this->t('Specify paths or patterns to not generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_do_not_generate'),
     ];
 
@@ -256,25 +270,11 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ];
     }
 
-    // Verbose Logging
-    $form['verbose_logging'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Verbose logging'),
-      '#default_value' => $config->get('verbose_logging'),
-    ];
-
-    // Static URL
-    $form['static_url'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Static URL'),
-      '#default_value' => $config->get('static_url'),
-    ];
-
     return parent::buildForm($form, $form_state);
   }
 
   public function canGenerateEntitiesOfEntityType($entity_type) {
-    if($entity_type == 'node' || $entity_type == 'block'){
+    if($entity_type == 'node'){
       return TRUE;
     } else {
       return FALSE;
