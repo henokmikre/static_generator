@@ -107,6 +107,8 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('static_url', $static_url)
       ->save();
 
+    drupal_set_message($this->t('Your settings have been saved.'));
+
   }
 
   /**

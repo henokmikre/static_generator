@@ -345,7 +345,7 @@ class StaticGenerator {
       file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
       if ($log) {
         \Drupal::logger('static_generator_pages')
-          ->notice('PG:' . $directory . '/' . $file_name);
+          ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
     }
   }
