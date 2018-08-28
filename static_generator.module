@@ -38,7 +38,7 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
  * @param \Drupal\Core\Block\BlockPluginInterface $block
  */
 //function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
-  //$build['#cache']['max-age'] = -1;
+//$build['#cache']['max-age'] = -1;
 //}
 
 /**
@@ -48,7 +48,7 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
  *
  */
 function static_generator_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  process_workflow($entity);
+  process_workflow($entity, 'insert');
 }
 
 /**
@@ -58,7 +58,7 @@ function static_generator_entity_insert(Drupal\Core\Entity\EntityInterface $enti
  *
  */
 function static_generator_entity_update(EntityInterface $entity) {
-  process_workflow($entity);
+  process_workflow($entity, 'update');
 }
 
 /**
@@ -66,10 +66,11 @@ function static_generator_entity_update(EntityInterface $entity) {
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *
+ * @param $operation
+ *
  * @throws \Drupal\Core\Entity\EntityMalformedException
- * @throws \Drupal\Core\Entity\EntityStorageException
  */
-function process_workflow(EntityInterface $entity) {
+function process_workflow(EntityInterface $entity, $operation) {
 
   // @todo need some sortof check here?
   //  if (!isset($entity->get('moderation_state')) {
@@ -78,10 +79,18 @@ function process_workflow(EntityInterface $entity) {
 
   // Node.
   if ($entity->getEntityTypeId() === 'node') {
-    //$path = $entity->toUrl()->toString();
-    $path_array = \Drupal::service('pathauto.generator')
-      ->createEntityAlias($entity, 'insert');
-    $path = $path_array['alias'];
+    if ($operation == 'update') {
+      $path = $entity->toUrl()->toString();
+    }
+    else {
+      $path_array = \Drupal::service('pathauto.generator')
+        ->createEntityAlias($entity, 'insert');
+      $path = $path_array['alias'];
+    }
+
+    if (substr($path, 0, 1) !== '/') {
+      $path = '/' . $path;
+    }
     if ($entity->get('moderation_state')->value == 'published') {
       \Drupal::service('static_generator')->generatePage($path, FALSE, TRUE);
     }
