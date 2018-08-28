@@ -15,7 +15,7 @@ A static page generator for Drupal
     + [Redirect Generation](#redirect-generation)
     + [Files Generation](#files-generation)
     
-## Installation
+## Overview
 
 Typically the Static Generator module is installed on a Drupal site that is located behind a firewall.
 That way content editors can edit the content in a more secure environment.  As content editors 
@@ -25,8 +25,9 @@ publish content, it is pushed out to a public facing static site in real time.
 
 - Drupal 8.5 or greater
 - PHP 7.2 or greater
+- Drupal Console
 
-### Steps
+### Installation
 - Install this module using the normal Drupal module installation process.
 - Configure a private directory in settings.php.
 - Configure static generation settings at /admin/config/system/static_generator.
@@ -41,8 +42,10 @@ the static files.
   specify that directory in the setting, e.g. private://<generator_directory>.
 - rSync Public: The rSync command line options for public file generation.
 - rSync Code: The rSync command line options for code file generation.
-- Paths to generate: Specify which paths to generate.  If left blank, all paths are generated.
-- Paths to not generate: Specify which paths to never generate.
+- Paths to generate: Specify paths to generate.  This often includes paths for views that have a page display,
+ or the "Default front page" setting from /admin/config/system/site-information (generated as index.html).
+- Paths and Patterns to not generate: Specify which paths and/or patterns to never generate. For example, to never
+generate the /about page, enter "/about", or to never generate any path starting with /about, enter "/about/*".
 - Blocks to ESI: Specify which blocks to ESI include. If left blank, all blocks are ESI included.
 - Blocks to not ESI: Specify blocks that should not be ESI included.
 - Frequently changing blocks: Specify blocks that change frequently.
@@ -143,17 +146,29 @@ has been enabled for a specific content type at /admin/config/workflow/workflows
 page files will be automatically generated whenever a new version of 
 the page is published.
 
-### Example cron settngs
+### CSS/JS Aggregation
 
-0 * * * * apache cd /var/www/my_project/docroot && /var/www/my_project/vendor/drupal/console/bin/drupal sgb
-* * * * * apache cd /var/www/my_project/docroot &&  /var/www/my_project/vendor/drupal/console/bin/drupal sgb --frequent
-*/5 * * * * wmb_web /var/www/rsync.sh > /dev/null 2>&1
+The SG Public file generation process (drupal sgf --public) replicates the aggregated CSS and JS files located in 
+/sites/default/files/css and /sites/default/files/js.  The steps required for changing CSS/JS are:
 
-The first entry does a full generation of all blocks at the top of each hour.  This assures that any
+1) Change the CSS/JS files (or source SCSS files etc).
+2) Clear the cache (causes new aggregated CSS/JS files to be created).
+3) Run "drupal sgp --public" to generate (using rsync) the public files directory, which includes the aggregated
+ CSS and JS files.
+
+### Example cron settings
+
+0 * * * * cd /var/www/my_project/docroot && /var/www/my_project/vendor/drupal/console/bin/drupal sgb > /dev/null 2>&1
+
+This cron entry does a full generation of all blocks at the top of each hour.  This assures that any
 blocks that change are regenerated, as some may not regenerate in real time.  This is because only Custom
 Blocks, which can be published using the core workflow module, are generated in real time.
 
-The second entry generates each minute frequently changing blocks.  For example, if you had a block
+*/2 * * * * cd /var/www/my_project/docroot && /var/www/my_project/vendor/drupal/console/bin/drupal sgb --frequent > /dev/null 2>&1
+
+Generates frequently changing blocks every two minutes.  For example, if you had a block
 that displayed the current temperature using a web service, then the temperature would never be more
-than one minute out of date. The third entry is a custom script that pushes, using rsync, the generated static files
-to the static production server.
+than two minutes out of date. 
+
+A third entry is typically required that call a custom script that pushes, using rsync, the generated static files,
+to the static public facing production web server.
