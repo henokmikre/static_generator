@@ -851,8 +851,6 @@ class StaticGenerator {
 
       // Construct block id.
       $id = $block->getAttribute('id');
-      \Drupal::logger('static_generator')
-        ->notice('Block Id: ' . $id);
       if ($id == '') {
         continue;
       }
