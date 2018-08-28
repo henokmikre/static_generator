@@ -836,17 +836,23 @@ class StaticGenerator {
     // Get list of blocks to ESI and not to ESI.
     $blocks_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_esi');
-    $blocks_esi = explode(',', $blocks_esi);
+    if (!empty($blocks_esi)) {
+      $blocks_esi = explode(',', $blocks_esi);
+    }
+
     $blocks_no_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_no_esi');
-    $blocks_no_esi = explode(',', $blocks_no_esi);
-
+    if (!empty($blocks_no_esi)) {
+      $blocks_no_esi = explode(',', $blocks_no_esi);
+    }
     // Replace each block with ESI if it is on the list of ESI blocks, or if
     // ESI block list is empty. Skip any blocks on the "no ESI" list.
     foreach ($blocks as $block) {
 
       // Construct block id.
       $id = $block->getAttribute('id');
+      \Drupal::logger('static_generator')
+        ->notice('Block Id: ' . $id);
       if ($id == '') {
         continue;
       }

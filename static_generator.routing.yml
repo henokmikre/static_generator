@@ -10,7 +10,7 @@ static_generator.test_route:
   path: '/sgtest'
   defaults:
     _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::sgTest'
-    _title: 'Generate'
+    _title: 'SG Test'
   requirements:
     _permission: 'administer static generator'
 
