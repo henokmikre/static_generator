@@ -107,6 +107,20 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('static_url', $static_url)
       ->save();
 
+    // Rsync Code
+    $rsync_code = $form_state->getValue('rsync_code');
+    $this->config('static_generator.settings')
+      ->set('rsync_code', $rsync_code)
+      ->save();
+
+    // Rsync Public
+    $rsync_public = $form_state->getValue('rsync_public');
+    $this->config('static_generator.settings')
+      ->set('rsync_public', $rsync_public)
+      ->save();
+    
+
+
     drupal_set_message($this->t('Your settings have been saved.'));
 
   }
