@@ -268,11 +268,11 @@ class StaticGenerator {
       $end_time = time();
       $elapsed_time = $end_time - $start_time;
       $elapsed_time_total += $elapsed_time;
+      $seconds_per_page = round($elapsed_time / $count_gen, 4);
 
       \Drupal::logger('static_generator')
-        ->notice('Generated bundle: ' . $bundle . ', count: ' . $count_gen .
-          ', elapsed time: ' . $elapsed_time .
-          ' seconds. Start:' . $start . ' Length: ' . $length);
+        ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
+          ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
     }
     return $elapsed_time_total;
   }
@@ -883,10 +883,10 @@ class StaticGenerator {
       if ($id == '') {
         continue;
       }
-      if(substr($id,0,6)=='block-'){
+      if (substr($id, 0, 6) == 'block-') {
         $id = substr($id, 6);
       }
-      $id = str_replace('-', '_',$id );
+      $id = str_replace('-', '_', $id);
 
       // Special handling for Views Blocks
       //      if (substr($block_id, 0, 12) == 'views_block_') {
