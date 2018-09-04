@@ -118,7 +118,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $this->config('static_generator.settings')
       ->set('rsync_public', $rsync_public)
       ->save();
-    
+
 
 
     drupal_set_message($this->t('Your settings have been saved.'));

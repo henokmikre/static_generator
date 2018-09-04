@@ -321,6 +321,7 @@ class StaticGenerator {
    * @param bool $log
    *   Should a log message be written to dblog.
    *
+   * @return string|void
    * @throws \Exception
    */
   public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE) {
@@ -353,12 +354,13 @@ class StaticGenerator {
   }
 
   /**
-   * Generate all block fragment files.
+   * Should a path be excluded by "Paths to not generate setting.
+   *
+   * @param $path
    *
    * @return boolean
    *   Return true if path is excluded, false otherwise.
    *`
-   * @throws \Exception
    */
   public function excludePath($path) {
 
@@ -412,15 +414,16 @@ class StaticGenerator {
   }
 
   /**
-   * Generate a block fragment file.
+   * Generate a block fragment file using the block_id and DOM block element.
    *
    * @param $block_id
+   *   The block id.
    *
    * @param \DOMElement $block
-   *   The block.
+   *   The DOM block element.
    *
    * @param $blocks_over_write
-   *   Should a block fragment be generated if one already exisits.
+   *   Should a block fragment be generated if one already exists.
    *
    */
   public function generateBlock($block_id, $block, $blocks_over_write = FALSE) {
@@ -880,7 +883,10 @@ class StaticGenerator {
       if ($id == '') {
         continue;
       }
-      $block_id = str_replace('-', '_', substr($id, 6));
+      if(substr($id,0,6)=='block-'){
+        $id = substr($id, 6);
+      }
+      $id = str_replace('-', '_',$id );
 
       // Special handling for Views Blocks
       //      if (substr($block_id, 0, 12) == 'views_block_') {
@@ -889,17 +895,17 @@ class StaticGenerator {
       //      }
 
       // Do not replace block if listed in "Blocks to not ESI".
-      if (in_array($block_id, $blocks_no_esi)) {
+      if (in_array($id, $blocks_no_esi)) {
         continue;
       }
 
       // Create the ESI and then replace the block with the ESI.
-      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
+      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($id) . '" -->';
       $esi = $dom->createElement('span', $esi_markup);
       $block->parentNode->replaceChild($esi, $block);
 
       // Generate the block.
-      $this->generateBlock($block_id, $block, $blocks_over_write);
+      $this->generateBlock($id, $block, $blocks_over_write);
 
     }
 
