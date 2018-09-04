@@ -187,21 +187,21 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function generatePages() {
-    \Drupal::logger('static_generator')->notice('Begin generatePages()');
     $elapsed_time = $this->deletePages();
+    $elapsed_time += $this->deleteBlocks();
     $elapsed_time += $this->generateNodes();
-    $elapsed_time += $this->generatePaths();
-    $elapsed_time += $this->generateBlocks();
-    $elapsed_time += $this->generateRedirects();
+    //$elapsed_time += $this->generatePaths();
+    //$elapsed_time += $this->generateRedirects();
     \Drupal::logger('static_generator')
-      ->notice('End generatePages(), elapsed time: ' . $elapsed_time . ' seconds.');
+      ->notice('Generation of all pages complete, elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
 
   /**
    * Generate nodes.
    *
-   * @param $type
+   * @param bool $blocks_only
+   * @param string $type
    * @param int $start
    * @param int $length
    *
@@ -210,7 +210,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function generateNodes($type = '', $start = 0, $length = 1000) {
+  public function generateNodes($blocks_only = FALSE, $type = '', $start = 0, $length = 1000) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
@@ -254,7 +254,7 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $this->generatePage('/node/' . $entity_id);
+          $this->generatePage('/node/' . $entity_id, $blocks_only);
           $count_gen++;
         }
 
@@ -311,15 +311,19 @@ class StaticGenerator {
    * @param String $path
    *   The page's path.
    *
-   * @param bool $generate_blocks
-   *   Generate the block fragments referenced by the ESI's.
+   * @param bool $blocks_only
+   *   Optionally omit generating the page (just generate the blocks).
+   *
+   * @param bool $blocks_over_write
+   *   Generate the block fragments referenced by the ESI's even if a
+   *   fragment already exists.
    *
    * @param bool $log
    *   Should a log message be written to dblog.
    *
    * @throws \Exception
    */
-  public function generatePage($path, $generate_blocks = FALSE, $log = FALSE) {
+  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -330,23 +334,21 @@ class StaticGenerator {
       return;
     }
 
-    //    \Drupal::logger('static_generator_pages')
-    //      ->notice('GP: ' . $path);
-
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias);
-    $markup_esi = $this->injectESIs($markup, $generate_blocks);
+    $markup = $this->injectESIs($markup, $blocks_over_write);
 
     // Write page files.
     $web_directory = $this->directoryFromPath($path_alias);
     $file_name = $this->filenameFromPath($path_alias);
     $directory = $this->generatorDirectory() . $web_directory;
-    if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($markup_esi, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
       if ($log) {
         \Drupal::logger('static_generator_pages')
           ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
+      return 'done';
     }
   }
 
@@ -380,7 +382,7 @@ class StaticGenerator {
   }
 
   /**
-   * Generate all block fragment files.
+   * Generate block ESi fragment files.
    *
    * @param bool $frequent_only
    *   Generate frequent blocks only.  Frequent blocks are defined in settings.
@@ -391,57 +393,81 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function generateBlocks($frequent_only = FALSE) {
-    $start_time = time();
 
-    if (!$frequent_only) {
-      $blocks_esi = $this->configFactory->get('static_generator.settings')
-        ->get('blocks_esi');
-      if (empty($blocks_esi)) {
-        // Get all block id's
-        $storage = $this->entityTypeManager->getStorage('block');
-        $ids = $storage->getQuery()
-          ->execute();
-        $blocks_esi = $storage->loadMultiple($ids);
-      }
-      else {
-        $blocks_esi = explode(',', $blocks_esi);
-      }
-      foreach ($blocks_esi as $block_id) {
-        $this->generateBlock($block_id);
-      }
-    }
-    else {
+    if ($frequent_only) {
       // Generate frequent blocks only.
       $blocks_frequent = $this->configFactory->get('static_generator.settings')
         ->get('blocks_frequent');
-      $blocks_frequent = explode(',', $blocks_frequent);
 
       if (!empty($blocks_frequent)) {
+        $blocks_frequent = explode(',', $blocks_frequent);
         foreach ($blocks_frequent as $block_id) {
-          $this->generateBlock($block_id);
+          $this->generateBlockbyId($block_id);
         }
       }
     }
-
-    // Elapsed time.
-    $end_time = time();
-    $elapsed_time = $end_time - $start_time;
-    //    if ($this->verboseLogging()) {
-    //      \Drupal::logger('static_generator')
-    //        ->notice('generateBlocks() elapsed time: ' . $elapsed_time . ' seconds.');
-    //    }
-    return $elapsed_time;
+    else {
+      return $this->generateNodes(TRUE);
+    }
   }
 
   /**
    * Generate a block fragment file.
+   *
+   * @param $block_id
+   *
+   * @param \DOMElement $block
+   *   The block.
+   *
+   * @param $blocks_over_write
+   *   Should a block fragment be generated if one already exisits.
+   *
+   */
+  public function generateBlock($block_id, $block, $blocks_over_write = FALSE) {
+
+    // Return if block on "no esi" in settings.
+    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
+      ->get('blocks_no_esi');
+    $blocks_no_esi = explode(',', $blocks_no_esi);
+    if (in_array($block_id, $blocks_no_esi)) {
+      return;
+    }
+
+    // Return if block's pattern on "no esi" in settings.
+    foreach ($blocks_no_esi as $block_no_esi) {
+      if (substr($block_no_esi, strlen($block_no_esi) - 1, 1) === '*') {
+        $block_no_esi = substr($block_no_esi, 0, strlen($block_no_esi) - 1);
+        if (strpos($block_id, $block_no_esi) === 0) {
+          return;
+        }
+      }
+    }
+
+    // Return if block fragment already exists and not over writing.
+    $dir = $this->generatorDirectory() . '/esi/block';
+    file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
+    if (!$blocks_over_write) {
+      if (file_scan_directory($dir, '/^' . $block_id . '$/')) {
+        return;
+      }
+    }
+
+    // Generate block fragment.
+    $block_markup = $block->ownerDocument->saveHTML($block);
+    file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
+  }
+
+  /**
+   * Generate a block fragment file.  This approach generates a block directly,
+   * rather than taking the rendered block markup from the rendered pages, which
+   * is the approach used when generating all pages.
    *
    * @param string $block_id
    *   The block id.
    *
    * @throws \Exception
    */
-  public function generateBlock($block_id) {
+  public function generateBlockById($block_id) {
     if (empty($block_id)) {
       return;
     }
@@ -601,16 +627,16 @@ class StaticGenerator {
     // rSync
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    //$public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' --exclude-from "' . $generator_directory . '/exclude_files.txt" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    $public_files = 'rsync -zr --delete --progress --delete-excluded ' . $rsync_public . ' ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    exec($public_files);
+    $rsync_public = $rsync_public . ' ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    exec($rsync_public);
 
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     if ($this->verboseLogging()) {
       \Drupal::logger('static_generator')
-        ->notice('generatePublicFiles() elapsed time: ' . $elapsed_time . ' seconds.');
+        ->notice('Generate Public Files elapsed time: ' . $elapsed_time .
+          ' seconds. (' . $rsync_public . ')');
     }
     return $elapsed_time;
   }
@@ -639,7 +665,7 @@ class StaticGenerator {
     exec($module_files);
 
     // rSync themes.
-    $theme_files = 'rsync -zarv --prune-empty-dirs --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
+    $theme_files = '' . $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
     exec($theme_files);
 
     // Elapsed time.
@@ -817,15 +843,15 @@ class StaticGenerator {
    * @param String $markup
    *   The markup.
    *
-   * @param bool $generate_blocks
-   *   Generate the block fragments referenced by the ESI's.
+   * @param bool $blocks_over_write
+   *   Over write block fragments if they exist.
    *
    * @return String
    *   Markup with ESI's injected.
    *
    * @throws \Exception
    */
-  public function injectESIs($markup, $generate_blocks = FALSE) {
+  public function injectESIs($markup, $blocks_over_write = FALSE) {
 
     // Find all of the blocks in the markup.
     $dom = new DomDocument();
@@ -833,20 +859,20 @@ class StaticGenerator {
     $finder = new DomXPath($dom);
     $blocks = $finder->query("//div[contains(@class, 'block')]");
 
-    // Get list of blocks to ESI and not to ESI.
-    $blocks_esi = $this->configFactory->get('static_generator.settings')
-      ->get('blocks_esi');
-    if (!empty($blocks_esi)) {
-      $blocks_esi = explode(',', $blocks_esi);
-    }
+    // Get list of blocks to ESI.
+    //    $blocks_esi = $this->configFactory->get('static_generator.settings')
+    //      ->get('blocks_esi');
+    //    if (!empty($blocks_esi)) {
+    //      $blocks_esi = explode(',', $blocks_esi);
+    //    }
 
+    // Get list of blocks to not ESI.
     $blocks_no_esi = $this->configFactory->get('static_generator.settings')
       ->get('blocks_no_esi');
     if (!empty($blocks_no_esi)) {
       $blocks_no_esi = explode(',', $blocks_no_esi);
     }
-    // Replace each block with ESI if it is on the list of ESI blocks, or if
-    // ESI block list is empty. Skip any blocks on the "no ESI" list.
+
     foreach ($blocks as $block) {
 
       // Construct block id.
@@ -855,30 +881,25 @@ class StaticGenerator {
         continue;
       }
       $block_id = str_replace('-', '_', substr($id, 6));
-      if (substr($block_id, 0, 12) == 'views_block_') {
-        //str_replace('views_block_', 'views_block__', $block_id);
-        $block_id = 'views_block__' . substr($block_id, 12);
-      }
 
-      // Replace block if ESI blocks is empty or if block id is in ESI blocks.
-      if (!empty($blocks_esi) && !in_array($block_id, $blocks_esi)) {
-        continue;
-      }
+      // Special handling for Views Blocks
+      //      if (substr($block_id, 0, 12) == 'views_block_') {
+      //        //str_replace('views_block_', 'views_block__', $block_id);
+      //        $block_id = 'views_block__' . substr($block_id, 12);
+      //      }
 
-      // Do not replace block if listed in "no ESI blocks".
+      // Do not replace block if listed in "Blocks to not ESI".
       if (in_array($block_id, $blocks_no_esi)) {
         continue;
-      }
-
-      // Conditionally generate block.
-      if ($generate_blocks) {
-        $this->generateBlock($block_id);
       }
 
       // Create the ESI and then replace the block with the ESI.
       $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
       $esi = $dom->createElement('span', $esi_markup);
       $block->parentNode->replaceChild($esi, $block);
+
+      // Generate the block.
+      $this->generateBlock($block_id, $block, $blocks_over_write);
 
     }
 
@@ -929,11 +950,12 @@ class StaticGenerator {
    */
   public function deleteAll() {
     $elapsed_time = $this->deletePages();
+    $elapsed_time += $this->deleteBlocks();
     $elapsed_time += $this->deleteDrupal();
 
     // Elapsed time.
     \Drupal::logger('static_generator')
-      ->notice('deleteAll() elapsed time: ' . $elapsed_time . ' seconds.');
+      ->notice('Delete all elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
 
@@ -968,7 +990,7 @@ class StaticGenerator {
     $non_drupal = $this->configFactory->get('static_generator.settings')
       ->get('non_drupal');
     $non_drupal_array = [];
-    if (!empty($drupal)) {
+    if (!empty($non_drupal)) {
       $non_drupal_array = explode(',', $non_drupal);
     }
 
@@ -1000,7 +1022,33 @@ class StaticGenerator {
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     \Drupal::logger('static_generator')
-      ->notice('deletePages() elapsed time: ' . $elapsed_time . ' seconds.');
+      ->notice('Delete Page elapsed time: ' . $elapsed_time . ' seconds.');
+    return $elapsed_time;
+  }
+
+
+  /**
+   * Deletes all generated block include files in /esi/blocks.
+   *
+   * @return int
+   *   Execution time in seconds.
+   *
+   * @throws \Exception
+   */
+  public function deleteBlocks() {
+    $start_time = time();
+    $dir = $this->generatorDirectory(TRUE) . '/esi/block';
+
+    $files = file_scan_directory($dir, '/.*/');
+    foreach ($files as $file) {
+      file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+    }
+
+    // Elapsed time.
+    $end_time = time();
+    $elapsed_time = $end_time - $start_time;
+    \Drupal::logger('static_generator')
+      ->notice('Delete blocks elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
 
@@ -1018,7 +1066,7 @@ class StaticGenerator {
     $full_file_name = $this->generatorDirectory() . $web_directory . '/' . $file_name;
     file_unmanaged_delete($full_file_name);
     \Drupal::logger('static_generator')
-      ->notice('deletePage() file: ' . $full_file_name);
+      ->notice('Deleted page: ' . $full_file_name);
   }
 
   /**

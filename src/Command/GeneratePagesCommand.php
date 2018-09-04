@@ -81,7 +81,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
       }
     }
     else {
-      $this->staticGenerator->generatePage($path);
+      $this->staticGenerator->generatePage($path, FALSE, TRUE );
       $this->getIo()
         ->info('Generation of page for path ' . $path . ' complete.');
       //    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));

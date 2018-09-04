@@ -138,6 +138,8 @@ To delete all generated pages:
 ```
 drupal sgd -- pages
 ```
+The delete all pages command will not delete those files and directories listed in the 
+SG Settings "Drupal files and directories" and "Non-Drupal files and directories"
 
 ### Workflow Integration
 

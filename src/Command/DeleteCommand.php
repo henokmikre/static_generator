@@ -51,6 +51,12 @@ class DeleteCommand extends ContainerAwareCommand {
         InputOption::VALUE_NONE,
         $this->trans('commands.sg.delete.options.pages')
       )
+      ->addOption(
+        'blocks',
+        NULL,
+        InputOption::VALUE_NONE,
+        $this->trans('commands.sg.delete.options.blocks')
+      )
       ->setAliases(['sgd']);
   }
 
@@ -62,15 +68,23 @@ class DeleteCommand extends ContainerAwareCommand {
   protected function execute(InputInterface $input, OutputInterface $output) {
     if ($input->getOption('pages')) {
       $answer = $this->getIo()->ask('Delete all pages (yes/no)? ');
-      if(strtolower($answer) == 'yes') {
+      if (strtolower($answer) == 'yes') {
         $elapsed_time = $this->staticGenerator->deletePages();
         $this->getIo()
           ->info('Delete all generated pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
       }
     }
+    elseif ($input->getOption('blocks')) {
+      $answer = $this->getIo()->ask('Delete all blocks (yes/no)? ');
+      if (strtolower($answer) == 'yes') {
+        $elapsed_time = $this->staticGenerator->deleteBlocks();
+        $this->getIo()
+          ->info('Delete all generated blocks completed, elapsed time: ' . $elapsed_time . ' seconds.');
+      }
+    }
     else {
       $answer = $this->getIo()->ask('Delete all files and pages (yes/no)? ');
-      if(strtolower($answer) == 'yes') {
+      if (strtolower($answer) == 'yes') {
         $elapsed_time = $this->staticGenerator->deleteAll();
         $this->getIo()
           ->info('Delete all generated files and pages completed, elapsed time: ' . $elapsed_time . ' seconds.');

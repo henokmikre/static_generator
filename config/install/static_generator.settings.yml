@@ -1,6 +1,6 @@
 generator_directory: 'private://'
-rsync_public: '--exclude "php" --exclude ".*"'
-rsync_code: '--include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*"'
+rsync_public: 'rsync -zr --delete --progress --delete-excluded --exclude "php" --exclude ".*"'
+rsync_code: 'rsync -zarv --prune-empty-dirs --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*"'
 paths_generate: '/node'
 blocks_no_esi: 'logo'
 drupal: 'sites,modules,themes,core'

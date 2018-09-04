@@ -32,7 +32,11 @@ class StaticGeneratorController extends ControllerBase {
    * The markup.
    */
   public function generateNode($nid) {
-    \Drupal::service('static_generator')->generatePage('/node/' . $nid, TRUE);
+    try {
+      \Drupal::service('static_generator')->generatePage('/node/' . $nid, TRUE);
+    } catch (\Exception $exception) {
+    }
+
     $build = [
       '#markup' => $this->t('Page generation complete.'),
     ];

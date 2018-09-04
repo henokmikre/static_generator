@@ -66,10 +66,10 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->save();
 
     // Blocks - ESI.
-    $blocks_esi = $form_state->getValue('blocks_esi');
-    $this->config('static_generator.settings')
-      ->set('blocks_esi', $blocks_esi)
-      ->save();
+//    $blocks_esi = $form_state->getValue('blocks_esi');
+//    $this->config('static_generator.settings')
+//      ->set('blocks_esi', $blocks_esi)
+//      ->save();
 
     // Blocks - No ESI.
     $blocks_no_esi = $form_state->getValue('blocks_no_esi');
@@ -143,19 +143,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('static_url'),
     ];
 
-    $form['rsync_public'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('rSync public'),
-      '#default_value' => $config->get('rsync_public'),
-      '#description' => $this->t('rSync command for public files.'),
-    ];
-
-    $form['rsync_code'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('rSync code'),
-      '#default_value' => $config->get('rsync_code'),
-      '#description' => $this->t('rSync command for code files.'),
-    ];
 
     // Verbose Logging
     $form['verbose_logging'] = [
@@ -164,6 +151,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('verbose_logging'),
     ];
 
+
     $form['paths_generate'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Paths to Generate'),
@@ -171,22 +159,22 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('paths_generate'),
     ];
     $form['paths_do_not_generate'] = [
-      '#type' => 'textarea',
-      '#title' => $this->t('Paths and Patterns to not Generate'),
-      '#description' => $this->t('Specify paths or patterns to not generate - comma separated, no spaces.'),
+      '#type' => 'C',
+      '#title' => $this->t('Paths and Path Patterns to not Generate'),
+      '#description' => $this->t('Specify paths or path patterns (ending with *) to not generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_do_not_generate'),
     ];
 
-    $form['blocks_esi'] = [
-      '#type' => 'textarea',
-      '#title' => $this->t('Blocks to ESI'),
-      '#description' => $this->t('Specify block ids to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
-      '#default_value' => $config->get('blocks_esi'),
-    ];
+//    $form['blocks_esi'] = [
+//      '#type' => 'textarea',
+//      '#title' => $this->t('Blocks to ESI'),
+//      '#description' => $this->t('Specify block ids or block id patterns to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
+//      '#default_value' => $config->get('blocks_esi'),
+//    ];
     $form['blocks_no_esi'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Blocks to not ESI'),
-      '#description' => $this->t('Specify block ids to not ESI include - comma separated, no spaces.'),
+      '#title' => $this->t('Blocks and block patterns to not ESI'),
+      '#description' => $this->t('Specify block ids or block id patterns to not ESI include - comma separated, no spaces.'),
       '#default_value' => $config->get('blocks_no_esi'),
     ];
 
@@ -208,6 +196,19 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#title' => $this->t('Non-Drupal files and directories.'),
       '#description' => $this->t('Specify files and directories that should never be deleted - comma separated, no spaces.'),
       '#default_value' => $config->get('non_drupal'),
+    ];
+    $form['rsync_public'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('rSync public'),
+      '#default_value' => $config->get('rsync_public'),
+      '#description' => $this->t('rSync command for public files.'),
+    ];
+
+    $form['rsync_code'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('rSync code'),
+      '#default_value' => $config->get('rsync_code'),
+      '#description' => $this->t('rSync command for code files.'),
     ];
 
     $header = [
