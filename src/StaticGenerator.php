@@ -268,7 +268,11 @@ class StaticGenerator {
       $end_time = time();
       $elapsed_time = $end_time - $start_time;
       $elapsed_time_total += $elapsed_time;
-      $seconds_per_page = round($elapsed_time / $count_gen, 4);
+      if ($count_gen > 0) {
+        $seconds_per_page = round($elapsed_time / $count_gen, 2);
+      } else {
+        $seconds_per_page = 'n/a';
+      }
 
       \Drupal::logger('static_generator')
         ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
@@ -860,7 +864,7 @@ class StaticGenerator {
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
-    $blocks = $finder->query("//div[contains(@class, 'block')]");
+    $blocks = $finder->query("//*[contains(@class, 'block')]");
 
     // Get list of blocks to ESI.
     //    $blocks_esi = $this->configFactory->get('static_generator.settings')
