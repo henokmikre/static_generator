@@ -270,7 +270,8 @@ class StaticGenerator {
       $elapsed_time_total += $elapsed_time;
       if ($count_gen > 0) {
         $seconds_per_page = round($elapsed_time / $count_gen, 2);
-      } else {
+      }
+      else {
         $seconds_per_page = 'n/a';
       }
 
@@ -408,7 +409,7 @@ class StaticGenerator {
       if (!empty($blocks_frequent)) {
         $blocks_frequent = explode(',', $blocks_frequent);
         foreach ($blocks_frequent as $block_id) {
-          $this->generateBlockbyId($block_id);
+          $this->generateBlockById($block_id);
         }
       }
     }
@@ -416,6 +417,46 @@ class StaticGenerator {
       return $this->generateNodes(TRUE);
     }
   }
+
+  /**
+   * Get all Block ID's to ESI, or optionally only those that match a patten.
+   *
+   * @param string $pattern
+   *   The block id pattern.
+   *
+   * @return array|int
+   *
+   * @throws \Exception
+   */
+  public function blockIds($pattern = '') {
+
+    $controller = $this->container->get('entity_type.manager')->getStorage('block');
+    $ids = [];
+    foreach ($controller->loadMultiple() as $return_block) {
+      $ids[] = $return_block->id();
+      //if ($return_block_weight = $return_block->getWeight()) {
+        //$this->assertTrue($test_blocks[$id]['weight'] == $return_block_weight, 'Block weight is set as "' . $return_block_weight . '" for ' . $id . ' block.');
+        //$position[$id] = strpos($test_content, Html::getClass('block-' . $test_blocks[$id]['id']));
+      //}
+    }
+
+    //$storage = $this->entityTypeManager->getStorage('block');
+    //$ids = $storage->getQuery()
+    //  ->execute();
+    if (!empty($pattern)) {
+      $ids_match_pattern = [];
+      foreach ($ids as $id) {
+        if (substr($id, 0, strlen($pattern)) === $pattern) {
+          $ids_match_pattern[] = $id;
+        }
+      }
+      return $ids_match_pattern;
+    }
+    else {
+      return 'done';
+    }
+  }
+
 
   /**
    * Generate a block fragment file using the block_id and DOM block element.
@@ -430,7 +471,7 @@ class StaticGenerator {
    *   Should a block fragment be generated if one already exists.
    *
    */
-  public function generateBlock($block_id, $block, $blocks_over_write = FALSE) {
+  public function generateBlockByElement($block_id, $block, $blocks_over_write = FALSE) {
 
     // Return if block on "no esi" in settings.
     $blocks_no_esi = $this->configFactory->get('static_generator.settings')
@@ -497,90 +538,6 @@ class StaticGenerator {
       file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
     }
   }
-
-  /**
-   * Generate test blocks.
-   *
-   * @param int $count
-   *   Number of test blocks to generate.
-   *
-   * @throws \Exception
-   */
-  public function generateTestBlocks($count) {
-
-    for ($i = 0; $i < 100; $i++) {
-      //      $block_content = BlockContent::create([
-      //        'info' => 'Test block' . substr(uniqid(), 0, 10),
-      //        'type' => 'basic',
-      //       ]);
-      //       $block_content->save();
-      //       $id = $block_content->id();
-      $this->placeBlock('system_powered_by_block');
-    }
-  }
-
-  /**
-   * Creates a block instance based on default settings.
-   *
-   * @param string $plugin_id
-   *   The plugin ID of the block type for this block instance.
-   * @param array $settings
-   *   (optional) An associative array of settings for the block entity.
-   *   Override the defaults by specifying the key and value in the array, for
-   *   example:
-   *
-   * @code
-   *     $this->drupalPlaceBlock('system_powered_by_block', array(
-   *       'label' => t('Hello, world!'),
-   *     ));
-   * @endcode
-   *   The following defaults are provided:
-   *   - label: Random string.
-   *   - ID: Random string.
-   *   - region: 'sidebar_first'.
-   *   - theme: The default theme.
-   *   - visibility: Empty array.
-   *
-   * @return \Drupal\block\Entity\Block
-   *   The block entity.
-   *
-   * @todo
-   *   Add support for creating custom block instances.
-   * @throws \Drupal\Core\Entity\EntityStorageException
-   */
-  //  public function placeBlock($plugin_id, array $settings = []) {
-  //    $config = \Drupal::configFactory();
-  //    $settings += [
-  //      'plugin' => $plugin_id,
-  //      'region' => 'sidebar_first',
-  //      'id' => strtolower(substr(uniqid(), 0, 8)) . time(),
-  //      'theme' => $config->get('system.theme')->get('default'),
-  //      //'label' => substr(uniqid(), 0, 8),
-  //      'label' => 'test label',
-  //      'visibility' => [],
-  //      'weight' => 0,
-  //    ];
-  //    $values = [];
-  //    foreach ([
-  //               'region',
-  //               'id',
-  //               'theme',
-  //               'plugin',
-  //               'weight',
-  //               'visibility',
-  //             ] as $key) {
-  //      $values[$key] = $settings[$key];
-  //      // Remove extra values that do not belong in the settings array.
-  //      unset($settings[$key]);
-  //    }
-  //    foreach ($values['visibility'] as $id => $visibility) {
-  //      $values['visibility'][$id]['id'] = $id;
-  //    }
-  //    $values['settings'] = $settings;
-  //    $block = Block::create($values);
-  //    //$block->save();
-  //    return $block;
-  //  }
 
   /**
    * Generate all files.
@@ -909,7 +866,7 @@ class StaticGenerator {
       $block->parentNode->replaceChild($esi, $block);
 
       // Generate the block.
-      $this->generateBlock($id, $block, $blocks_over_write);
+      $this->generateBlockByElement($id, $block, $blocks_over_write);
 
     }
 
@@ -940,7 +897,8 @@ class StaticGenerator {
    *
    * @return string
    */
-  public function generatorDirectory($real_path = FALSE) {
+  public
+  function generatorDirectory($real_path = FALSE) {
     $generator_directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
     if ($real_path) {
@@ -1258,3 +1216,67 @@ class StaticGenerator {
 //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
 //$session_manager = Drupal::service('session_manager');
 //$request->setSession(new AnonymousUserSession());
+
+
+/**
+ * Creates a block instance based on default settings.
+ *
+ * @param string $plugin_id
+ *   The plugin ID of the block type for this block instance.
+ * @param array $settings
+ *   (optional) An associative array of settings for the block entity.
+ *   Override the defaults by specifying the key and value in the array, for
+ *   example:
+ *
+ * @code
+ *     $this->drupalPlaceBlock('system_powered_by_block', array(
+ *       'label' => t('Hello, world!'),
+ *     ));
+ * @endcode
+ *   The following defaults are provided:
+ *   - label: Random string.
+ *   - ID: Random string.
+ *   - region: 'sidebar_first'.
+ *   - theme: The default theme.
+ *   - visibility: Empty array.
+ *
+ * @return \Drupal\block\Entity\Block
+ *   The block entity.
+ *
+ * @todo
+ *   Add support for creating custom block instances.
+ * @throws \Drupal\Core\Entity\EntityStorageException
+ */
+//  public function placeBlock($plugin_id, array $settings = []) {
+//    $config = \Drupal::configFactory();
+//    $settings += [
+//      'plugin' => $plugin_id,
+//      'region' => 'sidebar_first',
+//      'id' => strtolower(substr(uniqid(), 0, 8)) . time(),
+//      'theme' => $config->get('system.theme')->get('default'),
+//      //'label' => substr(uniqid(), 0, 8),
+//      'label' => 'test label',
+//      'visibility' => [],
+//      'weight' => 0,
+//    ];
+//    $values = [];
+//    foreach ([
+//               'region',
+//               'id',
+//               'theme',
+//               'plugin',
+//               'weight',
+//               'visibility',
+//             ] as $key) {
+//      $values[$key] = $settings[$key];
+//      // Remove extra values that do not belong in the settings array.
+//      unset($settings[$key]);
+//    }
+//    foreach ($values['visibility'] as $id => $visibility) {
+//      $values['visibility'][$id]['id'] = $id;
+//    }
+//    $values['settings'] = $settings;
+//    $block = Block::create($values);
+//    //$block->save();
+//    return $block;
+//  }

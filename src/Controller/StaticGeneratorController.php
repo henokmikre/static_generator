@@ -17,7 +17,7 @@ class StaticGeneratorController extends ControllerBase {
    */
   public function sgTest() {
     $build = [
-      '#markup' => \Drupal::service('static_generator')->generatePage('/node'),
+      '#markup' => \Drupal::service('static_generator')->blockIds(),
     ];
     return $build;
   }
