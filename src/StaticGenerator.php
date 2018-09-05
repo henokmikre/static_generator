@@ -201,6 +201,7 @@ class StaticGenerator {
    * Generate nodes.
    *
    * @param bool $blocks_only
+   * @param bool $blocks_over_write
    * @param string $type
    * @param int $start
    * @param int $length
@@ -210,7 +211,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function generateNodes($blocks_only = FALSE, $type = '', $start = 0, $length = 1000) {
+  public function generateNodes($blocks_only = FALSE, $blocks_over_write = FALSE, $type = '', $start = 0, $length = 1000) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
@@ -254,7 +255,7 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $this->generatePage('/node/' . $entity_id, $blocks_only);
+          $this->generatePage('/node/' . $entity_id, $blocks_only, $blocks_over_write);
           $count_gen++;
         }
 
@@ -405,7 +406,6 @@ class StaticGenerator {
       // Generate frequent blocks only.
       $blocks_frequent = $this->configFactory->get('static_generator.settings')
         ->get('blocks_frequent');
-
       if (!empty($blocks_frequent)) {
         $blocks_frequent = explode(',', $blocks_frequent);
         foreach ($blocks_frequent as $block_id) {
@@ -414,7 +414,8 @@ class StaticGenerator {
       }
     }
     else {
-      return $this->generateNodes(TRUE);
+      // Generate all blocks.
+      return $this->generateNodes(TRUE, TRUE);
     }
   }
 
@@ -430,7 +431,7 @@ class StaticGenerator {
    */
   public function blockIds($pattern = '') {
 
-    $controller = $this->container->get('entity_type.manager')->getStorage('block');
+    $controller = $this->entityTypeManager->getStorage('block');
     $ids = [];
     foreach ($controller->loadMultiple() as $return_block) {
       $ids[] = $return_block->id();
@@ -456,7 +457,6 @@ class StaticGenerator {
       return 'done';
     }
   }
-
 
   /**
    * Generate a block fragment file using the block_id and DOM block element.

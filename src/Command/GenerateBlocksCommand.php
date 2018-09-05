@@ -53,11 +53,6 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
         InputArgument::OPTIONAL,
         $this->trans('commands.sg.generate-blocks.arguments.block_id'))
       ->addOption(
-        'test',
-        NULL,
-        InputOption::VALUE_NONE,
-        $this->trans('commands.sg.generate-blocks.options.test'))
-      ->addOption(
         'frequent',
         NULL,
         InputOption::VALUE_NONE,
@@ -80,34 +75,24 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
 
     $elapsed_time = 0;
     if (empty($block_id)) {
-      if (!empty($input->getOption('test'))) {
-        for ($i = 0; $i < 5000; $i++) {
-          $this->placeBlock('system_powered_by_block', [
-            'id' => 'bartik_powered_A' . $i,
-            'theme' => 'bartik',
-            'weight' => 2,
-          ]);
-        }
-      }
-      else {
-        if (empty($input->getOption('frequent'))) {
-          // Generate all blocks.
-          if (empty($input->getOption('quite'))) {
-            $answer = $this->getIo()
-              ->ask('Delete and re-generate all blocks (yes/no)? ');
-            if (strtolower($answer) == 'yes') {
-              $elapsed_time = $this->staticGenerator->generateBlocks();
-            }
-          }
-          else {
+      if (empty($input->getOption('frequent'))) {
+        // Generate all blocks.
+        if (empty($input->getOption('quite'))) {
+          $answer = $this->getIo()
+            ->ask('Delete and re-generate all blocks (yes/no)? ');
+          if (strtolower($answer) == 'yes') {
             $elapsed_time = $this->staticGenerator->generateBlocks();
           }
         }
         else {
-          // Generate frequent blocks.
-          $elapsed_time = $this->staticGenerator->generateBlocks(TRUE);
+          $elapsed_time = $this->staticGenerator->generateBlocks();
         }
       }
+      else {
+        // Generate frequent blocks.
+        $elapsed_time = $this->staticGenerator->generateBlocks(TRUE);
+      }
+
       $this->getIo()
         ->info('Generate blocks completed, elapsed time: ' . $elapsed_time . ' seconds.');
       //    $this->getIo()->info($this->trans('commands.sg.generate-blocks.messages.success'));
