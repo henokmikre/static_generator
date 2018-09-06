@@ -18,36 +18,51 @@ A static page generator for Drupal
 ## Overview
 
 Typically the Static Generator module is installed on a Drupal site that is located behind a firewall.
-That way content editors can edit the content in a more secure environment.  As content editors 
-publish content, it is pushed out to a public facing static site in real time.
+That way content editors can edit the content in a more secure environment.  As content 
+is published, static .html files are generated and then pushed out to a public facing static site.
+
+Blocks may be replaced with ESI markup that references block fragment include files,
+which makes possible the changing of block content without having to re-generate every page that
+has the block, only the block fragment needs to be regenerated.  
 
 ### Requirements
 
-- Drupal 8.5 or greater
+- Drupal 8.6 or greater
 - PHP 7.2 or greater
 - Drupal Console
 
 ### Installation
 - Install this module using the normal Drupal module installation process.
+
 - Configure a private directory in settings.php.
 - Configure static generation settings at /admin/config/system/static_generator.
-- Create a script that uses rsync to push generated files to a public facing server that serves
+- Create a script that uses rsync to push generated static files to a public facing server that serves
 the static files.
 
 ## Settings
  
 - The settings page is located at: /admin/config/system/static_generator.
+
 - Generator Directory: Determines where the generated files are placed. The default setting is to generate files in the
   private files directory.  To generate files in a directory that is within the private files directory,
   specify that directory in the setting, e.g. private://<generator_directory>.
-- rSync Public: The rSync command line options for public file generation.
-- rSync Code: The rSync command line options for code file generation.
+- rSync Public: The rSync command line options for public file generation. Note that
+  a file name rsync_exclude_static.txt must be present in the public files directory
+  top level folder, containing public files that should not be synced to the static (private) 
+  files directory.
+- rSync Code: The rSync command line options for code file generation.  This makes available to the static
+  site all image assets contained in core and contrib modules, which could potentially be referenced in the
+  aggregated CSS files used by both the live and static sites. 
 - Paths to generate: Specify paths to generate.  This often includes paths for views that have a page display,
  or the "Default front page" setting from /admin/config/system/site-information (generated as index.html).
 - Paths and Patterns to not generate: Specify which paths and/or patterns to never generate. For example, to never
 generate the /about page, enter "/about", or to never generate any path starting with /about, enter "/about/*".
 - Blocks to ESI: Specify which blocks to ESI include. If left blank, all blocks are ESI included.
-- Blocks to not ESI: Specify blocks that should not be ESI included.
+- Blocks and Patterns to not ESI: Specify block id's for blocks that should not be ESI included.  
+  Patterns may be specified by appending an asterisk, e.g. "some_block_id*" indicates that all blocks with a 
+  block id beginning with "some_block_id" should not be ESI included.  This is typically done for blocks 
+  that are unique to each page, for example a breadcrumb block, so there is not advantage to removing the block markup
+  from the page and placing it in a block fragment file.
 - Frequently changing blocks: Specify blocks that change frequently.
 - Entity Types: Specify which entity types to generate.
 

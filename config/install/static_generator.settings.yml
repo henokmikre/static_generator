@@ -1,5 +1,5 @@
 generator_directory: 'private://'
-rsync_public: 'rsync -avzr --delete --progress --delete-excluded --exclude "php" --exclude ".*"'
+rsync_public: 'rsync -avzr --delete --progress --delete-excluded'
 rsync_code: 'rsync -avzr --prune-empty-dirs --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*"'
 paths_generate: '/node'
 blocks_no_esi: 'logo'
