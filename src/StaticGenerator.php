@@ -348,6 +348,12 @@ class StaticGenerator {
     // Write page files.
     $web_directory = $this->directoryFromPath($path_alias);
     $file_name = $this->filenameFromPath($path_alias);
+
+    // Return if on index.html and gen index is false.
+    if ($file_name == "index.html" && !$this->generateIndex()) {
+      return;
+    }
+
     $directory = $this->generatorDirectory() . $web_directory;
     if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
@@ -436,8 +442,8 @@ class StaticGenerator {
     foreach ($controller->loadMultiple() as $return_block) {
       $ids[] = $return_block->id();
       //if ($return_block_weight = $return_block->getWeight()) {
-        //$this->assertTrue($test_blocks[$id]['weight'] == $return_block_weight, 'Block weight is set as "' . $return_block_weight . '" for ' . $id . ' block.');
-        //$position[$id] = strpos($test_content, Html::getClass('block-' . $test_blocks[$id]['id']));
+      //$this->assertTrue($test_blocks[$id]['weight'] == $return_block_weight, 'Block weight is set as "' . $return_block_weight . '" for ' . $id . ' block.');
+      //$position[$id] = strpos($test_content, Html::getClass('block-' . $test_blocks[$id]['id']));
       //}
     }
 
@@ -887,6 +893,17 @@ class StaticGenerator {
     $verbose_logging = $this->configFactory->get('static_generator.settings')
       ->get('verbose_logging');
     return $verbose_logging;
+  }
+
+  /**
+   * Get generate index.html setting.
+   *
+   * @return boolean;
+   */
+  public function generateIndex() {
+    $generate_index = $this->configFactory->get('static_generator.settings')
+      ->get('generate_index');
+    return $generate_index;
   }
 
   /**

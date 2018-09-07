@@ -40,6 +40,9 @@ static_generator.settings:
     verbose_logging:
       type: boolean
       label: 'Turn on verbose logging.'
+    generate_index:
+      type: boolean
+      label: 'Generate index.html.'
     static_url:
       type: string
       label: 'Turn on verbose logging.'

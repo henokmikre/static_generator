@@ -101,6 +101,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('verbose_logging', $verbose_logging)
       ->save();
 
+    // Generate index.html
+    $generate_index = $form_state->getValue('generate_index');
+    $this->config('static_generator.settings')
+      ->set('generate_index', $generate_index)
+      ->save();
+
     // Static URL
     $static_url = $form_state->getValue('static_url');
     $this->config('static_generator.settings')
@@ -157,7 +163,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('static_url'),
     ];
 
-
     // Verbose Logging
     $form['verbose_logging'] = [
       '#type' => 'checkbox',
@@ -165,6 +170,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('verbose_logging'),
     ];
 
+    // Generate index.html
+    $form['generate_index'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate index.html'),
+      '#default_value' => $config->get('generate_index'),
+    ];
 
     $form['paths_generate'] = [
       '#type' => 'textarea',
