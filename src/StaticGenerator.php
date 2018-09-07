@@ -628,21 +628,19 @@ class StaticGenerator {
 
     // rSync core.
     $rsync_core = $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
-    \Drupal::logger('static_generator')
-      ->notice('rsync core: ' . $rsync_core . ' seconds.');
     exec($rsync_core);
 
     // rSync modules.
     $rsync_modules = $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
-    \Drupal::logger('static_generator')
-      ->notice('rsync mod: ' . $rsync_modules . ' seconds.');
-    exec($module_files);
+    exec($rsync_modules);
 
     // rSync themes.
     $rsync_themes = $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
-    \Drupal::logger('static_generator')
-      ->notice('rsync theme: ' . $rsync_themes . ' seconds.');
-    exec($theme_files);
+    exec($rsync_themes);
+
+    // rSync libraries.
+    $rsync_libraries = $rsync_code . ' ' . DRUPAL_ROOT . '/libraries ' . $generator_directory;
+    exec($rsync_libraries);
 
     // Elapsed time.
     $end_time = time();
