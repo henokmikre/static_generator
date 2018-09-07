@@ -914,8 +914,7 @@ class StaticGenerator {
    *
    * @return string
    */
-  public
-  function generatorDirectory($real_path = FALSE) {
+  public function generatorDirectory($real_path = FALSE) {
     $generator_directory = $this->configFactory->get('static_generator.settings')
       ->get('generator_directory');
     if ($real_path) {
