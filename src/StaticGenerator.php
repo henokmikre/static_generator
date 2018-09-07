@@ -627,11 +627,11 @@ class StaticGenerator {
     $generator_directory = $this->generatorDirectory(TRUE);
 
     // rSync core.
-    $core_files = 'rsync -zarv --prune-empty-dirs --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
+    $core_files = $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
     exec($core_files);
 
     // rSync modules.
-    $module_files = 'rsync -zarv --prune-empty-dirs --delete ' . $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
+    $module_files = $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
     exec($module_files);
 
     // rSync themes.
