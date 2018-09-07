@@ -597,7 +597,7 @@ class StaticGenerator {
     // rSync
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_exclude_static.txt"' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_exclude_static.txt" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
     exec($rsync_public);
 
     // Elapsed time.
