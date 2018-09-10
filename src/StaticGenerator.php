@@ -367,7 +367,7 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    //$markup = $this->injectESIs($markup, $blocks_over_write);
+    $markup = $this->injectESIs($markup, $blocks_over_write);
 
     // Write page files.
     $web_directory = $this->directoryFromPath($path_alias);
