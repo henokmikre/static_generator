@@ -59,10 +59,10 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
         $this->trans('commands.sg.generate-blocks.options.frequent')
       )
       ->addOption(
-        'quite',
+        'q',
         NULL,
         InputOption::VALUE_NONE,
-        $this->trans('commands.sg.generate-blocks.options.quite'))
+        $this->trans('commands.sg.generate-blocks.options.q'))
       ->setAliases(['sgb']);
   }
 
@@ -77,7 +77,7 @@ class GenerateBlocksCommand extends ContainerAwareCommand {
     if (empty($block_id)) {
       if (empty($input->getOption('frequent'))) {
         // Generate all blocks.
-        if (empty($input->getOption('quite'))) {
+        if (empty($input->getOption('q'))) {
           $answer = $this->getIo()
             ->ask('Delete and re-generate all blocks (yes/no)? ');
           if (strtolower($answer) == 'yes') {

@@ -211,7 +211,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function generateNodes($blocks_only = FALSE, $blocks_over_write = FALSE, $type = '', $start = 0, $length = 1000) {
+  public function generateNodes($blocks_only = FALSE, $blocks_over_write = FALSE, $type = '', $start = 0, $length = 5000) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
@@ -223,6 +223,17 @@ class StaticGenerator {
     else {
       $gen_node_bundles = [$type];
     }
+
+    // Generate as Anonymous user.
+    \Drupal::service('account_switcher')
+      ->switchTo(new AnonymousUserSession());
+
+    // Switch to default theme
+    $active_theme = $this->themeManager->getActiveTheme();
+    $default_theme_name = $this->configFactory->get('system.theme')
+      ->get('default');
+    $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
+    $this->themeManager->setActiveTheme($default_theme);
 
     // Generate each bundle
     foreach ($gen_node_bundles as $bundle) {
@@ -255,7 +266,9 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $this->generatePage('/node/' . $entity_id, $blocks_only, $blocks_over_write);
+          $path_alias = \Drupal::service('path.alias_manager')
+            ->getAliasByPath('/node/' . $entity_id);
+          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE);
           $count_gen++;
         }
 
@@ -280,6 +293,13 @@ class StaticGenerator {
         ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
           ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
     }
+
+    // Switch back from anonymous user.
+    \Drupal::service('account_switcher')->switchBack();
+
+    // Switch back to active theme.
+    $this->themeManager->setActiveTheme($active_theme);
+
     return $elapsed_time_total;
   }
 
@@ -314,7 +334,7 @@ class StaticGenerator {
   /**
    * Generate markup for a single page.
    *
-   * @param String $path
+   * @param string $path
    *   The page's path.
    *
    * @param bool $blocks_only
@@ -327,10 +347,14 @@ class StaticGenerator {
    * @param bool $log
    *   Should a log message be written to dblog.
    *
+   * @param bool $account_switcher
+   *
+   * @param bool $theme_switcher
+   *
    * @return string|void
-   * @throws \Exception
+   * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
-  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE) {
+  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -342,8 +366,8 @@ class StaticGenerator {
     }
 
     // Get/Process markup.
-    $markup = $this->markupForPage($path_alias);
-    $markup = $this->injectESIs($markup, $blocks_over_write);
+    $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
+    //$markup = $this->injectESIs($markup, $blocks_over_write);
 
     // Write page files.
     $web_directory = $this->directoryFromPath($path_alias);
@@ -421,7 +445,8 @@ class StaticGenerator {
     }
     else {
       // Generate all blocks.
-      return $this->generateNodes(TRUE, TRUE);
+      $this->deleteBlocks();
+      return $this->generateNodes(TRUE, FALSE);
     }
   }
 
@@ -479,24 +504,6 @@ class StaticGenerator {
    */
   public function generateBlockByElement($block_id, $block, $blocks_over_write = FALSE) {
 
-    // Return if block on "no esi" in settings.
-    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
-      ->get('blocks_no_esi');
-    $blocks_no_esi = explode(',', $blocks_no_esi);
-    if (in_array($block_id, $blocks_no_esi)) {
-      return;
-    }
-
-    // Return if block's pattern on "no esi" in settings.
-    foreach ($blocks_no_esi as $block_no_esi) {
-      if (substr($block_no_esi, strlen($block_no_esi) - 1, 1) === '*') {
-        $block_no_esi = substr($block_no_esi, 0, strlen($block_no_esi) - 1);
-        if (strpos($block_id, $block_no_esi) === 0) {
-          return;
-        }
-      }
-    }
-
     // Return if block fragment already exists and not over writing.
     $dir = $this->generatorDirectory() . '/esi/block';
     file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
@@ -509,6 +516,33 @@ class StaticGenerator {
     // Generate block fragment.
     $block_markup = $block->ownerDocument->saveHTML($block);
     file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
+  }
+
+  public function esiBlock($block_id) {
+
+    // Return if block on "no esi" in settings.
+    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
+      ->get('blocks_no_esi');
+    if (empty($blocks_no_esi)) {
+      return TRUE;
+    }
+    $blocks_no_esi = explode(',', $blocks_no_esi);
+    if (in_array($block_id, $blocks_no_esi)) {
+      return FALSE;
+    }
+
+    // Return if block's pattern on "no esi" in settings.
+    foreach ($blocks_no_esi as $block_no_esi) {
+      if (substr($block_no_esi, strlen($block_no_esi) - 1, 1) === '*') {
+        $block_no_esi = substr($block_no_esi, 0, strlen($block_no_esi) - 1);
+        if (strpos($block_id, $block_no_esi) === 0) {
+          return FALSE;
+        }
+      }
+    }
+
+    // Did not match id or pattern
+    return TRUE;
   }
 
   /**
@@ -525,15 +559,8 @@ class StaticGenerator {
     if (empty($block_id)) {
       return;
     }
-    if ($block_id instanceof Block) {
-      $block_id = $block_id->id();
-    }
-
-    // Return if block on "no esi" in settings.
-    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
-      ->get('blocks_no_esi');
-    $blocks_no_esi = explode(',', $blocks_no_esi);
-    if (in_array($block_id, $blocks_no_esi)) {
+    // Return if block id listed in "block no esi" setting.
+    if (!$this->esiBlock($block_id)) {
       return;
     }
 
@@ -718,10 +745,10 @@ class StaticGenerator {
   /**
    * Get filename from path.
    *
-   * @param String $path
+   * @param string $path
    *   The page's path.
    *
-   * @return String
+   * @return string
    *   The filename.
    *
    * @throws \Exception
@@ -745,10 +772,10 @@ class StaticGenerator {
   /**
    * Get page directory from path.
    *
-   * @param String $path
+   * @param string $path
    *   The page's path.
    *
-   * @return String
+   * @return string
    *   The directory and filename.
    *
    * @throws \Exception
@@ -771,28 +798,35 @@ class StaticGenerator {
   /**
    * Returns the rendered markup for a path.
    *
-   * @param String $path
+   * @param string $path
    *   The path.
    *
-   * @return String
+   * @param bool $account_switcher
+   *
+   * @param bool $theme_switcher
+   *
+   * @return string
    *   The rendered markup.
    *
-   * @throws \Exception When an Exception occurs during processing
-   *
+   * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
-  public function markupForPage($path) {
+  public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
 
-    // Generate as Anonymous user.
-    \Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
-
-    // Save active theme.
-    $active_theme = $this->themeManager->getActiveTheme();
+    // Switch to anonymous use.
+    if ($account_switcher) {
+      // Generate as Anonymous user.
+      \Drupal::service('account_switcher')
+        ->switchTo(new AnonymousUserSession());
+    }
 
     // Switch to default theme.
-    $default_theme_name = $this->configFactory->get('system.theme')
-      ->get('default');
-    $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
-    $this->themeManager->setActiveTheme($default_theme);
+    if ($theme_switcher) {
+      $active_theme = $this->themeManager->getActiveTheme();
+      $default_theme_name = $this->configFactory->get('system.theme')
+        ->get('default');
+      $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
+      $this->themeManager->setActiveTheme($default_theme);
+    }
 
     $request = Request::create($path);
     //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
@@ -803,9 +837,14 @@ class StaticGenerator {
     $markup = $response->getContent();
 
     // Switch back to active theme.
-    $this->themeManager->setActiveTheme($active_theme);
+    if ($theme_switcher) {
+      $this->themeManager->setActiveTheme($active_theme);
+    }
 
-    \Drupal::service('account_switcher')->switchBack();
+    // Switch back from anonymous use.
+    if ($account_switcher) {
+      \Drupal::service('account_switcher')->switchBack();
+    }
 
     return $markup;
 
@@ -814,13 +853,13 @@ class StaticGenerator {
   /**
    * Inject ESI markup for every block.
    *
-   * @param String $markup
+   * @param string $markup
    *   The markup.
    *
    * @param bool $blocks_over_write
    *   Over write block fragments if they exist.
    *
-   * @return String
+   * @return string
    *   Markup with ESI's injected.
    *
    * @throws \Exception
@@ -840,43 +879,40 @@ class StaticGenerator {
     //      $blocks_esi = explode(',', $blocks_esi);
     //    }
 
-    // Get list of blocks to not ESI.
-    $blocks_no_esi = $this->configFactory->get('static_generator.settings')
-      ->get('blocks_no_esi');
-    if (!empty($blocks_no_esi)) {
-      $blocks_no_esi = explode(',', $blocks_no_esi);
-    }
-
     foreach ($blocks as $block) {
 
       // Construct block id.
-      $id = $block->getAttribute('id');
-      if ($id == '') {
+      $block_id = $block->getAttribute('id');
+      if ($block_id == '') {
         continue;
       }
-      if (substr($id, 0, 6) == 'block-') {
-        $id = substr($id, 6);
+      if (substr($block_id, 0, 6) == 'block-') {
+        $block_id = substr($block_id, 6);
       }
-      $id = str_replace('-', '_', $id);
+      $block_id = str_replace('-', '_', $block_id);
 
-      // Special handling for Views Blocks
+      // @TODO Special handling for Views Blocks
       //      if (substr($block_id, 0, 12) == 'views_block_') {
       //        //str_replace('views_block_', 'views_block__', $block_id);
       //        $block_id = 'views_block__' . substr($block_id, 12);
       //      }
 
-      // Do not replace block if listed in "Blocks to not ESI".
-      if (in_array($id, $blocks_no_esi)) {
+      // Return if block id listed in "block no esi" setting.
+      if (!$this->esiBlock($block_id)) {
         continue;
       }
 
+      //      if ($id == 'patentrotator') {
+      //        continue;
+      //      }
+
       // Create the ESI and then replace the block with the ESI.
-      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($id) . '" -->';
+      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
       $esi = $dom->createElement('span', $esi_markup);
       $block->parentNode->replaceChild($esi, $block);
 
       // Generate the block.
-      $this->generateBlockByElement($id, $block, $blocks_over_write);
+      $this->generateBlockByElement($block_id, $block, $blocks_over_write);
 
     }
 
@@ -969,9 +1005,12 @@ class StaticGenerator {
     // Get Drupal dirs setting.
     $drupal = $this->configFactory->get('static_generator.settings')
       ->get('drupal');
-    $drupal_array = [];
     if (!empty($drupal)) {
       $drupal_array = explode(',', $drupal);
+      $drupal_array[] = 'esi';
+    }
+    else {
+      $drupal_array = ['esi'];
     }
 
     // Get Non Drupal dirs setting.
@@ -1027,10 +1066,12 @@ class StaticGenerator {
     $start_time = time();
     $dir = $this->generatorDirectory(TRUE) . '/esi/block';
 
-    $files = file_scan_directory($dir, '/.*/');
-    foreach ($files as $file) {
-      file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+    // Delete block esi include files and the block directory.
+    $block_esi_files = file_scan_directory($dir, '/.*/', ['recurse' => TRUE]);
+    foreach ($block_esi_files as $block_esi_file) {
+      file_unmanaged_delete_recursive($block_esi_file->uri, $callback = NULL);
     }
+    file_unmanaged_delete_recursive($dir, $callback = NULL);
 
     // Elapsed time.
     $end_time = time();
@@ -1043,7 +1084,7 @@ class StaticGenerator {
   /**
    * Delete a single page.
    *
-   * @param String $path
+   * @param string $path
    *   The page's path.
    *
    * @throws \Exception

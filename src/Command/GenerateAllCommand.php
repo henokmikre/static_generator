@@ -47,10 +47,10 @@ class GenerateAllCommand extends ContainerAwareCommand {
       ->setDescription($this->trans('commands.sg.generate-pages.description'))
       ->setAliases(['sg'])
       ->addOption(
-        'quite',
+        'q',
         NULL,
         InputOption::VALUE_NONE,
-        $this->trans('commands.sg.generate-all.options.quite'));
+        $this->trans('commands.sg.generate-all.options.q'));
   }
 
   /**
@@ -59,7 +59,7 @@ class GenerateAllCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    if (empty($input->getOption('quite'))) {
+    if (empty($input->getOption('q'))) {
       $answer = $this->getIo()
         ->ask('Delete and re-generate entire static site (yes/no)? ');
     }

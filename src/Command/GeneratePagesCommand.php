@@ -12,7 +12,7 @@ use Drupal\Console\Annotations\DrupalCommand;
 
 
 /**
- * Class GeneratePageCommand.
+ * Class GeneratePagesCommand.
  *
  * @DrupalCommand (
  *     extension="static_generator",
@@ -50,10 +50,10 @@ class GeneratePagesCommand extends ContainerAwareCommand {
         InputArgument::OPTIONAL,
         $this->trans('commands.sg.generate-pages.arguments.path'))
       ->addOption(
-        'quite',
+        'q',
         NULL,
         InputOption::VALUE_NONE,
-        $this->trans('commands.sg.generate-all.options.quite'))
+        $this->trans('commands.sg.generate-all.options.q'))
       ->setAliases(['sgp']);
   }
 
@@ -65,7 +65,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
   protected function execute(InputInterface $input, OutputInterface $output) {
     $path = $input->getArgument('path');
     if (empty($path)) {
-      if (empty($input->getOption('quite'))) {
+      if (empty($input->getOption('q'))) {
         $answer = $this->getIo()
           ->ask('Delete and re-generate all pages (yes/no)? ');
         if (strtolower($answer) == 'yes') {
