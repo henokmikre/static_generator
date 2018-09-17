@@ -190,8 +190,8 @@ class StaticGenerator {
     $elapsed_time = $this->deletePages();
     $elapsed_time += $this->deleteBlocks();
     $elapsed_time += $this->generateNodes();
-    //$elapsed_time += $this->generatePaths();
-    //$elapsed_time += $this->generateRedirects();
+    $elapsed_time += $this->generatePaths();
+    $elapsed_time += $this->generateRedirects();
     \Drupal::logger('static_generator')
       ->notice('Generation of all pages complete, elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
@@ -655,18 +655,34 @@ class StaticGenerator {
 
     // rSync core.
     $rsync_core = $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateCodeFiles() Core: ' . $rsync_core );
+    }
     exec($rsync_core);
 
     // rSync modules.
     $rsync_modules = $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateCodeFiles() Modules: ' . $rsync_modules );
+    }
     exec($rsync_modules);
 
     // rSync themes.
     $rsync_themes = $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateCodeFiles() Themes: ' . $rsync_themes );
+    }
     exec($rsync_themes);
 
     // rSync libraries.
     $rsync_libraries = $rsync_code . ' ' . DRUPAL_ROOT . '/libraries ' . $generator_directory;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateCodeFiles() Libraries: ' . $rsync_libraries );
+    }
     exec($rsync_libraries);
 
     // Elapsed time.

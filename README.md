@@ -64,7 +64,10 @@ generate the /about page, enter "/about", or to never generate any path starting
   that are unique to each page, for example a breadcrumb block, so there is not advantage to removing the block markup
   from the page and placing it in a block fragment file.
 - Frequently changing blocks: Specify blocks that change frequently.
-- Entity Types: Specify which entity types to generate.
+- Entity Types: Specify which entity types to generate. Currently only nodes are supported. IMPORTANT NOTE: 
+It is required that whatever content types are selected, the same content types be selected in the workflow
+configuration at /admin/config/workflow/workflows.  This is required because the workflow system is used to 
+automatically generate a static page .html file when a node (content) is published. 
 
 ## Generation
 ## Overview
