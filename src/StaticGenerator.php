@@ -8,9 +8,8 @@ use Drupal\block\Entity\Block;
 use Drupal\block_content\Entity\BlockContent;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
-
-//use Drupal\Core\Url;
-//use Drupal\file\Entity\File;
+use Drupal\Core\Url;
+use Drupal\file\Entity\File;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -600,21 +599,30 @@ class StaticGenerator {
   public function generatePublicFiles() {
     $start_time = time();
 
-    // Files to exclude.
-    //    $exclude_media_ids = $this->excludeMediaIds();
-    //    $exclude_files = '';
-    //    foreach ($exclude_media_ids as $exclude_media_id) {
-    //      $media = \Drupal::entityTypeManager()
-    //        ->getStorage('media')
-    //        ->load($exclude_media_id);
-    //      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
-    //      $file = File::load($fid);
-    //      $url = Url::fromUri($file->getFileUri());
-    //      $uri = $url->getUri();
-    //      $exclude_file = substr($uri, 9);
-    //      $exclude_files .= $exclude_file . "\r\n";
-    //    }
-    //    file_unmanaged_save_data($exclude_files, $this->generatorDirectory() . '/exclude_files.txt', FILE_EXISTS_REPLACE);
+    // Unpublished files to exclude.
+    $exclude_media_ids = $this->excludeMediaIdsUnpublished();
+
+    // Files to exclude specified in settings.
+    $rsync_public_exclude = $this->configFactory->get('static_generator.settings')
+      ->get('rsync_public_exclude');
+    if (!empty($non_drupal)) {
+      $exclude_media_ids .= explode(',', $rsync_public_exclude);
+    }
+
+    $exclude_files = '';
+    foreach ($exclude_media_ids as $exclude_media_id) {
+      $media = \Drupal::entityTypeManager()
+        ->getStorage('media')
+        ->load($exclude_media_id);
+      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+      $file = File::load($fid);
+      $url = Url::fromUri($file->getFileUri());
+      $uri = $url->getUri();
+      $exclude_file = substr($uri, 9);
+      $exclude_files .= $exclude_file . "\r\n";
+    }
+    $tmp_files_directory = $this->fileSystem->realpath('tmp://');
+    file_unmanaged_save_data($exclude_files, $tmp_files_directory . 'rsync_public_exclude.tmp', FILE_EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
     $public_files_directory = $this->fileSystem->realpath('public://');
@@ -624,7 +632,7 @@ class StaticGenerator {
     // rSync
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_exclude_static.txt" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    $rsync_public = $rsync_public . ' --exclude-from "' . $tmp_files_directory . 'rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
     exec($rsync_public);
 
     // Elapsed time.
@@ -657,7 +665,7 @@ class StaticGenerator {
     $rsync_core = $rsync_code . ' ' . DRUPAL_ROOT . '/core ' . $generator_directory;
     if ($this->verboseLogging()) {
       \Drupal::logger('static_generator')
-        ->notice('generateCodeFiles() Core: ' . $rsync_core );
+        ->notice('generateCodeFiles() Core: ' . $rsync_core);
     }
     exec($rsync_core);
 
@@ -665,7 +673,7 @@ class StaticGenerator {
     $rsync_modules = $rsync_code . ' ' . DRUPAL_ROOT . '/modules ' . $generator_directory;
     if ($this->verboseLogging()) {
       \Drupal::logger('static_generator')
-        ->notice('generateCodeFiles() Modules: ' . $rsync_modules );
+        ->notice('generateCodeFiles() Modules: ' . $rsync_modules);
     }
     exec($rsync_modules);
 
@@ -673,7 +681,7 @@ class StaticGenerator {
     $rsync_themes = $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
     if ($this->verboseLogging()) {
       \Drupal::logger('static_generator')
-        ->notice('generateCodeFiles() Themes: ' . $rsync_themes );
+        ->notice('generateCodeFiles() Themes: ' . $rsync_themes);
     }
     exec($rsync_themes);
 
@@ -681,7 +689,7 @@ class StaticGenerator {
     $rsync_libraries = $rsync_code . ' ' . DRUPAL_ROOT . '/libraries ' . $generator_directory;
     if ($this->verboseLogging()) {
       \Drupal::logger('static_generator')
-        ->notice('generateCodeFiles() Libraries: ' . $rsync_libraries );
+        ->notice('generateCodeFiles() Libraries: ' . $rsync_libraries);
     }
     exec($rsync_libraries);
 
@@ -844,9 +852,21 @@ class StaticGenerator {
       $this->themeManager->setActiveTheme($default_theme);
     }
 
-    $request = Request::create($path);
+    //create($uri, $method = 'GET', $parameters = array(), $cookies = array(), $files = array(), $server = array(), $content = null)
+//      $server = array_replace(array(
+//        'SERVER_NAME' => 'localhost',
+//        'SERVER_PORT' => 80,
+//        'HTTP_HOST' => 'localhost',
+//
+
+    $configuration = \Drupal::service('config.factory')
+      ->get('static_generator.settings');
+    $static_url = $configuration->get('static_url');
+
+    $request = Request::create($path, 'GET',[],[],[],['SERVER_NAME' => $static_url]);
     //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
     //$request->server->set('SCRIPT_FILENAME', 'index.php');
+
     $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
 
     // Return markup.
@@ -1157,7 +1177,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function excludeMediaIds() {
+  public function excludeMediaIdsUnpublished() {
     $query = \Drupal::entityQuery('media');
     $query->condition('status', 0);
     $exclude_media_ids = $query->execute();

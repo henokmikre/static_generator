@@ -1,5 +1,6 @@
 generator_directory: 'private://'
 rsync_public: 'rsync -azr --delete --delete-excluded'
+rsync_public_exclude: 'php,.csslintrc,.editorconfig,.env.example,.eslintignore,.eslintrc.json,.htaccess,.ht.router.php,.svnignore,.travis.yml'
 rsync_code: 'rsync -azr --prune-empty-dirs --delete --include="*/" --include="*.svg" --include="*.png" --include="*.jpg" --include="*.gif" --exclude="*"'
 paths_generate: '/node'
 drupal: 'sites,modules,themes,core'

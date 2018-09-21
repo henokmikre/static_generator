@@ -125,7 +125,11 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('rsync_public', $rsync_public)
       ->save();
 
-
+    // Public Files Exclude
+//    $rsync_public_exclude = $form_state->getValue('rsync_public_exclude');
+//    $this->config('rsync_public_exclude')
+//      ->set('rsync_public_exclude', $rsync_public_exclude)
+//      ->save();
 
     drupal_set_message($this->t('Your settings have been saved.'));
 
@@ -228,7 +232,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('rsync_public'),
       '#description' => $this->t('rSync command for public files.'),
     ];
-
+    $form['rsync_public_exclude'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('rSync public exclude'),
+      '#default_value' => $config->get('rsync_public_exclude'),
+      '#description' => $this->t('rSync command exclude file for public files.'),
+    ];
     $form['rsync_code'] = [
       '#type' => 'textarea',
       '#title' => $this->t('rSync code'),

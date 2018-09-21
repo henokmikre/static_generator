@@ -7,7 +7,6 @@
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\pathauto\PathautoGenerator;
 
 /**
  * Implements hook_help().
@@ -30,16 +29,6 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
       return $output;
   }
 }
-
-/**
- * Implements hook_block_view_alter().
- *
- * @param array $build
- * @param \Drupal\Core\Block\BlockPluginInterface $block
- */
-//function static_generator_block_view_alter(array &$build, \Drupal\Core\Block\BlockPluginInterface $block) {
-//$build['#cache']['max-age'] = -1;
-//}
 
 /**
  * Implements hook_ENTITY_postsave().
@@ -68,7 +57,6 @@ function static_generator_entity_update(EntityInterface $entity) {
  *
  * @param $operation
  *
- * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function process_workflow(EntityInterface $entity, $operation) {
 
@@ -105,19 +93,19 @@ function process_workflow(EntityInterface $entity, $operation) {
   }
 
   // Block.
-  /*if ($entity->getEntityTypeId() === 'block') {
-    // @todo not sure if we need to handle this.
-    $block_id = $entity->toUrl()->toString();
-    if ($entity->get('moderation_state')->value == 'published') {
-      if (in_array($block_id, \Drupal\static_generator\StaticGenerator::BLOCK_IDS_ESI)) {
-        \Drupal::service('static_generator')->generateBlock($block_id, $generate_blocks);
-      }
-    }
-    elseif ($entity->get('moderation_state')->value == 'archived') {
-      // @todo Not sure if block can be archived.
-      \Drupal::service('static_generator')->deleteBlock($block_id);
-    }
-  }*/
+//  if ($entity->getEntityTypeId() === 'block') {
+//    // @todo not sure if we need to handle this.
+//    $block_id = $entity->toUrl()->toString();
+//    if ($entity->get('moderation_state')->value == 'published') {
+//      if (in_array($block_id, \Drupal\static_generator\StaticGenerator::BLOCK_IDS_ESI)) {
+//        \Drupal::service('static_generator')->generateBlock($block_id, $generate_blocks);
+//      }
+//    }
+//    elseif ($entity->get('moderation_state')->value == 'archived') {
+//      // @todo Not sure if block can be archived.
+//      \Drupal::service('static_generator')->deleteBlock($block_id);
+//    }
+//  }
 
 }
 
@@ -126,7 +114,6 @@ function process_workflow(EntityInterface $entity, $operation) {
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *
- * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function static_generator_entity_delete(EntityInterface $entity) {
   // Content entities only.
