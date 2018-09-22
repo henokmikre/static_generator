@@ -601,38 +601,56 @@ class StaticGenerator {
 
     // Unpublished files to exclude.
     $exclude_media_ids = $this->excludeMediaIdsUnpublished();
-
-    // Files to exclude specified in settings.
-    $rsync_public_exclude = $this->configFactory->get('static_generator.settings')
-      ->get('rsync_public_exclude');
-    if (!empty($non_drupal)) {
-      $exclude_media_ids .= explode(',', $rsync_public_exclude);
+    if(!isset($exclude_media_ids) || empty($exclude_media_ids)) {
+      $exclude_media_ids = [];
     }
 
     $exclude_files = '';
     foreach ($exclude_media_ids as $exclude_media_id) {
+      
+      // Get the media entity.
       $media = \Drupal::entityTypeManager()
         ->getStorage('media')
         ->load($exclude_media_id);
-      $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+
+      // Get the file id.
+      if($media->hasField('field_media_image')) {
+        $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+      }
+      elseif($media->hasField('field_media_file')) {
+        $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
+      }
       $file = File::load($fid);
       $url = Url::fromUri($file->getFileUri());
       $uri = $url->getUri();
       $exclude_file = substr($uri, 9);
       $exclude_files .= $exclude_file . "\r\n";
     }
-    $tmp_files_directory = $this->fileSystem->realpath('tmp://');
-    file_unmanaged_save_data($exclude_files, $tmp_files_directory . 'rsync_public_exclude.tmp', FILE_EXISTS_REPLACE);
+
+    // Files to exclude specified in settings.
+    $rsync_public_exclude = $this->configFactory->get('static_generator.settings')
+      ->get('rsync_public_exclude');
+    if (!empty($rsync_public_exclude)) {
+      $rsync_public_exclude_array = explode(',', $rsync_public_exclude);
+      foreach ($rsync_public_exclude_array as $rsync_public_exclude_file) {
+        $exclude_files .= $rsync_public_exclude_file . "\r\n";
+      }
+    }
+
+    //$tmp_files_directory = $this->fileSystem->realpath('tmp://');
+    $public_files_directory = $this->fileSystem->realpath('public://');
+
+    file_unmanaged_save_data($exclude_files, $public_files_directory . '/rsync_public_exclude.tmp', FILE_EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
-    $public_files_directory = $this->fileSystem->realpath('public://');
+    //$public_files_directory = $this->fileSystem->realpath('public://');
     $generator_directory = $this->generatorDirectory(TRUE);
     exec('mkdir -p ' . $generator_directory . '/sites/default/files');
 
     // rSync
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    $rsync_public = $rsync_public . ' --exclude-from "' . $tmp_files_directory . 'rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
     exec($rsync_public);
 
     // Elapsed time.
