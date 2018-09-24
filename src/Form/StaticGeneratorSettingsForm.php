@@ -126,10 +126,10 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->save();
 
     // Public Files Exclude
-//    $rsync_public_exclude = $form_state->getValue('rsync_public_exclude');
-//    $this->config('rsync_public_exclude')
-//      ->set('rsync_public_exclude', $rsync_public_exclude)
-//      ->save();
+    $rsync_public_exclude = $form_state->getValue('rsync_public_exclude');
+    $this->config('static_generator.settings')
+      ->set('rsync_public_exclude', $rsync_public_exclude)
+      ->save();
 
     drupal_set_message($this->t('Your settings have been saved.'));
 
@@ -236,7 +236,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#type' => 'textarea',
       '#title' => $this->t('rSync public exclude'),
       '#default_value' => $config->get('rsync_public_exclude'),
-      '#description' => $this->t('rSync command exclude file for public files.'),
+      '#description' => $this->t('rSync exclude file for public files.'),
     ];
     $form['rsync_code'] = [
       '#type' => 'textarea',
@@ -281,7 +281,8 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       $form['entity_types_container']['entity_types'][$entity_type->id()] = [
         'type' => [
           '#type' => 'inline_template',
-          '#template' => '<strong>{{ label }}</strong></br><span id="selected-{{ entity_type_id }}">{{ bundles }}</span>',
+          //'#template' => '<strong>{{ label }}</strong></br><span id="selected-{{ entity_type_id }}">{{ selected_bundles }}</span>',
+          '#template' => '<strong>{{ label }}</strong></br>',
           '#context' => [
             'label' => $this->t('@bundle types', ['@bundle' => $entity_type->getLabel()]),
             'entity_type_id' => $entity_type->id(),
