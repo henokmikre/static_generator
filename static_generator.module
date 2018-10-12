@@ -139,6 +139,11 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
     \Drupal::service('static_generator')
       ->generationInfoForm('/node/' . $node->id(), $form, TRUE);
   }
+
+//  if (substr($form_id, 0 , 17) == 'entity_embed_form'){
+//    unset($form['image_link']['#options']['content']);
+//  }
+
 }
 
 // as seen in the content_moderation_notifications.

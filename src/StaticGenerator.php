@@ -234,7 +234,7 @@ class StaticGenerator {
     $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
     $this->themeManager->setActiveTheme($default_theme);
 
-    // Generate each bundle
+    // Generate each bundle.
     foreach ($gen_node_bundles as $bundle) {
       $start_time = time();
 
@@ -271,7 +271,7 @@ class StaticGenerator {
           $count_gen++;
         }
 
-        // Exit if single run for specified content type
+        // Exit if single run for specified content type.
         if (!empty($type)) {
           break;
         }
@@ -366,7 +366,7 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    $markup = $this->injectESIs($markup, $blocks_over_write);
+    $markup = $this->injectESIs($markup, $blocks_over_write, $path);
 
     // Write page files.
     $web_directory = $this->directoryFromPath($path_alias);
@@ -491,8 +491,8 @@ class StaticGenerator {
   /**
    * Generate a block fragment file using the block_id and DOM block element.
    *
-   * @param $block_id
-   *   The block id.
+   * @param $esi_filename
+   *   The filename for the generated ESI file.
    *
    * @param \DOMElement $block
    *   The DOM block element.
@@ -501,20 +501,20 @@ class StaticGenerator {
    *   Should a block fragment be generated if one already exists.
    *
    */
-  public function generateBlockByElement($block_id, $block, $blocks_over_write = FALSE) {
+  public function generateBlockByElement($esi_filename, $block, $blocks_over_write = FALSE) {
 
     // Return if block fragment already exists and not over writing.
     $dir = $this->generatorDirectory() . '/esi/block';
     file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
     if (!$blocks_over_write) {
-      if (file_scan_directory($dir, '/^' . $block_id . '$/')) {
+      if (file_scan_directory($dir, '/^' . $esi_filename . '$/')) {
         return;
       }
     }
 
     // Generate block fragment.
     $block_markup = $block->ownerDocument->saveHTML($block);
-    file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
+    file_unmanaged_save_data($block_markup, $dir . '/' . $esi_filename, FILE_EXISTS_REPLACE);
   }
 
   public function esiBlock($block_id) {
@@ -845,7 +845,13 @@ class StaticGenerator {
    *
    * @param bool $account_switcher
    *
+   * This allows caller to switch accounts once, that way the account
+   * is not repeatedly switched, if repeated calls to this function are made.
+   *
    * @param bool $theme_switcher
+   *
+   * This allows caller to switch theme once, that way the theme
+   * is not repeatedly switched, if repeated calls to this function are made.
    *
    * @return string
    *   The rendered markup.
@@ -877,17 +883,16 @@ class StaticGenerator {
 //        'HTTP_HOST' => 'localhost',
 //
 
+    // Make internal request.
     $configuration = \Drupal::service('config.factory')
       ->get('static_generator.settings');
     $static_url = $configuration->get('static_url');
-
     $request = Request::create($path, 'GET',[],[],[],['SERVER_NAME' => $static_url]);
     //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
     //$request->server->set('SCRIPT_FILENAME', 'index.php');
 
+    // Get the markup from the response.
     $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
-
-    // Return markup.
     $markup = $response->getContent();
 
     // Switch back to active theme.
@@ -895,11 +900,12 @@ class StaticGenerator {
       $this->themeManager->setActiveTheme($active_theme);
     }
 
-    // Switch back from anonymous use.
+    // Switch back from anonymous user.
     if ($account_switcher) {
       \Drupal::service('account_switcher')->switchBack();
     }
 
+    // Return markup.
     return $markup;
 
   }
@@ -918,7 +924,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function injectESIs($markup, $blocks_over_write = FALSE) {
+  public function injectESIs($markup, $blocks_over_write = FALSE, $path = '') {
 
     // Find all of the blocks in the markup.
     $dom = new DomDocument();
@@ -945,28 +951,33 @@ class StaticGenerator {
       }
       $block_id = str_replace('-', '_', $block_id);
 
+      // Return if block id listed in "block no esi" setting.
+      if (!$this->esiBlock($block_id)) {
+        continue;
+      }
+
+      // Get ESI filename.
+      if(strpos($block_id,'__') > 0){
+        $block_id = substr($block_id, 0, strpos($block_id,'__'));
+        $path_str = str_replace('/', '-', $path);
+        $esi_filename = $block_id . '-' . $path_str;
+      } else {
+        $esi_filename = $block_id;
+      }
+
       // @TODO Special handling for Views Blocks
       //      if (substr($block_id, 0, 12) == 'views_block_') {
       //        //str_replace('views_block_', 'views_block__', $block_id);
       //        $block_id = 'views_block__' . substr($block_id, 12);
       //      }
 
-      // Return if block id listed in "block no esi" setting.
-      if (!$this->esiBlock($block_id)) {
-        continue;
-      }
-
-      //      if ($id == 'patentrotator') {
-      //        continue;
-      //      }
-
-      // Create the ESI and then replace the block with the ESI.
-      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($block_id) . '" -->';
+      // Create the ESI and then replace the block with the ESI markup.
+      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($esi_filename) . '" -->';
       $esi = $dom->createElement('span', $esi_markup);
       $block->parentNode->replaceChild($esi, $block);
 
-      // Generate the block.
-      $this->generateBlockByElement($block_id, $block, $blocks_over_write);
+      // Generate the ESI fragment file.
+      $this->generateBlockByElement($esi_filename, $block, $blocks_over_write);
 
     }
 
