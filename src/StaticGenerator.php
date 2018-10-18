@@ -620,6 +620,10 @@ class StaticGenerator {
       elseif($media->hasField('field_media_file')) {
         $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
       }
+      elseif($media->hasField('field_media_audio_file')) {
+        $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
+      }
+
       $file = File::load($fid);
       $url = Url::fromUri($file->getFileUri());
       $uri = $url->getUri();
