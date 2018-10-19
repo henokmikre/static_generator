@@ -614,6 +614,7 @@ class StaticGenerator {
         ->load($exclude_media_id);
 
       // Get the file id.
+      $fid = 0;
       if($media->hasField('field_media_image')) {
         $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
       }
@@ -621,14 +622,15 @@ class StaticGenerator {
         $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
       }
       elseif($media->hasField('field_media_audio_file')) {
-        $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
+        $fid = $media->get('field_media_audio_file')->getValue()[0]['target_id'];
       }
-
-      $file = File::load($fid);
-      $url = Url::fromUri($file->getFileUri());
-      $uri = $url->getUri();
-      $exclude_file = substr($uri, 9);
-      $exclude_files .= $exclude_file . "\r\n";
+      if($fid > 0) {
+        $file = File::load($fid);
+        $url = Url::fromUri($file->getFileUri());
+        $uri = $url->getUri();
+        $exclude_file = substr($uri, 9);
+        $exclude_files .= $exclude_file . "\r\n";
+      }
     }
 
     // Files to exclude specified in settings.
