@@ -19,11 +19,15 @@ A static page generator for Drupal
 
 Typically the Static Generator module is installed on a Drupal site that is located behind a firewall.
 That way content editors can edit the content in a more secure environment.  As content 
-is published, static .html files are generated and then pushed out to a public facing static site.
+is published, static HTML files are generated and then pushed out to a public facing static site, along
+with other required files, e.g. css, javascript, media assets files.
 
 Blocks may be replaced with ESI markup that references block fragment include files,
 which makes possible the changing of block content without having to re-generate every page that
-has the block, only the block fragment needs to be regenerated.  
+has the block, only the block fragment needs to be regenerated.  By default all blocks are ESIed, but
+may be excluded on the settings page. ESI may also be implemented by
+assigning a wrapping block element a class name beginning with "sg-esi--\<id\>' 
+where id is a user assigned id that is used for the ESI filename.  
 
 ### Requirements
 
