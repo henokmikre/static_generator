@@ -2,27 +2,24 @@
 
 namespace Drupal\static_generator;
 
-use DOMXPath;
 use DOMDocument;
-use Drupal\block\Entity\Block;
-use Drupal\block_content\Entity\BlockContent;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\File\FileSystemInterface;
-use Drupal\Core\Url;
-use Drupal\file\Entity\File;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpKernel\HttpKernelInterface;
-use Drupal\block\BlockViewBuilder;
+use DOMXPath;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\File\FileSystemInterface;
+use Drupal\Core\Path\PathMatcherInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
-use Drupal\Core\Path\PathMatcherInterface;
+use Drupal\Core\Url;
+use Drupal\file\Entity\File;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 
 /**
@@ -979,6 +976,18 @@ class StaticGenerator {
     //    }
 
     foreach ($blocks as $block) {
+
+      // Make sure class = "block".
+      $block_classes_str = $block->getAttribute('class');
+      if (!empty($block_classes_str)) {
+        $block_classes = explode(' ', $block_classes_str);
+        if (!in_array('block', $block_classes)) {
+          continue;
+        }
+      }
+      else {
+        continue;
+      }
 
       // Construct block id.
       $block_id = $block->getAttribute('id');
