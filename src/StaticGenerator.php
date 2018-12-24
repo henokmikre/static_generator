@@ -187,7 +187,7 @@ class StaticGenerator {
     $elapsed_time += $this->deleteBlocks();
     $elapsed_time += $this->generateNodes();
     $elapsed_time += $this->generatePaths();
-    $elapsed_time += $this->generateRedirects();
+    //$elapsed_time += $this->generateRedirects();
     \Drupal::logger('static_generator')
       ->notice('Generation of all pages complete, elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
@@ -232,6 +232,7 @@ class StaticGenerator {
     $this->themeManager->setActiveTheme($default_theme);
 
     // Generate each bundle.
+    $blocks_processed = [];
     foreach ($gen_node_bundles as $bundle) {
       $start_time = time();
 
@@ -264,7 +265,7 @@ class StaticGenerator {
         foreach ($entity_ids as $entity_id) {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE);
+          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed);
           $count_gen++;
         }
 
@@ -347,10 +348,12 @@ class StaticGenerator {
    *
    * @param bool $theme_switcher
    *
+   * @param $blocks_processed
+   *
    * @return string|void
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
-  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE) {
+  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -363,9 +366,9 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    $markup = $this->injectESIs($markup, $blocks_over_write, $path);
+    $markup = $this->injectESIs($markup, $blocks_over_write, $path, $blocks_processed);
 
-    // Write page files.
+    // Get file name.
     $web_directory = $this->directoryFromPath($path_alias);
     $file_name = $this->filenameFromPath($path_alias);
 
@@ -374,6 +377,7 @@ class StaticGenerator {
       return;
     }
 
+    // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
     if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
@@ -483,32 +487,6 @@ class StaticGenerator {
     else {
       return 'done';
     }
-  }
-
-  /**
-   * Generate a block fragment file using the block_id and DOM block element.
-   *
-   * @param $esi_filename
-   *   The filename for the generated ESI file.
-   *
-   * @param $element
-   * @param $directory
-   * @param bool $over_write
-   */
-  public function generateEsiFileByElement($esi_filename, $element, $directory, $over_write = FALSE) {
-
-    // Return if fragment already exists and not over writing.
-    $directory = $this->generatorDirectory() . '/esi/' . $directory;
-    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
-    if (!$over_write) {
-      if (file_scan_directory($directory, '/^' . $esi_filename . '$/')) {
-        return;
-      }
-    }
-
-    // Generate block fragment.
-    $markup = $element->ownerDocument->saveHTML($element);
-    file_unmanaged_save_data($markup, $directory . '/' . $esi_filename, FILE_EXISTS_REPLACE);
   }
 
   /**
@@ -623,7 +601,7 @@ class StaticGenerator {
     $start_time = time();
 
     // Unpublished files to exclude.
-    $exclude_media_ids = $this->excludeMediaIdsUnpublished();
+    //$exclude_media_ids = $this->excludeMediaIdsUnpublished();
     if (!isset($exclude_media_ids) || empty($exclude_media_ids)) {
       $exclude_media_ids = [];
     }
@@ -941,7 +919,7 @@ class StaticGenerator {
   }
 
   /**
-   * Inject ESI markup for every block.
+   * Inject ESI markup/save ESI file.
    *
    * @param string $markup
    *   The markup.
@@ -951,11 +929,12 @@ class StaticGenerator {
    *
    * @param string $path
    *
+   * @param $blocks_processed
+   *
    * @return string
    *   Markup with ESI's injected.
-   *
    */
-  public function injectESIs($markup, $blocks_over_write = FALSE, $path = '') {
+  public function injectESIs($markup, $blocks_over_write = FALSE, $path = '', &$blocks_processed = []) {
 
     // Find all of the blocks in the markup.
     // @todo Currently SG does ESI for every block, but specific blocks may
@@ -966,8 +945,8 @@ class StaticGenerator {
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
     $blocks = $finder->query("//*[contains(@class, 'block')]");
-    $path = substr($path, 1);
 
+    // @todo add support for block inclusion.
     // Get list of blocks to ESI.
     //    $blocks_esi = $this->configFactory->get('static_generator.settings')
     //      ->get('blocks_esi');
@@ -991,6 +970,9 @@ class StaticGenerator {
 
       // Construct block id.
       $block_id = $block->getAttribute('id');
+      if (empty($block_id)) {
+        continue;
+      }
       if (substr($block_id, 0, 6) == 'block-') {
         $block_id = substr($block_id, 6);
       }
@@ -1002,14 +984,15 @@ class StaticGenerator {
       }
 
       // Get ESI filename.
-      if (strpos($block_id, '__') > 0) {
-        $block_id = substr($block_id, 0, strpos($block_id, '__'));
-        $path_str = str_replace('/', '-', $path);
-        $esi_filename = $block_id . '__' . $path_str;
-      }
-      else {
+      //if (strpos($block_id, '__') > 0) {
+        //@todo Support block names that have '__' in id.
+        //$block_id = substr($block_id, 0, strpos($block_id, '__'));
+        //$path_str = str_replace('/', '-', $path);
+        //$esi_filename = $block_id . '__' . $path_str;
+      //}
+      //else {
         $esi_filename = $block_id;
-      }
+      //}
 
       // @TODO Special handling for Views Blocks
       //      if (substr($block_id, 0, 12) == 'views_block_') {
@@ -1023,8 +1006,14 @@ class StaticGenerator {
       $block->parentNode->replaceChild($esi_element, $block);
 
       // Generate the ESI fragment file.
-      $this->generateEsiFileByElement($esi_filename, $block, 'block', $blocks_over_write);
-
+      if (in_array($block_id, $blocks_processed)) {
+        // Return if block has been processed.
+        continue;
+      }
+      else {
+        $this->generateEsiFileByElement($esi_filename, $block, 'block', $blocks_over_write);
+        $blocks_processed[] = $block_id;
+      }
     }
 
     // Add any manually included elements which have a class of sg-esi--<id>
@@ -1041,8 +1030,10 @@ class StaticGenerator {
       // Get ESI filename.
       if (strpos($esi_class, '--') > 0) {
         $esi_filename = substr($esi_class, 8);
-        $path_str = str_replace('/', '-', $path);
-        $esi_filename = $esi_filename . '__' . $path_str;
+        $path_nid = \Drupal::service('path.alias_manager')
+          ->getPathByAlias($path);
+        $path_str = str_replace('/', '--', $path_nid);
+        $esi_filename = $esi_filename . $path_str;
       }
       else {
         continue;
@@ -1070,6 +1061,33 @@ class StaticGenerator {
     $markup_esi = str_replace('&gt;', '>', $markup_esi);
 
     return $markup_esi;
+  }
+
+
+  /**
+   * Generate a block fragment file using the block_id and DOM block element.
+   *
+   * @param $esi_filename
+   *   The filename for the generated ESI file.
+   *
+   * @param $element
+   * @param $directory
+   * @param bool $over_write
+   */
+  public function generateEsiFileByElement($esi_filename, $element, $directory, $over_write = FALSE) {
+
+    // Return if fragment already exists and not over writing.
+    $directory = $this->generatorDirectory() . '/esi/' . $directory;
+    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+    if (!$over_write) {
+      if (file_scan_directory($directory, '/^' . $esi_filename . '$/')) {
+        return;
+      }
+    }
+
+    // Generate block fragment.
+    $markup = $element->ownerDocument->saveHTML($element);
+    file_unmanaged_save_data($markup, $directory . '/' . $esi_filename, FILE_EXISTS_REPLACE);
   }
 
   /**

@@ -69,7 +69,7 @@ class GeneratePagesTypeCommand extends ContainerAwareCommand {
     $start = $input->getArgument('start');
     $length = $input->getArgument('length');
 
-    $elapsed_time = $this->staticGenerator->generateNodes($type, $start, $length);
+    $elapsed_time = $this->staticGenerator->generateNodes(FALSE, FALSE, $type, $start, $length);
     $this->getIo()
       ->info('Generation of pages for type ' . $type . ' complete, elapsed time: ' . $elapsed_time . ' seconds.');
   }

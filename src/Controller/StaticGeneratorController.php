@@ -17,7 +17,9 @@ class StaticGeneratorController extends ControllerBase {
    */
   public function sgTest() {
     $build = [
-      '#markup' => \Drupal::service('static_generator')->generatePage('/patent', FALSE, TRUE),
+      //'#markup' => \Drupal::service('static_generator')->generatePage('/patent', FALSE, TRUE),
+      '#markup' => \Drupal::service('static_generator')->generateNodes(FALSE, FALSE, 'page', 0, 1000),
+      //'#markup' => \Drupal::service('static_generator')->generatePages(),
     ];
     return $build;
   }
@@ -33,7 +35,8 @@ class StaticGeneratorController extends ControllerBase {
    */
   public function generateNode($nid) {
     try {
-      \Drupal::service('static_generator')->generatePage('/node/' . $nid, FALSE, TRUE);
+      \Drupal::service('static_generator')
+        ->generatePage('/node/' . $nid, FALSE, TRUE);
     } catch (\Exception $exception) {
     }
 
