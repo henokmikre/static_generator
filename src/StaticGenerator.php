@@ -356,7 +356,7 @@ class StaticGenerator {
    * @return string|void
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
-  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed, &$sg_esi_processed) {
+  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = []) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
