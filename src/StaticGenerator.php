@@ -233,6 +233,7 @@ class StaticGenerator {
 
     // Generate each bundle.
     $blocks_processed = [];
+    $sg_esi_processed = [];
     foreach ($gen_node_bundles as $bundle) {
       $start_time = time();
 
@@ -265,7 +266,7 @@ class StaticGenerator {
         foreach ($entity_ids as $entity_id) {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed);
+          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed);
           $count_gen++;
         }
 
@@ -350,10 +351,12 @@ class StaticGenerator {
    *
    * @param $blocks_processed
    *
+   * @param $sg_esi_processed
+   *
    * @return string|void
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
-  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed) {
+  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed, &$sg_esi_processed) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -366,7 +369,7 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    $markup = $this->injectESIs($markup, $blocks_over_write, $path, $blocks_processed);
+    $markup = $this->injectESIs($markup, $blocks_over_write, $path, $blocks_processed,$sg_esi_processed);
 
     // Get file name.
     $web_directory = $this->directoryFromPath($path_alias);
@@ -929,12 +932,14 @@ class StaticGenerator {
    *
    * @param string $path
    *
-   * @param $blocks_processed
+   * @param array $blocks_processed
+   *
+   * @param array $sg_esi_processed
    *
    * @return string
    *   Markup with ESI's injected.
    */
-  public function injectESIs($markup, $blocks_over_write = FALSE, $path = '', &$blocks_processed = []) {
+  public function injectESIs($markup, $blocks_over_write = FALSE, $path = '', &$blocks_processed = [], &$sg_esi_processed = []) {
 
     // Find all of the blocks in the markup.
     // @todo Currently SG does ESI for every block, but specific blocks may
@@ -1006,7 +1011,7 @@ class StaticGenerator {
       $block->parentNode->replaceChild($esi_element, $block);
 
       // Generate the ESI fragment file.
-      if (in_array($block_id, $blocks_processed)) {
+      if (!$blocks_over_write && in_array($block_id, $blocks_processed)) {
         // Return if block has been processed.
         continue;
       }
@@ -1016,7 +1021,7 @@ class StaticGenerator {
       }
     }
 
-    // Add any manually included elements which have a class of sg-esi--<id>
+    // Perform ESI for elements which have a class of sg-esi--<some-id>
     $sg_esi_elements = $finder->query("//*[contains(@class, 'sg-esi--')]");
 
     foreach ($sg_esi_elements as $element) {
@@ -1029,11 +1034,11 @@ class StaticGenerator {
 
       // Get ESI filename.
       if (strpos($esi_class, '--') > 0) {
-        $esi_filename = substr($esi_class, 8);
+        $esi_id = substr($esi_class, 8);
         $path_nid = \Drupal::service('path.alias_manager')
           ->getPathByAlias($path);
         $path_str = str_replace('/', '--', $path_nid);
-        $esi_filename = $esi_filename . $path_str;
+        $esi_filename = $esi_id . $path_str;
       }
       else {
         continue;
@@ -1051,8 +1056,14 @@ class StaticGenerator {
       $element->parentNode->replaceChild($esi_element, $element);
 
       // Generate the ESI fragment file.
-      $this->generateEsiFileByElement($esi_filename, $element, 'esi', $blocks_over_write);
-
+      if (!$blocks_over_write && in_array($esi_id, $sg_esi_processed)) {
+        // Return if sg esi has been processed.
+        continue;
+      }
+      else {
+        $this->generateEsiFileByElement($esi_filename, $element, 'esi', $blocks_over_write);
+        $sg_esi_processed[] = $esi_id;
+      }
     }
 
     // Return markup with ESI's.
@@ -1062,7 +1073,6 @@ class StaticGenerator {
 
     return $markup_esi;
   }
-
 
   /**
    * Generate a block fragment file using the block_id and DOM block element.
