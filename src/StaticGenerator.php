@@ -628,6 +628,18 @@ class StaticGenerator {
    *
    * @return bool
    */
+  function startsWith($haystack, $needle)
+  {
+    $length = strlen($needle);
+    return (substr($haystack, 0, $length) === $needle);
+  }
+
+  /**
+   * @param $haystack
+   * @param $needle
+   *
+   * @return bool
+   */
   protected function endsWith($haystack, $needle) {
     $length = strlen($needle);
     if ($length == 0) {
@@ -1090,12 +1102,17 @@ class StaticGenerator {
 
       // Get esi class.
       $classes = $element->getAttribute('class');
-      $start_pos = strpos($classes, 'sg-esi--');
-      $first_space = strpos($classes, ' ', $start_pos);
-      $esi_class = substr($classes, $start_pos, $first_space);
-      $esi_id = substr($esi_class, 8);
+      if (strpos($classes, 'sg-esi---') > 0) {
+        continue;
+      }
 
-      //if (strpos($esi_class, '--') > 0) {
+      $classes_array = explode(' ', $classes);
+      $esi_id = '';
+      foreach($classes_array as $esi_class) {
+        if ($this->startsWith($esi_class, 'sg-esi--')) {
+          $esi_id = substr($esi_class, 8);
+        }
+      }
 
       // Get ESI filename.
       if (array_key_exists($esi_id, $sg_esi_processed)) {
@@ -1104,7 +1121,7 @@ class StaticGenerator {
       else {
         $path_id = \Drupal::service('path.alias_manager')
           ->getPathByAlias($path);
-        $path_id = substr($path_id,1);
+        $path_id = substr($path_id, 1);
         $path_str = str_replace('/', '--', $path_id);
         $esi_filename = $esi_id . '__' . $path_str;
       }
