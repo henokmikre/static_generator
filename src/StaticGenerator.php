@@ -369,7 +369,7 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    $markup = $this->injectESIs($markup, $blocks_over_write, $path, $blocks_processed,$sg_esi_processed);
+    $markup = $this->injectESIs($markup, $blocks_over_write, $path, $blocks_processed, $sg_esi_processed);
 
     // Get file name.
     $web_directory = $this->directoryFromPath($path_alias);
@@ -441,8 +441,9 @@ class StaticGenerator {
         ->get('blocks_frequent');
       if (!empty($blocks_frequent)) {
         $blocks_frequent = explode(',', $blocks_frequent);
-        foreach ($blocks_frequent as $block_id) {
-          $this->generateBlockById($block_id);
+        foreach ($blocks_frequent as $esi_id) {
+          //$this->generateBlockById($block_id);
+          $this->generateEsiById($esi_id);
         }
       }
     }
@@ -547,7 +548,7 @@ class StaticGenerator {
     }
 
     if (substr($block_id, 0, 8) === 'sg-esi--') {
-      $generator_directory = $this->generatorDirectory() . '/esi/esi';
+      $generator_directory = $this->generatorDirectory() . '/esi/sg-esi';
     }
     else {
       $generator_directory = $this->generatorDirectory() . '/esi/block';
@@ -573,6 +574,67 @@ class StaticGenerator {
     //if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
     //  file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
     //}
+  }
+
+  /**
+   * Generate a esi fragment file.
+   *
+   * @param string $esi_id
+   *   The esi id.
+   *
+   * @throws \Exception
+   */
+  public function generateEsiById($esi_id) {
+
+    $generator_directory = $this->generatorDirectory() . '/esi/sg-esi';
+
+    $files = file_scan_directory($generator_directory, '/*/', ['recurse' => FALSE]);
+    foreach ($files as $file) {
+      $filename = $file->filename;
+      $esi_id_file = substr($filename, 0, strpos($filename, '__'));
+
+      $generate_page = FALSE;
+      if ($this->endsWith($esi_id, "*")) {
+        $esi_id = substr($esi_id, 0, strlen($esi_id) - 1);
+        if (substr($esi_id_file, 0, strlen($esi_id)) === $esi_id) {
+          $generate_page = TRUE;
+        }
+      }
+      else {
+        if ($esi_id === $esi_id_file) {
+          $generate_page = TRUE;
+          continue;
+        }
+      }
+      if ($generate_page) {
+        $path_str = substr($filename, strpos($filename, '__') + 2);
+        $path = '/' . str_replace('--', '/', $path_str);
+        $this->generatePage($path, TRUE, TRUE);
+      }
+    }
+
+    // Old way of generating blocks by using render of element.
+    //    $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
+    //    $block_markup = $this->renderer->renderRoot($block_render_array);
+    //
+    //if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
+    //  file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
+    //}
+  }
+
+  /**
+   * @param $haystack
+   * @param $needle
+   *
+   * @return bool
+   */
+  protected function endsWith($haystack, $needle) {
+    $length = strlen($needle);
+    if ($length == 0) {
+      return TRUE;
+    }
+
+    return (substr($haystack, -$length) === $needle);
   }
 
   /**
@@ -990,13 +1052,13 @@ class StaticGenerator {
 
       // Get ESI filename.
       //if (strpos($block_id, '__') > 0) {
-        //@todo Support block names that have '__' in id.
-        //$block_id = substr($block_id, 0, strpos($block_id, '__'));
-        //$path_str = str_replace('/', '-', $path);
-        //$esi_filename = $block_id . '__' . $path_str;
+      //@todo Support block names that have '__' in id.
+      //$block_id = substr($block_id, 0, strpos($block_id, '__'));
+      //$path_str = str_replace('/', '-', $path);
+      //$esi_filename = $block_id . '__' . $path_str;
       //}
       //else {
-        $esi_filename = $block_id;
+      $esi_filename = $block_id;
       //}
 
       // @TODO Special handling for Views Blocks
@@ -1021,7 +1083,7 @@ class StaticGenerator {
       }
     }
 
-    // Perform ESI for elements which have a class of sg-esi--<some-id>
+    // Process ESI for elements which have a class of sg-esi--<some-id>
     $sg_esi_elements = $finder->query("//*[contains(@class, 'sg-esi--')]");
 
     foreach ($sg_esi_elements as $element) {
@@ -1031,17 +1093,20 @@ class StaticGenerator {
       $start_pos = strpos($classes, 'sg-esi--');
       $first_space = strpos($classes, ' ', $start_pos);
       $esi_class = substr($classes, $start_pos, $first_space);
+      $esi_id = substr($esi_class, 8);
+
+      //if (strpos($esi_class, '--') > 0) {
 
       // Get ESI filename.
-      if (strpos($esi_class, '--') > 0) {
-        $esi_id = substr($esi_class, 8);
-        $path_nid = \Drupal::service('path.alias_manager')
-          ->getPathByAlias($path);
-        $path_str = str_replace('/', '--', $path_nid);
-        $esi_filename = $esi_id . $path_str;
+      if (array_key_exists($esi_id, $sg_esi_processed)) {
+        $esi_filename = $sg_esi_processed[$esi_id];
       }
       else {
-        continue;
+        $path_id = \Drupal::service('path.alias_manager')
+          ->getPathByAlias($path);
+        $path_id = substr($path_id,1);
+        $path_str = str_replace('/', '--', $path_id);
+        $esi_filename = $esi_id . '__' . $path_str;
       }
 
       // @TODO Special handling for Views Blocks
@@ -1051,18 +1116,18 @@ class StaticGenerator {
       //      }
 
       // Replace the original element with the ESI markup.
-      $esi_markup = '<!--#include virtual="/esi/esi/' . Html::escape($esi_filename) . '" -->';
+      $esi_markup = '<!--#include virtual="/esi/sg-esi/' . Html::escape($esi_filename) . '" -->';
       $esi_element = $dom->createElement('span', $esi_markup);
       $element->parentNode->replaceChild($esi_element, $element);
 
       // Generate the ESI fragment file.
-      if (!$blocks_over_write && in_array($esi_id, $sg_esi_processed)) {
-        // Return if sg esi has been processed.
+      if (!$blocks_over_write && array_key_exists($esi_id, $sg_esi_processed)) {
+        // Return if esi_id has been processed.
         continue;
       }
       else {
-        $this->generateEsiFileByElement($esi_filename, $element, 'esi', $blocks_over_write);
-        $sg_esi_processed[] = $esi_id;
+        $this->generateEsiFileByElement($esi_filename, $element, 'sg-esi', $blocks_over_write);
+        $sg_esi_processed[$esi_id] = $esi_filename;
       }
     }
 
@@ -1086,7 +1151,7 @@ class StaticGenerator {
    */
   public function generateEsiFileByElement($esi_filename, $element, $directory, $over_write = FALSE) {
 
-    // Return if fragment already exists and not over writing.
+    // Return if fragment file already exists and not over writing.
     $directory = $this->generatorDirectory() . '/esi/' . $directory;
     file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
     if (!$over_write) {
@@ -1095,7 +1160,7 @@ class StaticGenerator {
       }
     }
 
-    // Generate block fragment.
+    // Generate esi fragment file.
     $markup = $element->ownerDocument->saveHTML($element);
     file_unmanaged_save_data($markup, $directory . '/' . $esi_filename, FILE_EXISTS_REPLACE);
   }
@@ -1241,11 +1306,23 @@ class StaticGenerator {
    */
   public function deleteBlocks() {
     $start_time = time();
+
+    // Delete Blocks
     $dir = $this->generatorDirectory(TRUE) . '/esi/block';
 
     // Delete block esi include files and the block directory.
-    $block_esi_files = file_scan_directory($dir, '/.*/', ['recurse' => TRUE]);
-    foreach ($block_esi_files as $block_esi_file) {
+    $esi_files = file_scan_directory($dir, '/.*/', ['recurse' => TRUE]);
+    foreach ($esi_files as $block_esi_file) {
+      file_unmanaged_delete_recursive($block_esi_file->uri, $callback = NULL);
+    }
+    file_unmanaged_delete_recursive($dir, $callback = NULL);
+
+    // Delete sg_esi tags
+    $dir = $this->generatorDirectory(TRUE) . '/esi/sg-esi';
+
+    // Delete sg esi include files and the sg-esi directory.
+    $esi_files = file_scan_directory($dir, '/.*/', ['recurse' => TRUE]);
+    foreach ($esi_files as $block_esi_file) {
       file_unmanaged_delete_recursive($block_esi_file->uri, $callback = NULL);
     }
     file_unmanaged_delete_recursive($dir, $callback = NULL);
