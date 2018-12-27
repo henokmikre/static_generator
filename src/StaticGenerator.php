@@ -264,12 +264,15 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
+          //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
+          //if($entity_id=='158364'){
+          //drupal_static_reset();
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
           $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed);
           $count_gen++;
+          //}
         }
-
 
         // Exit if single run for specified content type.
         if (!empty($type)) {
@@ -1034,7 +1037,7 @@ class StaticGenerator {
     //    }
 
     foreach ($blocks as $block) {
-
+continue;
       // Make sure class = "block".
       $block_classes_str = $block->getAttribute('class');
       if (!empty($block_classes_str)) {
@@ -1095,9 +1098,14 @@ class StaticGenerator {
       }
     }
 
+    // Remove three dashes.
+    $three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
+    foreach ($three_dashes as $three_dash) {
+      $three_dash->parentNode->removeChild($three_dash);
+    }
+
     // Process ESI for elements which have a class of sg-esi--<some-id>
     $sg_esi_elements = $finder->query("//*[contains(@class, 'sg-esi--')]");
-
     foreach ($sg_esi_elements as $element) {
 
       // Get esi class.
@@ -1106,9 +1114,6 @@ class StaticGenerator {
       $classes_array = explode(' ', $classes);
       $esi_id = '';
       foreach ($classes_array as $esi_class) {
-        if ($this->startsWith($esi_class, 'sg-esi---')) {
-          continue;
-        }
         if ($this->startsWith($esi_class, 'sg-esi--')) {
           $esi_id = substr($esi_class, 8);
         }
@@ -1175,7 +1180,7 @@ class StaticGenerator {
    */
   public function generateEsiFileByElement($esi_filename, $element, $directory) {
 
-    // Return if fragment file already exists and not over writing.
+    // Make sure directory exists.
     $directory = $this->generatorDirectory() . '/esi/' . $directory;
     file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
 
@@ -1254,7 +1259,6 @@ class StaticGenerator {
    */
   public function deletePages() {
     $start_time = time();
-
 
     // Delete .html files
     //    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
