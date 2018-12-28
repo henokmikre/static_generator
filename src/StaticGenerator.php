@@ -17,6 +17,7 @@ use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
+use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -267,6 +268,7 @@ class StaticGenerator {
         foreach ($entity_ids as $entity_id) {
           //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
           //if($entity_id=='158364'){
+          //if($entity_id=='158364' || $entity_id=='159193') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
           $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed);
@@ -386,13 +388,14 @@ class StaticGenerator {
 
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
+
     if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
       if ($log) {
         \Drupal::logger('static_generator_pages')
           ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
-      return 'done';
+      return;
     }
   }
 
@@ -971,19 +974,33 @@ class StaticGenerator {
     //        'HTTP_HOST' => 'localhost',
     //
 
-    // Make internal request.
-    $configuration = \Drupal::service('config.factory')
-      ->get('static_generator.settings');
-    $static_url = $configuration->get('static_url');
-    $request = Request::create($path, 'GET', [], [], [], ['SERVER_NAME' => $static_url]);
-    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-    //$request->server->set('SCRIPT_FILENAME', 'index.php');
+//    // Make internal request.
+//    $configuration = \Drupal::service('config.factory')
+//      ->get('static_generator.settings');
+//    $static_url = $configuration->get('static_url');
+//    $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
+//    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+//    //$request->server->set('SCRIPT_FILENAME', 'index.php');
+//
+//    // Get the markup from the response.
+//    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
+//    $markup = $response->getContent();
 
-    // Get the markup from the response.
-    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
-    $markup = $response->getContent();
+    // Make request.
+    $client = \Drupal::httpClient();
+    try {
+      //'SERVER_NAME' => $static_url
+      $response = $client->request('GET', 'd8.local' . $path, []);
+      if ($response) {
+        $markup = $response->getBody();
+      }
+    }
+    catch (RequestException $exception) {
+      watchdog_exception('static_generator', $exception);
+      return t('RequestException in Static Generator');
+    }
 
-    // Switch back to active theme.
+  // Switch back to active theme.
     if ($theme_switcher) {
       $this->themeManager->setActiveTheme($active_theme);
     }
@@ -1121,6 +1138,7 @@ continue;
 
       // Must have an sg esi id.
       if (empty($esi_id)) {
+        $this->log('esi_id empty!!!!!!!!!');
         continue;
       }
 
@@ -1135,6 +1153,8 @@ continue;
         $path_str = str_replace('/', '--', $path_id);
         $esi_filename = $esi_id . '__' . $path_str;
       }
+
+      //$this->log('Process ' . $path . ' esi_id: ' . $esi_id);
 
       // @TODO Special handling for Views Blocks
       //      if (substr($block_id, 0, 12) == 'views_block_') {
