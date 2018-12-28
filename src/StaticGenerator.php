@@ -260,13 +260,13 @@ class StaticGenerator {
         $query->condition('status', 1);
         $query->condition('type', $bundle);
         $query->range($i, $length);
+        $query->sort('nid', 'DESC');
         $entity_ids = $query->execute();
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
           //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
           //if($entity_id=='158364'){
-          //drupal_static_reset();
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
           $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed);
@@ -1209,6 +1209,14 @@ continue;
     $generate_index = $this->configFactory->get('static_generator.settings')
       ->get('generate_index');
     return $generate_index;
+  }
+
+  /**
+   * @param $notice
+   */
+  public function log($notice) {
+      \Drupal::logger('static_generator')
+        ->notice($notice);
   }
 
   /**
