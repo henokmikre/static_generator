@@ -1003,29 +1003,29 @@ class StaticGenerator {
     //
 
     //    // Make internal request.
-    //    $configuration = \Drupal::service('config.factory')
-    //      ->get('static_generator.settings');
-    //    $static_url = $configuration->get('static_url');
-    //    $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
-    //    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-    //    //$request->server->set('SCRIPT_FILENAME', 'index.php');
-    //
-    //    // Get the markup from the response.
-    //    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
-    //    $markup = $response->getContent();
+        $configuration = \Drupal::service('config.factory')
+          ->get('static_generator.settings');
+        $static_url = $configuration->get('static_url');
+        $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
+        //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+        //$request->server->set('SCRIPT_FILENAME', 'index.php');
+
+        // Get the markup from the response.
+        $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
+        $markup = $response->getContent();
 
     // Make request.
-    $client = \Drupal::httpClient();
-    try {
-      //'SERVER_NAME' => $static_url
-      $response = $client->request('GET', 'd8.local' . $path, []);
-      if ($response) {
-        $markup = $response->getBody();
-      }
-    } catch (RequestException $exception) {
-      watchdog_exception('static_generator', $exception);
-      return t('RequestException in Static Generator');
-    }
+//    $client = \Drupal::httpClient();
+//    try {
+//      //'SERVER_NAME' => $static_url
+//      $response = $client->request('GET', 'd8.local' . $path, []);
+//      if ($response) {
+//        $markup = $response->getBody();
+//      }
+//    } catch (RequestException $exception) {
+//      watchdog_exception('static_generator', $exception);
+//      return t('RequestException in Static Generator');
+//    }
 
     // Switch back to active theme.
     if ($theme_switcher) {
