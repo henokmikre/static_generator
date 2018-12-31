@@ -629,9 +629,9 @@ class StaticGenerator {
 
       $generate_page = FALSE;
       if ($this->endsWith($esi_id, "*")) {
+        $esi_id_real = substr($esi_id, 0, strlen($esi_id) - 1);
         // Wildcard esi_id ends in *
-        $esi_id = substr($esi_id, 0, strlen($esi_id) - 1);
-        if (substr($esi_id_file, 0, strlen($esi_id)) === $esi_id) {
+        if (substr($esi_id_file, 0, strlen($esi_id_real)) === $esi_id_real) {
           $generate_page = TRUE;
         }
       }
