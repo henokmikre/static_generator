@@ -164,6 +164,7 @@ class StaticGenerator {
    *   Execution time in seconds.
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generateAll() {
     \Drupal::logger('static_generator')->notice('Begin generateAll()');
@@ -182,6 +183,7 @@ class StaticGenerator {
    *   Execution time in seconds.
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generatePages() {
     $elapsed_time = $this->deletePages();
@@ -198,7 +200,6 @@ class StaticGenerator {
    * Generate nodes.
    *
    * @param bool $blocks_only
-   * @param bool $blocks_over_write
    * @param string $type
    * @param int $start
    * @param int $length
@@ -207,8 +208,9 @@ class StaticGenerator {
    *   Execution time in seconds.
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generateNodes($blocks_only = FALSE, $blocks_over_write = FALSE, $type = '', $start = 0, $length = 5000) {
+  public function generateNodes($type = '', $blocks_only = FALSE, $start = 0, $length = 100000) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
@@ -235,6 +237,7 @@ class StaticGenerator {
     // Generate each bundle.
     $blocks_processed = [];
     $sg_esi_processed = [];
+    $sg_esi_existing = $this->existingSgEsiFiles();
     foreach ($gen_node_bundles as $bundle) {
       $start_time = time();
 
@@ -271,7 +274,7 @@ class StaticGenerator {
           //if($entity_id=='158364' || $entity_id=='159193') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed);
+          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
           //}
         }
@@ -314,6 +317,7 @@ class StaticGenerator {
    *   Execution time in seconds.
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generatePaths() {
     $start_time = time();
@@ -344,10 +348,6 @@ class StaticGenerator {
    * @param bool $blocks_only
    *   Optionally omit generating the page (just generate the blocks).
    *
-   * @param bool $blocks_over_write
-   *   Generate the block fragments referenced by the ESI's even if a
-   *   fragment already exists.
-   *
    * @param bool $log
    *   Should a log message be written to dblog.
    *
@@ -355,14 +355,17 @@ class StaticGenerator {
    *
    * @param bool $theme_switcher
    *
-   * @param $blocks_processed
+   * @param array $blocks_processed
    *
-   * @param $sg_esi_processed
+   * @param array $sg_esi_processed
+   *
+   * @param array $sg_esi_existing
    *
    * @return string|void
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generatePage($path, $blocks_only = FALSE, $blocks_over_write = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = []) {
+  public function generatePage($path, $blocks_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = []) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -375,7 +378,7 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    $markup = $this->injectESIs($markup, $blocks_over_write, $path, $blocks_processed, $sg_esi_processed);
+    $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
 
     // Get file name.
     $web_directory = $this->directoryFromPath($path_alias);
@@ -395,7 +398,6 @@ class StaticGenerator {
         \Drupal::logger('static_generator_pages')
           ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
-      return;
     }
   }
 
@@ -439,6 +441,7 @@ class StaticGenerator {
    *   Execution time in seconds.
    *`
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generateBlocks($frequent_only = FALSE) {
 
@@ -457,7 +460,7 @@ class StaticGenerator {
     else {
       // Generate all blocks.
       $this->deleteBlocks();
-      return $this->generateNodes(TRUE, FALSE);
+      return $this->generateNodes('', TRUE);
     }
   }
 
@@ -544,6 +547,7 @@ class StaticGenerator {
    *   The block id.
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generateBlockById($block_id) {
     if (empty($block_id)) {
@@ -584,12 +588,35 @@ class StaticGenerator {
   }
 
   /**
+   * Create array of existing sg-esi files.
+   *
+   */
+  public function existingSgEsiFiles() {
+
+    $generator_directory = $this->generatorDirectory();
+    $directory = $generator_directory . 'esi/sg-esi';
+    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+    $files = file_scan_directory($directory, '/.*/', ['recurse' => FALSE]);
+    //$files = scandir($directory);
+    $existingSgEsiFiles = [];
+    foreach ($files as $file) {
+      $filename = $file->filename;
+      if (strpos($filename, '__') !== false) {
+        $esi_id = substr($filename, 0, strpos($filename, '__'));
+        $existingSgEsiFiles[$esi_id] = $filename;
+      }
+    }
+    return $existingSgEsiFiles;
+  }
+
+  /**
    * Generate a esi fragment file.
    *
    * @param string $esi_id
    *   The esi id.
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generateEsiById($esi_id) {
 
@@ -948,6 +975,7 @@ class StaticGenerator {
    *   The rendered markup.
    *
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
 
@@ -974,17 +1002,17 @@ class StaticGenerator {
     //        'HTTP_HOST' => 'localhost',
     //
 
-//    // Make internal request.
-//    $configuration = \Drupal::service('config.factory')
-//      ->get('static_generator.settings');
-//    $static_url = $configuration->get('static_url');
-//    $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
-//    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-//    //$request->server->set('SCRIPT_FILENAME', 'index.php');
-//
-//    // Get the markup from the response.
-//    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
-//    $markup = $response->getContent();
+    //    // Make internal request.
+    //    $configuration = \Drupal::service('config.factory')
+    //      ->get('static_generator.settings');
+    //    $static_url = $configuration->get('static_url');
+    //    $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
+    //    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+    //    //$request->server->set('SCRIPT_FILENAME', 'index.php');
+    //
+    //    // Get the markup from the response.
+    //    $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
+    //    $markup = $response->getContent();
 
     // Make request.
     $client = \Drupal::httpClient();
@@ -994,13 +1022,12 @@ class StaticGenerator {
       if ($response) {
         $markup = $response->getBody();
       }
-    }
-    catch (RequestException $exception) {
+    } catch (RequestException $exception) {
       watchdog_exception('static_generator', $exception);
       return t('RequestException in Static Generator');
     }
 
-  // Switch back to active theme.
+    // Switch back to active theme.
     if ($theme_switcher) {
       $this->themeManager->setActiveTheme($active_theme);
     }
@@ -1021,9 +1048,6 @@ class StaticGenerator {
    * @param string $markup
    *   The markup.
    *
-   * @param bool $blocks_over_write
-   *   Over write block fragments if they exist.
-   *
    * @param string $path
    *
    * @param array $blocks_processed
@@ -1033,7 +1057,7 @@ class StaticGenerator {
    * @return string
    *   Markup with ESI's injected.
    */
-  public function injectESIs($markup, $blocks_over_write = FALSE, $path = '', &$blocks_processed = [], &$sg_esi_processed = []) {
+  public function injectESIs($markup, $path = '', &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing) {
 
     // Find all of the blocks in the markup.
     // @todo Currently SG does ESI for every block, but specific blocks may
@@ -1054,7 +1078,7 @@ class StaticGenerator {
     //    }
 
     foreach ($blocks as $block) {
-continue;
+      continue;
       // Make sure class = "block".
       $block_classes_str = $block->getAttribute('class');
       if (!empty($block_classes_str)) {
@@ -1142,16 +1166,29 @@ continue;
         continue;
       }
 
+      // Get list of existing sg esi filenames if not provided.
+      if (count($sg_esi_existing) == 0) {
+        $sg_esi_existing = $this->existingSgEsiFiles();
+      }
+
       // Get ESI filename.
       if (array_key_exists($esi_id, $sg_esi_processed)) {
+        // If esi id already processed, use existing file name.
         $esi_filename = $sg_esi_processed[$esi_id];
       }
       else {
-        $path_id = \Drupal::service('path.alias_manager')
-          ->getPathByAlias($path);
-        $path_id = substr($path_id, 1);
-        $path_str = str_replace('/', '--', $path_id);
-        $esi_filename = $esi_id . '__' . $path_str;
+        if (array_key_exists($esi_id, $sg_esi_existing)) {
+          // Fragment file with esi_id exists, so use that file name.
+          $esi_filename = $sg_esi_existing[$esi_id];
+        }
+        else {
+          // Get new filename.
+          $path_id = \Drupal::service('path.alias_manager')
+            ->getPathByAlias($path);
+          $path_id = substr($path_id, 1);
+          $path_str = str_replace('/', '--', $path_id);
+          $esi_filename = $esi_id . '__' . $path_str;
+        }
       }
 
       //$this->log('Process ' . $path . ' esi_id: ' . $esi_id);
@@ -1235,8 +1272,8 @@ continue;
    * @param $notice
    */
   public function log($notice) {
-      \Drupal::logger('static_generator')
-        ->notice($notice);
+    \Drupal::logger('static_generator')
+      ->notice($notice);
   }
 
   /**
@@ -1345,7 +1382,6 @@ continue;
       ->notice('Delete Page elapsed time: ' . $elapsed_time . ' seconds.');
     return $elapsed_time;
   }
-
 
   /**
    * Deletes all generated block include files in /esi/blocks.

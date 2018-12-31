@@ -17,10 +17,10 @@ class StaticGeneratorController extends ControllerBase {
    */
   public function sgTest() {
     $build = [
-      //'#markup' => \Drupal::service('static_generator')->generatePage('/node/156855'),
+      '#markup' => \Drupal::service('static_generator')->generatePage('/node/158364'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/187833'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/patent', FALSE, TRUE),
-      '#markup' => \Drupal::service('static_generator')->generateNodes(FALSE, FALSE, 'page', 0, 10000),
+      //'#markup' => \Drupal::service('static_generator')->generateNodes('page'),
       //'#markup' => \Drupal::service('static_generator')->generatePages(),
       //'#markup' => \Drupal::service('static_generator')->generateNodes(FALSE, FALSE, 'page'),
     ];
