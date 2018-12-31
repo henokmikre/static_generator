@@ -395,7 +395,7 @@ class StaticGenerator {
     if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
       if ($log) {
-        \Drupal::logger('static_generator_pages')
+        \Drupal::logger('static_generator')
           ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
     }
@@ -622,13 +622,14 @@ class StaticGenerator {
 
     $generator_directory = $this->generatorDirectory() . '/esi/sg-esi';
 
-    $files = file_scan_directory($generator_directory, '/*/', ['recurse' => FALSE]);
+    $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
       $esi_id_file = substr($filename, 0, strpos($filename, '__'));
 
       $generate_page = FALSE;
       if ($this->endsWith($esi_id, "*")) {
+        // If esi_id end in * then it is wildcard
         $esi_id = substr($esi_id, 0, strlen($esi_id) - 1);
         if (substr($esi_id_file, 0, strlen($esi_id)) === $esi_id) {
           $generate_page = TRUE;
@@ -637,7 +638,6 @@ class StaticGenerator {
       else {
         if ($esi_id === $esi_id_file) {
           $generate_page = TRUE;
-          continue;
         }
       }
       if ($generate_page) {

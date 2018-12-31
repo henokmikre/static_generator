@@ -190,27 +190,27 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $form['paths_do_not_generate'] = [
       '#type' => 'C',
       '#title' => $this->t('Paths and Path Patterns to not Generate'),
-      '#description' => $this->t('Specify paths or path patterns (ending with *) to not generate - comma separated, no spaces.'),
+      '#description' => $this->t('Specify paths or path wildcards (ending with *) to not generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_do_not_generate'),
     ];
 
 //    $form['blocks_esi'] = [
 //      '#type' => 'textarea',
 //      '#title' => $this->t('Blocks to ESI'),
-//      '#description' => $this->t('Specify block ids or block id patterns to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
+//      '#description' => $this->t('Specify block ids or block id wildcards (ending in *) to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
 //      '#default_value' => $config->get('blocks_esi'),
 //    ];
     $form['blocks_no_esi'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Blocks and block patterns to not ESI'),
-      '#description' => $this->t('Specify block ids or block id patterns to not ESI include - comma separated, no spaces.'),
+      '#title' => $this->t('Blocks and block wildcards to not ESI'),
+      '#description' => $this->t('Specify block ids or block id wildcards (ending in *) to not ESI include - comma separated, no spaces.'),
       '#default_value' => $config->get('blocks_no_esi'),
     ];
 
     $form['blocks_frequent'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Blocks to generate frequently'),
-      '#description' => $this->t('Specify block ids generate frequently - comma separated, no spaces.'),
+      '#title' => $this->t('Blocks and elements with class="sg-esi--<id>" to generate frequently'),
+      '#description' => $this->t("Specify block ids and sg esi ids to generate frequently - comma separated, no spaces, wildcard ending with *."),
       '#default_value' => $config->get('blocks_frequent'),
     ];
 
