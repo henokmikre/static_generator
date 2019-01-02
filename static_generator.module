@@ -92,20 +92,64 @@ function process_workflow(EntityInterface $entity, $operation) {
     \Drupal::service('static_generator')->generatePublicFiles();
   }
 
+  // Menu.
+  if ($entity->getEntityTypeId() === 'menu_link_content') {
+
+    // Generate page for this link.
+    $menu_link_uri = $entity->link->uri;
+    $path = '/' . substr($menu_link_uri, 7);
+    \Drupal::service('static_generator')->generatePage($path);
+
+    // Get this link's children and generate their pages.
+    $menu_parameters = new \Drupal\Core\Menu\MenuTreeParameters();
+    $menu_parameters->setMaxDepth(1);
+    $menu_parameters->setRoot($entity->getPluginId());
+    $menu_parameters->excludeRoot();
+    $menu_tree_service = \Drupal::service('menu.link_tree');
+    $tree = $menu_tree_service->load('main', $menu_parameters);
+    $children = $menu_tree_service->build($tree);
+    $child_items = $children['#items'];
+    foreach ($child_items as $child_item) {
+      $url = $child_item['url'];
+      $path = $url->toString();
+      if (substr($path, 0, 1) == '/') {
+        \Drupal::service('static_generator')->generatePage($path);
+      }
+    }
+
+    // Get this link's parent and generate its pages.
+    $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
+    $menu_parameters_siblings->setMaxDepth(1);
+    $parent_id = $entity->getParentId();
+    $menu_parameters_siblings->setRoot($parent_id);
+    $menu_parameters_siblings->excludeRoot();
+    $menu_tree_service = \Drupal::service('menu.link_tree');
+    $tree_siblings = $menu_tree_service->load('main', $menu_parameters_siblings);
+    $siblings = $menu_tree_service->build($tree_siblings);
+    $child_items = $siblings['#items'];
+    foreach ($child_items as $child_item) {
+      $url = $child_item['url'];
+      $path = $url->toString();
+      if (substr($path, 0, 1) == '/') {
+        \Drupal::service('static_generator')->generatePage($path);
+      }
+    }
+  }
+
   // Block.
-//  if ($entity->getEntityTypeId() === 'block') {
-//    // @todo not sure if we need to handle this.
-//    $block_id = $entity->toUrl()->toString();
-//    if ($entity->get('moderation_state')->value == 'published') {
-//      if (in_array($block_id, \Drupal\static_generator\StaticGenerator::BLOCK_IDS_ESI)) {
-//        \Drupal::service('static_generator')->generateBlock($block_id, $generate_blocks);
-//      }
-//    }
-//    elseif ($entity->get('moderation_state')->value == 'archived') {
-//      // @todo Not sure if block can be archived.
-//      \Drupal::service('static_generator')->deleteBlock($block_id);
-//    }
-//  }
+  //  if ($entity->getEntityTypeId() === 'block') {
+  //    // @todo not sure if we need to handle this.
+  //    $block_id = $entity->toUrl()->toString();
+  //    if ($entity->get('moderation_state')->value == 'published') {
+  //      if (in_array($block_id, \Drupal\static_generator\StaticGenerator::BLOCK_IDS_ESI)) {
+  //        \Drupal::service('static_generator')->generateBlock($block_id, $generate_blocks);
+  //      }
+  //    }
+  //    elseif ($entity->get('moderation_state')->value == 'archived') {
+  //      // @todo Not sure if block can be archived.
+  //      \Drupal::service('static_generator')->deleteBlock($block_id);
+  //    }
+  //  }
 
 }
 
@@ -134,7 +178,8 @@ function static_generator_entity_delete(EntityInterface $entity) {
  * @param $form_id
  */
 function static_generator_form_alter(&$form, $form_state, $form_id) {
-  $has_generate_permission = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->hasPermission('generate static pages');
+  $has_generate_permission = \Drupal\user\Entity\User::load(\Drupal::currentUser()
+    ->id())->hasPermission('generate static pages');
 
   if ($has_generate_permission && in_array($form_id, ['node_page_edit_form'])) {
     $node = $form_state->getFormObject()->getEntity();

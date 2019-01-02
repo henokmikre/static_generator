@@ -765,11 +765,16 @@ class StaticGenerator {
     $generator_directory = $this->generatorDirectory(TRUE);
     exec('mkdir -p ' . $generator_directory . '/sites/default/files');
 
-    // rSync
+    // rSync public.
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
     $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    $this->log($rsync_public);
     exec($rsync_public);
+
+    // rSync css/js.
+    $rsync_css_js = 'rsync -azr ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    exec($rsync_css_js);
 
     // Elapsed time.
     $end_time = time();
@@ -979,7 +984,7 @@ class StaticGenerator {
    */
   public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
 
-    // Switch to anonymous use.
+    // Switch to anonymous user.
     if ($account_switcher) {
       // Generate as Anonymous user.
       \Drupal::service('account_switcher')
@@ -1002,30 +1007,31 @@ class StaticGenerator {
     //        'HTTP_HOST' => 'localhost',
     //
 
-    //    // Make internal request.
-        $configuration = \Drupal::service('config.factory')
-          ->get('static_generator.settings');
-        $static_url = $configuration->get('static_url');
-        $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
+        // Make internal request.
+//        $configuration = \Drupal::service('config.factory')
+//          ->get('static_generator.settings');
+//        $static_url = $configuration->get('static_url');
+//        $request = Request::create($path, 'GET', [], [], [], ['HTTP_CACHE_CONTROL' => 'no-cache', 'SERVER_NAME' => $static_url]);
+
         //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
         //$request->server->set('SCRIPT_FILENAME', 'index.php');
 
         // Get the markup from the response.
-        $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
-        $markup = $response->getContent();
+//        $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
+//        $markup = $response->getContent();
 
     // Make request.
-//    $client = \Drupal::httpClient();
-//    try {
-//      //'SERVER_NAME' => $static_url
-//      $response = $client->request('GET', 'd8.local' . $path, []);
-//      if ($response) {
-//        $markup = $response->getBody();
-//      }
-//    } catch (RequestException $exception) {
-//      watchdog_exception('static_generator', $exception);
-//      return t('RequestException in Static Generator');
-//    }
+    $client = \Drupal::httpClient();
+    try {
+      //'SERVER_NAME' => $static_url
+      $response = $client->request('GET', 'd8.local' . $path, []);
+      if ($response) {
+        $markup = $response->getBody();
+      }
+    } catch (RequestException $exception) {
+      watchdog_exception('static_generator', $exception);
+      return t('RequestException in Static Generator');
+    }
 
     // Switch back to active theme.
     if ($theme_switcher) {
@@ -1155,6 +1161,9 @@ class StaticGenerator {
       $classes_array = explode(' ', $classes);
       $esi_id = '';
       foreach ($classes_array as $esi_class) {
+        if ($this->startsWith($esi_class, 'sg-esi--sidebar-menu-block')) {
+          continue;
+        }
         if ($this->startsWith($esi_class, 'sg-esi--')) {
           $esi_id = substr($esi_class, 8);
         }
