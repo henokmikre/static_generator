@@ -117,7 +117,7 @@ function process_workflow(EntityInterface $entity, $operation) {
   //      }
   //    }
   //  }
-  
+
     // Get this link's parent and generate its pages.
 //    $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
 //    $menu_parameters_siblings->setMaxDepth(1);

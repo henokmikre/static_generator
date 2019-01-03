@@ -271,12 +271,12 @@ class StaticGenerator {
         foreach ($entity_ids as $entity_id) {
           //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
           //if($entity_id=='158364'){
-          //if($entity_id=='158364' || $entity_id=='159193') {
-          $path_alias = \Drupal::service('path.alias_manager')
-            ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
-          $count_gen++;
-          //}
+          if ($entity_id == '158364' || $entity_id == '159193') {
+            $path_alias = \Drupal::service('path.alias_manager')
+              ->getAliasByPath('/node/' . $entity_id);
+            $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+            $count_gen++;
+          }
         }
 
         // Exit if single run for specified content type.
@@ -601,7 +601,7 @@ class StaticGenerator {
     $existingSgEsiFiles = [];
     foreach ($files as $file) {
       $filename = $file->filename;
-      if (strpos($filename, '__') !== false) {
+      if (strpos($filename, '__') !== FALSE) {
         $esi_id = substr($filename, 0, strpos($filename, '__'));
         $existingSgEsiFiles[$esi_id] = $filename;
       }
@@ -769,12 +769,8 @@ class StaticGenerator {
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
     $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    $this->log($rsync_public);
+    //$this->log($rsync_public);
     exec($rsync_public);
-
-    // rSync css/js.
-    $rsync_css_js = 'rsync -azr ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    exec($rsync_css_js);
 
     // Elapsed time.
     $end_time = time();
@@ -1007,31 +1003,45 @@ class StaticGenerator {
     //        'HTTP_HOST' => 'localhost',
     //
 
-        // Make internal request.
-        $configuration = \Drupal::service('config.factory')
-          ->get('static_generator.settings');
-        $static_url = $configuration->get('static_url');
-        $request = Request::create($path, 'GET', [], [], [], ['SERVER_NAME' => $static_url]);
+    //$request = Request::createFromGlobals();
+    //$request->
+    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+    //$request->server->set('SCRIPT_FILENAME', 'index.php');
+    //$request = Request::create($path, 'GET', [], [], [], ['SERVER_NAME' => $static_url]);
+    //$_SERVER['REQUEST_URI'] = '/';
 
-        //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-        //$request->server->set('SCRIPT_FILENAME', 'index.php');
+    $render_method = $this->configFactory->get('static_generator.settings')
+      ->get('render_method');
 
-        // Get the markup from the response.
-        $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, FALSE);
-        $markup = $response->getContent();
+    if ($render_method == 'Core') {
 
-    // Make Guzzle request (much slower than internal request).
-//    $client = \Drupal::httpClient();
-//    try {
-//      //'SERVER_NAME' => $static_url
-//      $response = $client->request('GET', 'd8.local' . $path, []);
-//      if ($response) {
-//        $markup = $response->getBody();
-//      }
-//    } catch (RequestException $exception) {
-//      watchdog_exception('static_generator', $exception);
-//      return t('RequestException in Static Generator');
-//    }
+      // Make internal request.
+      $configuration = \Drupal::service('config.factory')
+        ->get('static_generator.settings');
+      $static_url = $configuration->get('static_url');
+
+      $request = Request::create($path, 'GET', [], [], [], ['SERVER_NAME' => $static_url]);
+
+      // Get the markup from the response.
+      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, TRUE);
+      $markup = $response->getContent();
+
+    }
+    else {
+
+      // Make Guzzle request (much slower than internal request).
+      $client = \Drupal::httpClient();
+      try {
+        //'SERVER_NAME' => $static_url
+        $response = $client->request('GET', 'd8.local' . $path, []);
+        if ($response) {
+          $markup = $response->getBody();
+        }
+      } catch (RequestException $exception) {
+        watchdog_exception('static_generator', $exception);
+        return t('RequestException in Static Generator');
+      }
+    }
 
     // Switch back to active theme.
     if ($theme_switcher) {
@@ -1073,154 +1083,175 @@ class StaticGenerator {
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
-    $blocks = $finder->query("//*[contains(@class, 'block')]");
 
-    // @todo add support for block inclusion.
-    // Get list of blocks to ESI.
-    //    $blocks_esi = $this->configFactory->get('static_generator.settings')
-    //      ->get('blocks_esi');
-    //    if (!empty($blocks_esi)) {
-    //      $blocks_esi = explode(',', $blocks_esi);
-    //    }
+    $esi_blocks = $this->configFactory->get('static_generator.settings')
+      ->get('esi_blocks');
 
-    foreach ($blocks as $block) {
+    if ($esi_blocks) {
 
-      // Make sure class = "block".
-      $block_classes_str = $block->getAttribute('class');
-      if (!empty($block_classes_str)) {
-        $block_classes = explode(' ', $block_classes_str);
-        if (!in_array('block', $block_classes)) {
-          continue;
-        }
-      }
-      else {
-        continue;
-      }
 
-      // Construct block id.
-      $block_id = $block->getAttribute('id');
-      if (empty($block_id)) {
-        continue;
-      }
-      if (substr($block_id, 0, 6) == 'block-') {
-        $block_id = substr($block_id, 6);
-      }
-      $block_id = str_replace('-', '_', $block_id);
+      $blocks = $finder->query("//*[contains(@class, 'block')]");
 
-      // Return if block id or block pattern is listed in "block no esi" setting.
-      if (!$this->esiBlock($block_id)) {
-        continue;
-      }
+      // @todo add support for block inclusion.
+      // Get list of blocks to ESI.
+      //    $blocks_esi = $this->configFactory->get('static_generator.settings')
+      //      ->get('blocks_esi');
+      //    if (!empty($blocks_esi)) {
+      //      $blocks_esi = explode(',', $blocks_esi);
+      //    }
 
-      // Get ESI filename.
-      //if (strpos($block_id, '__') > 0) {
-      //@todo Support block names that have '__' in id.
-      //$block_id = substr($block_id, 0, strpos($block_id, '__'));
-      //$path_str = str_replace('/', '-', $path);
-      //$esi_filename = $block_id . '__' . $path_str;
-      //}
-      //else {
-      $esi_filename = $block_id;
-      //}
+      foreach ($blocks as $block) {
 
-      // @TODO Special handling for Views Blocks
-      //      if (substr($block_id, 0, 12) == 'views_block_') {
-      //        //str_replace('views_block_', 'views_block__', $block_id);
-      //        $block_id = 'views_block__' . substr($block_id, 12);
-      //      }
-
-      // Create the ESI and then replace the block with the ESI markup.
-      $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($esi_filename) . '" -->';
-      $esi_element = $dom->createElement('span', $esi_markup);
-      $block->parentNode->replaceChild($esi_element, $block);
-
-      // Generate the ESI fragment file.
-      if (in_array($block_id, $blocks_processed)) {
-        // Return if block has been processed.
-        continue;
-      }
-      else {
-        $this->generateEsiFileByElement($esi_filename, $block, 'block');
-        $blocks_processed[] = $block_id;
-      }
-    }
-
-    // Remove three dashes - hack for site specific issue, will be removed.
-    $three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
-    foreach ($three_dashes as $three_dash) {
-      $three_dash->parentNode->removeChild($three_dash);
-    }
-
-    // Process ESI for elements which have a class of sg-esi--<some-id>
-    $sg_esi_elements = $finder->query("//*[contains(@class, 'sg-esi--')]");
-    foreach ($sg_esi_elements as $element) {
-
-      // Get esi class.
-      $classes = $element->getAttribute('class');
-
-      $classes_array = explode(' ', $classes);
-      $esi_id = '';
-      foreach ($classes_array as $esi_class) {
-        if ($this->startsWith($esi_class, 'sg-esi--sidebar-menu-block')) {
-          continue;
-        }
-        if ($this->startsWith($esi_class, 'sg-esi--')) {
-          $esi_id = substr($esi_class, 8);
-        }
-      }
-
-      // Must have an sg esi id.
-      if (empty($esi_id)) {
-        $this->log('esi_id empty!!!!!!!!!');
-        continue;
-      }
-
-      // Get list of existing sg esi filenames if not provided.
-      if (count($sg_esi_existing) == 0) {
-        $sg_esi_existing = $this->existingSgEsiFiles();
-      }
-
-      // Get ESI filename.
-      if (array_key_exists($esi_id, $sg_esi_processed)) {
-        // If esi id already processed, use existing file name.
-        $esi_filename = $sg_esi_processed[$esi_id];
-      }
-      else {
-        if (array_key_exists($esi_id, $sg_esi_existing)) {
-          // Fragment file with esi_id exists, so use that file name.
-          $esi_filename = $sg_esi_existing[$esi_id];
+        // Make sure class = "block".
+        $block_classes_str = $block->getAttribute('class');
+        if (!empty($block_classes_str)) {
+          $block_classes = explode(' ', $block_classes_str);
+          if (!in_array('block', $block_classes)) {
+            continue;
+          }
         }
         else {
-          // Get new filename.
-          $path_id = \Drupal::service('path.alias_manager')
-            ->getPathByAlias($path);
-          $path_id = substr($path_id, 1);
-          $path_str = str_replace('/', '--', $path_id);
-          $esi_filename = $esi_id . '__' . $path_str;
+          continue;
+        }
+
+        // Construct block id.
+        $block_id = $block->getAttribute('id');
+        if (empty($block_id)) {
+          continue;
+        }
+        if (substr($block_id, 0, 6) == 'block-') {
+          $block_id = substr($block_id, 6);
+        }
+        $block_id = str_replace('-', '_', $block_id);
+
+        // Return if block id or block pattern is listed in "block no esi" setting.
+        if (!$this->esiBlock($block_id)) {
+          continue;
+        }
+
+        // Get ESI filename.
+        //if (strpos($block_id, '__') > 0) {
+        //@todo Support block names that have '__' in id.
+        //$block_id = substr($block_id, 0, strpos($block_id, '__'));
+        //$path_str = str_replace('/', '-', $path);
+        //$esi_filename = $block_id . '__' . $path_str;
+        //}
+        //else {
+        $esi_filename = $block_id;
+        //}
+
+        // @TODO Special handling for Views Blocks
+        //      if (substr($block_id, 0, 12) == 'views_block_') {
+        //        //str_replace('views_block_', 'views_block__', $block_id);
+        //        $block_id = 'views_block__' . substr($block_id, 12);
+        //      }
+
+        // Create the ESI and then replace the block with the ESI markup.
+        $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($esi_filename) . '" -->';
+        $esi_element = $dom->createElement('span', $esi_markup);
+        $block->parentNode->replaceChild($esi_element, $block);
+
+        // Generate the ESI fragment file.
+        if (in_array($block_id, $blocks_processed)) {
+          // Return if block has been processed.
+          continue;
+        }
+        else {
+          $this->generateEsiFileByElement($esi_filename, $block, 'block');
+          $blocks_processed[] = $block_id;
         }
       }
+    }
 
-      //$this->log('Process ' . $path . ' esi_id: ' . $esi_id);
+    $esi_blocks = $this->configFactory->get('static_generator.settings')
+      ->get('esi_blocks');
 
-      // @TODO Special handling for Views Blocks
-      //      if (substr($block_id, 0, 12) == 'views_block_') {
-      //        //str_replace('views_block_', 'views_block__', $block_id);
-      //        $block_id = 'views_block__' . substr($block_id, 12);
-      //      }
+    if ($esi_blocks) {
 
-      // Replace the original element with the ESI markup.
-      $esi_markup = '<!--#include virtual="/esi/sg-esi/' . Html::escape($esi_filename) . '" -->';
-      $esi_element = $dom->createElement('span', $esi_markup);
-      $element->parentNode->replaceChild($esi_element, $element);
 
-      // Generate the ESI fragment file.
-      if (array_key_exists($esi_id, $sg_esi_processed)) {
-        // Return if esi_id has been processed.
-        continue;
+      // Remove three dashes - hack for site specific issue, will be removed.
+      $three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
+      foreach ($three_dashes as $three_dash) {
+        $three_dash->parentNode->removeChild($three_dash);
       }
-      else {
-        $this->generateEsiFileByElement($esi_filename, $element, 'sg-esi');
-        $sg_esi_processed[$esi_id] = $esi_filename;
+
+      // Remove elements with class=sg--remove.
+      $remove_elements = $finder->query("//*[contains(@class, 'sg--remove')]");
+      foreach ($remove_elements as $remove_element) {
+        $remove_element->parentNode->removeChild($remove_element);
+      }
+
+      // Process ESI for elements which have a class of sg-esi--<some-id>
+      $sg_esi_elements = $finder->query("//*[contains(@class, 'sg-esi--')]");
+      foreach ($sg_esi_elements as $element) {
+
+        // Get esi class.
+        $classes = $element->getAttribute('class');
+
+        $classes_array = explode(' ', $classes);
+        $esi_id = '';
+        foreach ($classes_array as $esi_class) {
+          //        if ($this->startsWith($esi_class, 'sg-esi--sidebar-menu-block')) {
+          //          continue;
+          //        }
+          if ($this->startsWith($esi_class, 'sg-esi--')) {
+            $esi_id = substr($esi_class, 8);
+          }
+        }
+
+        // Must have an sg esi id.
+        if (empty($esi_id)) {
+          $this->log('esi_id empty!!!!!!!!!');
+          continue;
+        }
+
+        // Get list of existing sg esi filenames if not provided.
+        if (count($sg_esi_existing) == 0) {
+          $sg_esi_existing = $this->existingSgEsiFiles();
+        }
+
+        // Get ESI filename.
+        if (array_key_exists($esi_id, $sg_esi_processed)) {
+          // If esi id already processed, use existing file name.
+          $esi_filename = $sg_esi_processed[$esi_id];
+        }
+        else {
+          if (array_key_exists($esi_id, $sg_esi_existing)) {
+            // Fragment file with esi_id exists, so use that file name.
+            $esi_filename = $sg_esi_existing[$esi_id];
+          }
+          else {
+            // Get new filename.
+            $path_id = \Drupal::service('path.alias_manager')
+              ->getPathByAlias($path);
+            $path_id = substr($path_id, 1);
+            $path_str = str_replace('/', '--', $path_id);
+            $esi_filename = $esi_id . '__' . $path_str;
+          }
+        }
+
+        //$this->log('Process ' . $path . ' esi_id: ' . $esi_id);
+
+        // @TODO Special handling for Views Blocks
+        //      if (substr($block_id, 0, 12) == 'views_block_') {
+        //        //str_replace('views_block_', 'views_block__', $block_id);
+        //        $block_id = 'views_block__' . substr($block_id, 12);
+        //      }
+
+        // Replace the original element with the ESI markup.
+        $esi_markup = '<!--#include virtual="/esi/sg-esi/' . Html::escape($esi_filename) . '" -->';
+        $esi_element = $dom->createElement('span', $esi_markup);
+        $element->parentNode->replaceChild($esi_element, $element);
+
+        // Generate the ESI fragment file.
+        if (array_key_exists($esi_id, $sg_esi_processed)) {
+          // Return if esi_id has been processed.
+          continue;
+        }
+        else {
+          $this->generateEsiFileByElement($esi_filename, $element, 'sg-esi');
+          $sg_esi_processed[$esi_id] = $esi_filename;
+        }
       }
     }
 

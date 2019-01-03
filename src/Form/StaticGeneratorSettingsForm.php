@@ -47,6 +47,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
+    // Render method.
+    $render_method = $form_state->getValue('generator_directory');
+    $this->config('static_generator.settings')
+      ->set('generator_directory', $render_method)
+      ->save();
+
     // Generator directory.
     $generator_directory = $form_state->getValue('generator_directory');
     $this->config('static_generator.settings')
@@ -107,6 +113,18 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('generate_index', $generate_index)
       ->save();
 
+    // ESI Blocks
+    $esi_blocks = $form_state->getValue('esi_blocks');
+    $this->config('static_generator.settings')
+      ->set('esi_blocks', $esi_blocks)
+      ->save();
+
+    // ESI sg-esi
+    $esi_sg_esi = $form_state->getValue('esi_sg_esi');
+    $this->config('static_generator.settings')
+      ->set('esi_sg_esi', $esi_sg_esi)
+      ->save();
+
     // Static URL
     $static_url = $form_state->getValue('static_url');
     $this->config('static_generator.settings')
@@ -152,7 +170,45 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
 
     $entityTypeManager = \Drupal::entityTypeManager();
     $entityTypeBundleInfo = \Drupal::service('entity_type.bundle.info');
-    
+
+    // Render method.
+    $form['render_method'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Render method'),
+      '#default_value' => $config->get('topics.hot_threshold'),
+      '#options' => ['Core','Guzzle'],
+      '#description' => $this->t('The method used to render pages.'),
+    ];
+
+    // Verbose logging.
+    $form['verbose_logging'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Verbose logging'),
+      '#default_value' => $config->get('verbose_logging'),
+    ];
+
+    // Generate index.html.
+    $form['generate_index'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate index.html'),
+      '#default_value' => $config->get('generate_index'),
+    ];
+
+    // ESI blocks.
+    $form['esi_blocks'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate ESI for blocks.'),
+      '#default_value' => $config->get('esi_blocks'),
+    ];
+
+    // ESI sg_esi.
+    $form['esi_sg_esi'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate ESI for class="sg-esi--<id>".'),
+      '#default_value' => $config->get('esi_sg_esi'),
+    ];
+
+    // Generator directory.
     $form['generator_directory'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Generator directory'),
@@ -160,33 +216,22 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#description' => $this->t('The static generator target directory.'),
     ];
 
-    // Static URL
+    // Static URL.
     $form['static_url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Static URL'),
       '#default_value' => $config->get('static_url'),
     ];
 
-    // Verbose Logging
-    $form['verbose_logging'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Verbose logging'),
-      '#default_value' => $config->get('verbose_logging'),
-    ];
-
-    // Generate index.html
-    $form['generate_index'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Generate index.html'),
-      '#default_value' => $config->get('generate_index'),
-    ];
-
+    // Paths to generate.
     $form['paths_generate'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Paths to Generate'),
       '#description' => $this->t('Specify paths to generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_generate'),
     ];
+
+    // Paths to not generate.
     $form['paths_do_not_generate'] = [
       '#type' => 'C',
       '#title' => $this->t('Paths and Path Patterns to not Generate'),
@@ -200,6 +245,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
 //      '#description' => $this->t('Specify block ids or block id wildcards (ending in *) to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
 //      '#default_value' => $config->get('blocks_esi'),
 //    ];
+
     $form['blocks_no_esi'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Blocks and block wildcards to not ESI'),
