@@ -118,22 +118,22 @@ function process_workflow(EntityInterface $entity, $operation) {
     }
 
     // Get this link's parent and generate its pages.
-    $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
-    $menu_parameters_siblings->setMaxDepth(1);
-    $parent_id = $entity->getParentId();
-    $menu_parameters_siblings->setRoot($parent_id);
-    $menu_parameters_siblings->excludeRoot();
-    $menu_tree_service = \Drupal::service('menu.link_tree');
-    $tree_siblings = $menu_tree_service->load('main', $menu_parameters_siblings);
-    $siblings = $menu_tree_service->build($tree_siblings);
-    $child_items = $siblings['#items'];
-    foreach ($child_items as $child_item) {
-      $url = $child_item['url'];
-      $path = $url->toString();
-      if (substr($path, 0, 1) == '/') {
-        \Drupal::service('static_generator')->generatePage($path);
-      }
-    }
+//    $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
+//    $menu_parameters_siblings->setMaxDepth(1);
+//    $parent_id = $entity->getParentId();
+//    $menu_parameters_siblings->setRoot($parent_id);
+//    $menu_parameters_siblings->excludeRoot();
+//    $menu_tree_service = \Drupal::service('menu.link_tree');
+//    $tree_siblings = $menu_tree_service->load('main', $menu_parameters_siblings);
+//    $siblings = $menu_tree_service->build($tree_siblings);
+//    $child_items = $siblings['#items'];
+//    foreach ($child_items as $child_item) {
+//      $url = $child_item['url'];
+//      $path = $url->toString();
+//      if (substr($path, 0, 1) == '/') {
+//        \Drupal::service('static_generator')->generatePage($path);
+//      }
+//    }
   }
 
   // Block.
