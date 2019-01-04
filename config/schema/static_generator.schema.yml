@@ -56,6 +56,6 @@ static_generator.settings:
       type: boolean
       label: 'ESI class="sg-esi--<id>".'
     render_method:
-      type: boolean
+      type: string
       label: 'Method used to render pages.'
 
