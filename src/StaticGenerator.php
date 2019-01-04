@@ -271,12 +271,12 @@ class StaticGenerator {
         foreach ($entity_ids as $entity_id) {
           //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
           //if($entity_id=='158364'){
-          if ($entity_id == '158364' || $entity_id == '159193') {
+          //if ($entity_id == '158364' || $entity_id == '159193') {
             $path_alias = \Drupal::service('path.alias_manager')
               ->getAliasByPath('/node/' . $entity_id);
             $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
             $count_gen++;
-          }
+          //}
         }
 
         // Exit if single run for specified content type.
@@ -1169,7 +1169,6 @@ class StaticGenerator {
       ->get('esi_sg_esi');
 
     if ($esi_sg_esi) {
-
 
       // Remove three dashes - hack for site specific issue, will be removed.
       $three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
