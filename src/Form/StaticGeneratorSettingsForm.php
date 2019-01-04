@@ -48,9 +48,9 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
     // Render method.
-    $render_method = $form_state->getValue('generator_directory');
+    $render_method = $form_state->getValue('render_method');
     $this->config('static_generator.settings')
-      ->set('generator_directory', $render_method)
+      ->set('render_method', $render_method)
       ->save();
 
     // Generator directory.
@@ -175,7 +175,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $form['render_method'] = [
       '#type' => 'select',
       '#title' => $this->t('Render method'),
-      '#default_value' => $config->get('topics.hot_threshold'),
+      '#default_value' => $config->get('render_method'),
       '#options' => ['Core','Guzzle'],
       '#description' => $this->t('The method used to render pages.'),
     ];

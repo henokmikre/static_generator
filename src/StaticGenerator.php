@@ -1070,6 +1070,8 @@ class StaticGenerator {
    *
    * @param array $sg_esi_processed
    *
+   * @param $sg_esi_existing
+   *
    * @return string
    *   Markup with ESI's injected.
    */
@@ -1163,10 +1165,10 @@ class StaticGenerator {
       }
     }
 
-    $esi_blocks = $this->configFactory->get('static_generator.settings')
-      ->get('esi_blocks');
+    $esi_sg_esi = $this->configFactory->get('static_generator.settings')
+      ->get('esi_sg_esi');
 
-    if ($esi_blocks) {
+    if ($esi_sg_esi) {
 
 
       // Remove three dashes - hack for site specific issue, will be removed.
