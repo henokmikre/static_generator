@@ -72,10 +72,10 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->save();
 
     // Blocks - ESI.
-//    $blocks_esi = $form_state->getValue('blocks_esi');
-//    $this->config('static_generator.settings')
-//      ->set('blocks_esi', $blocks_esi)
-//      ->save();
+    //    $blocks_esi = $form_state->getValue('blocks_esi');
+    //    $this->config('static_generator.settings')
+    //      ->set('blocks_esi', $blocks_esi)
+    //      ->save();
 
     // Blocks - No ESI.
     $blocks_no_esi = $form_state->getValue('blocks_no_esi');
@@ -176,7 +176,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#type' => 'select',
       '#title' => $this->t('Render method'),
       '#default_value' => $config->get('render_method'),
-      '#options' => ['Core','Guzzle'],
+      '#options' => ['Core' => 'Core', 'Guzzle' => 'Guzzle'],
       '#description' => $this->t('The method used to render pages.'),
     ];
 
@@ -239,12 +239,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('paths_do_not_generate'),
     ];
 
-//    $form['blocks_esi'] = [
-//      '#type' => 'textarea',
-//      '#title' => $this->t('Blocks to ESI'),
-//      '#description' => $this->t('Specify block ids or block id wildcards (ending in *) to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
-//      '#default_value' => $config->get('blocks_esi'),
-//    ];
+    //    $form['blocks_esi'] = [
+    //      '#type' => 'textarea',
+    //      '#title' => $this->t('Blocks to ESI'),
+    //      '#description' => $this->t('Specify block ids or block id wildcards (ending in *) to ESI include - comma separated, no spaces. If empty, all blocks are ESI included.'),
+    //      '#default_value' => $config->get('blocks_esi'),
+    //    ];
 
     $form['blocks_no_esi'] = [
       '#type' => 'textarea',
@@ -293,7 +293,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
 
     $header = [
       'type' => $this->t('Items'),
-      'operations' => $this->t('Operations')
+      'operations' => $this->t('Operations'),
     ];
     $form['entity_types_container'] = [
       '#type' => 'details',
@@ -314,7 +314,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
 
       $bundles = [];
       foreach ($entityTypeBundleInfo->getBundleInfo($entity_type->id()) as $bundle_id => $bundle) {
-          $bundles[$bundle_id] = $bundle['label'];
+        $bundles[$bundle_id] = $bundle['label'];
       }
 
       $bundles_list = [
@@ -333,7 +333,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
             'label' => $this->t('@bundle types', ['@bundle' => $entity_type->getLabel()]),
             'entity_type_id' => $entity_type->id(),
             'selected_bundles' => $bundles_list,
-          ]
+          ],
         ],
         'operations' => [
           '#type' => 'operations',
@@ -358,9 +358,10 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
   }
 
   public function canGenerateEntitiesOfEntityType($entity_type) {
-    if($entity_type == 'node'){
+    if ($entity_type == 'node') {
       return TRUE;
-    } else {
+    }
+    else {
       return FALSE;
     }
   }

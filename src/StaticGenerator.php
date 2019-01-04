@@ -1171,10 +1171,10 @@ class StaticGenerator {
     if ($esi_sg_esi) {
 
       // Remove three dashes - hack for site specific issue, will be removed.
-      $three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
-      foreach ($three_dashes as $three_dash) {
-        $three_dash->parentNode->removeChild($three_dash);
-      }
+      //$three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
+      //foreach ($three_dashes as $three_dash) {
+      //  $three_dash->parentNode->removeChild($three_dash);
+      //}
 
       // Remove elements with class=sg--remove.
       $remove_elements = $finder->query("//*[contains(@class, 'sg--remove')]");
@@ -1196,13 +1196,17 @@ class StaticGenerator {
           //          continue;
           //        }
           if ($this->startsWith($esi_class, 'sg-esi--')) {
+            if ($this->startsWith($esi_class, 'sg-esi---')) {
+              continue;
+            }
+            //str_replace('sg-esi---','sg-esi--',$esi_class);
             $esi_id = substr($esi_class, 8);
           }
         }
 
         // Must have an sg esi id.
         if (empty($esi_id)) {
-          $this->log('esi_id empty!!!!!!!!!');
+          //$this->log('esi_id empty!!!!!!!!!');
           continue;
         }
 
