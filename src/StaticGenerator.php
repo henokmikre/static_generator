@@ -769,7 +769,7 @@ class StaticGenerator {
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
     $rsync_public_command = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    //exec($rsync_public_command);
+    exec($rsync_public_command);
 
     // rSync CSS.
     $css_directory = $this->configFactory->get('static_generator.settings')
