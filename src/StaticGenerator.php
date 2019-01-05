@@ -768,9 +768,20 @@ class StaticGenerator {
     // rSync public.
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    $rsync_public = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
-    //$this->log($rsync_public);
-    exec($rsync_public);
+    $rsync_public_command = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    //exec($rsync_public_command);
+
+    // rSync CSS.
+    $css_directory = $this->configFactory->get('static_generator.settings')
+      ->get('css_directory');
+    $rsync_css = 'rsync -azr ' . $public_files_directory . '/css/ ' . $css_directory;
+    exec($rsync_css);
+
+    // rSync JS.
+    $js_directory = $this->configFactory->get('static_generator.settings')
+      ->get('js_directory');
+    $rsync_js = 'rsync -azr ' . $public_files_directory . '/js/ ' . $js_directory;
+    exec($rsync_js);
 
     // Elapsed time.
     $end_time = time();

@@ -7,6 +7,12 @@ static_generator.settings:
     generator_directory:
       type: string
       label: 'Generator directory'
+    css_directory:
+      type: string
+      label: 'CSS Directory'
+    js_directory:
+      type: string
+      label: 'JS Directory'
     paths_generate:
       type: string
       label: 'Paths to Generate'

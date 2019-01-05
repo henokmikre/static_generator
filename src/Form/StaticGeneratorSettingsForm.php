@@ -59,6 +59,18 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('generator_directory', $generator_directory)
       ->save();
 
+    // CSS directory.
+    $css_directory = $form_state->getValue('css_directory');
+    $this->config('static_generator.settings')
+      ->set('css_directory', $css_directory)
+      ->save();
+
+    // JS directory.
+    $js_directory = $form_state->getValue('js_directory');
+    $this->config('static_generator.settings')
+      ->set('js_directory', $js_directory)
+      ->save();
+
     // Paths - generate.
     $paths_generate = $form_state->getValue('paths_generate');
     $this->config('static_generator.settings')
@@ -208,6 +220,13 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('esi_sg_esi'),
     ];
 
+    // Static URL.
+    $form['static_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Static URL'),
+      '#default_value' => $config->get('static_url'),
+    ];
+
     // Generator directory.
     $form['generator_directory'] = [
       '#type' => 'textfield',
@@ -216,11 +235,20 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#description' => $this->t('The static generator target directory.'),
     ];
 
-    // Static URL.
-    $form['static_url'] = [
+    // CSS directory.
+    $form['css_directory'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Static URL'),
-      '#default_value' => $config->get('static_url'),
+      '#title' => $this->t('CSS directory'),
+      '#default_value' => $config->get('css_directory'),
+      '#description' => $this->t('The CSS rsync target directory.'),
+    ];
+
+    // JS directory.
+    $form['js_directory'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('JS directory'),
+      '#default_value' => $config->get('js_directory'),
+      '#description' => $this->t('The JS rsync target directory.'),
     ];
 
     // Paths to generate.
