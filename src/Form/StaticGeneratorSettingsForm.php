@@ -143,6 +143,18 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('static_url', $static_url)
       ->save();
 
+    // Guzzle Host
+    $guzzle_host = $form_state->getValue('guzzle_host');
+    $this->config('static_generator.settings')
+      ->set('guzzle_host', $guzzle_host)
+      ->save();
+
+    // Guzzle Options
+    $guzzle_options = $form_state->getValue('guzzle_options');
+    $this->config('static_generator.settings')
+      ->set('guzzle_options', $guzzle_options)
+      ->save();
+
     // Rsync Code
     $rsync_code = $form_state->getValue('rsync_code');
     $this->config('static_generator.settings')
@@ -225,6 +237,21 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Static URL'),
       '#default_value' => $config->get('static_url'),
+    ];
+
+    // Guzzle Host.
+    $form['guzzle_host'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Guzzle Host'),
+      '#default_value' => $config->get('guzzle_host'),
+    ];
+
+    // Guzzle Options.
+    $form['guzzle_options'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Guzzle Options'),
+      '#default_value' => $config->get('guzzle_options'),
+      '#description' => $this->t('Guzzle options, e.g. [\'verify\' => false] to turn off HTTPS checking.'),
     ];
 
     // Generator directory.

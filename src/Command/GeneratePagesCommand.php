@@ -53,7 +53,13 @@ class GeneratePagesCommand extends ContainerAwareCommand {
         'q',
         NULL,
         InputOption::VALUE_NONE,
-        $this->trans('commands.sg.generate-all.options.q'))
+        $this->trans('commands.sg.generate-pages.options.q'))
+      ->addOption(
+        'queued',
+        NULL,
+        InputOption::VALUE_NONE,
+        $this->trans('commands.sg.generate-pages.options.queued')
+      )
       ->setAliases(['sgp']);
   }
 
@@ -61,27 +67,33 @@ class GeneratePagesCommand extends ContainerAwareCommand {
    * {@inheritdoc}
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $path = $input->getArgument('path');
     if (empty($path)) {
-      if (empty($input->getOption('q'))) {
-        $answer = $this->getIo()
-          ->ask('Delete and re-generate all pages (yes/no)? ');
-        if (strtolower($answer) == 'yes') {
+      if (!empty($input->getOption('queued'))) {
+        $this->staticGenerator->processQueue();
+      }
+      else {
+        if (empty($input->getOption('q'))) {
+          $answer = $this->getIo()
+            ->ask('Delete and re-generate all pages (yes/no)? ');
+          if (strtolower($answer) == 'yes') {
+            $elapsed_time = $this->staticGenerator->generatePages();
+            $this->getIo()
+              ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
+          }
+        }
+        else {
           $elapsed_time = $this->staticGenerator->generatePages();
           $this->getIo()
             ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
         }
       }
-      else {
-        $elapsed_time = $this->staticGenerator->generatePages();
-        $this->getIo()
-          ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
-      }
     }
     else {
-      $this->staticGenerator->generatePage($path, FALSE, TRUE );
+      $this->staticGenerator->generatePage($path, FALSE, TRUE);
       $this->getIo()
         ->info('Generation of page for path ' . $path . ' complete.');
       //    $this->getIo()->info($this->trans('commands.sg.generate-page.messages.success'));

@@ -83,7 +83,7 @@ function process_workflow(EntityInterface $entity, $operation) {
       $path = '/' . $path;
     }
     if ($entity->get('moderation_state')->value == 'published') {
-      \Drupal::service('static_generator')->generatePage($path, FALSE, TRUE);
+      \Drupal::service('static_generator')->queuePage($path);
     }
     elseif ($entity->get('moderation_state')->value == 'archived') {
       \Drupal::service('static_generator')->deletePage($path);
@@ -91,59 +91,19 @@ function process_workflow(EntityInterface $entity, $operation) {
   }
 
   // Media.
-  if ($entity->getEntityTypeId() === 'media') {
-    \Drupal::service('static_generator')->generatePublicFiles();
-  }
-
-  $render_method = \Drupal::configFactory()->get('static_generator.settings')
-    ->get('render_method');
-
+//  if ($entity->getEntityTypeId() === 'media') {
+//    \Drupal::service('static_generator')->generatePublicFiles();
+//  }
 
   // Menu Item.
-  if ($entity->getEntityTypeId() === 'menu_link_content') {
-
-    if ($render_method == 'Core') {
-      // Generate page for this link.
-      $menu_link_uri = $entity->link->uri;
-      $path = '/' . substr($menu_link_uri, 7);
-      \Drupal::service('static_generator')->generatePage($path);
-
-      // Get this link's children and generate their pages.
-      $menu_parameters = new \Drupal\Core\Menu\MenuTreeParameters();
-      $menu_parameters->setMaxDepth(1);
-      $menu_parameters->setRoot($entity->getPluginId());
-      $menu_parameters->excludeRoot();
-      $menu_tree_service = \Drupal::service('menu.link_tree');
-      $tree = $menu_tree_service->load('main', $menu_parameters);
-      $children = $menu_tree_service->build($tree);
-      $child_items = $children['#items'];
-      foreach ($child_items as $child_item) {
-        $url = $child_item['url'];
-        $path = $url->toString();
-        if (substr($path, 0, 1) == '/') {
-          \Drupal::service('static_generator')->generatePage($path);
-        }
-      }
-
-      // Get this link's parent and generate its pages.
-      $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
-      $menu_parameters_siblings->setMaxDepth(1);
-      $parent_id = $entity->getParentId();
-      $menu_parameters_siblings->setRoot($parent_id);
-      $menu_parameters_siblings->excludeRoot();
-      $menu_tree_service = \Drupal::service('menu.link_tree');
-      $tree_siblings = $menu_tree_service->load('main', $menu_parameters_siblings);
-      $siblings = $menu_tree_service->build($tree_siblings);
-      $child_items = $siblings['#items'];
-      foreach ($child_items as $child_item) {
-        $url = $child_item['url'];
-        $path = $url->toString();
-        if (substr($path, 0, 1) == '/') {
-          \Drupal::service('static_generator')->generatePage($path);
-        }
-      }
-    }
-  }
+//  if ($entity->getEntityTypeId() === 'menu_link_content') {
+//
+//      // Generate page for this link, children and siblings..
+//      $menu_link_uri = $entity->link->uri;
+//      $path = '/' . substr($menu_link_uri, 7);
+//
+//      \Drupal::service('static_generator')->generatePagesMenuChildrenSiblings($entity, $path);
+//  }
 
   // Block.
   //  if ($entity->getEntityTypeId() === 'block') {
@@ -167,6 +127,7 @@ function process_workflow(EntityInterface $entity, $operation) {
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
  *
+ * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function static_generator_entity_delete(EntityInterface $entity) {
   // Content entities only.

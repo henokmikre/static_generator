@@ -64,4 +64,9 @@ static_generator.settings:
     render_method:
       type: string
       label: 'Method used to render pages.'
-
+    guzzle_host:
+      type: string
+      label: 'The host to use for Guzzle.'
+    guzzle_options:
+      type: string
+      label: "Guzzle options, e.g. ['verify' => false] to turn off HTTPS checking."

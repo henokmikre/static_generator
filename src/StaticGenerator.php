@@ -10,6 +10,9 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Path\PathMatcherInterface;
+use Drupal\Core\Queue\QueueInterface;
+use Drupal\Core\Queue\QueueWorkerInterface;
+use Drupal\Core\Queue\SuspendQueueException;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AnonymousUserSession;
@@ -26,7 +29,7 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 /**
  * Static Generator Service.
  *
- * Manages static generation process.
+ * Provides static generation services.
  */
 class StaticGenerator {
 
@@ -267,15 +270,23 @@ class StaticGenerator {
         $query->sort('nid', 'DESC');
         $entity_ids = $query->execute();
 
+        foreach ($entity_ids as $key => $entity_id) {
+          if ($entity_id == '158364') {
+            unset($entity_ids[$key]);
+          }
+        }
+        $entity_ids['1'] = '158364';
+
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
           //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
           //if($entity_id=='158364'){
           //if ($entity_id == '158364' || $entity_id == '159193') {
-            $path_alias = \Drupal::service('path.alias_manager')
-              ->getAliasByPath('/node/' . $entity_id);
-            $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
-            $count_gen++;
+          //if ($entity_id == '14' || $entity_id == '158364') {
+          $path_alias = \Drupal::service('path.alias_manager')
+            ->getAliasByPath('/node/' . $entity_id);
+          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $count_gen++;
           //}
         }
 
@@ -391,12 +402,63 @@ class StaticGenerator {
 
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
+    //if ($path_alias == '/patents-getting-started/general-information-concerning-patents') {
+      if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+        file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
 
-    if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
-      if ($log) {
-        \Drupal::logger('static_generator')
-          ->notice('Generate Page: ' . $directory . '/' . $file_name);
+        if ($log) {
+          \Drupal::logger('static_generator')
+            ->notice('Generate Page: ' . $directory . '/' . $file_name);
+        }
+      }
+    //}
+  }
+
+  /**
+   * @param $menu_link
+   * @param $path
+   *
+   * @throws \Drupal\Core\Theme\MissingThemeDependencyException
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   */
+  public function generatePagesMenuChildrenSiblings($menu_link, $path) {
+
+    if ($path) {
+      $this->generatePage($path);
+    }
+
+    // Get the menu link's children and generate their pages.
+    $menu_parameters = new \Drupal\Core\Menu\MenuTreeParameters();
+    $menu_parameters->setMaxDepth(1);
+    $menu_parameters->setRoot($menu_link->getPluginId());
+    $menu_parameters->excludeRoot();
+    $menu_tree_service = \Drupal::service('menu.link_tree');
+    $tree = $menu_tree_service->load('main', $menu_parameters);
+    $children = $menu_tree_service->build($tree);
+    $child_items = $children['#items'];
+    foreach ($child_items as $child_item) {
+      $url = $child_item['url'];
+      $path = $url->toString();
+      if (substr($path, 0, 1) == '/') {
+        \Drupal::service('static_generator')->generatePage($path);
+      }
+    }
+
+    // Get this link's parent and generate its pages.
+    $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
+    $menu_parameters_siblings->setMaxDepth(1);
+    $parent_id = $menu_link->getParentId();
+    $menu_parameters_siblings->setRoot($parent_id);
+    $menu_parameters_siblings->excludeRoot();
+    $menu_tree_service = \Drupal::service('menu.link_tree');
+    $tree_siblings = $menu_tree_service->load('main', $menu_parameters_siblings);
+    $siblings = $menu_tree_service->build($tree_siblings);
+    $child_items = $siblings['#items'];
+    foreach ($child_items as $child_item) {
+      $url = $child_item['url'];
+      $path = $url->toString();
+      if (substr($path, 0, 1) == '/') {
+        \Drupal::service('static_generator')->generatePage($path);
       }
     }
   }
@@ -1023,28 +1085,40 @@ class StaticGenerator {
 
     $render_method = $this->configFactory->get('static_generator.settings')
       ->get('render_method');
+    $markup = t('Error in SG Rendering');
 
+    // Make Request
+    $configuration = \Drupal::service('config.factory')
+      ->get('static_generator.settings');
+    $static_url = $configuration->get('static_url');
     if ($render_method == 'Core') {
 
-      // Make internal request.
-      $configuration = \Drupal::service('config.factory')
-        ->get('static_generator.settings');
-      $static_url = $configuration->get('static_url');
-
-      $request = Request::create($path, 'GET', [], [], [], ['SERVER_NAME' => $static_url]);
-
-      // Get the markup from the response.
-      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST, TRUE);
+      // Internal request using Drupal Core.
+      //$request = Request::createFromGlobals();
+      //$request = Request::create($path, 'GET', [], [], [], ['clear' => TRUE]);
+      //$request = Request::create($path, 'GET', [], [], [], []);
+      $request = Request::create($path);
+      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
       $markup = $response->getContent();
 
     }
     else {
 
-      // Make Guzzle request (much slower than internal request).
-      $client = \Drupal::httpClient();
+      // Guzzle request using Drupal core (much slower than internal request).
+      $client = \Drupal::httpClient(['SERVER_NAME' => $static_url]);
       try {
-        //'SERVER_NAME' => $static_url
-        $response = $client->request('GET', 'd8.local' . $path, []);
+        //$response = $client->request('GET', 'd8.local' . $path, ['SERVER_NAME' => $static_url]);
+
+        $guzzle_host = $this->configFactory->get('static_generator.settings')
+          ->get('guzzle_host');
+        $guzzle_options = $this->configFactory->get('static_generator.settings')
+          ->get('guzzle_options');
+        if (!empty($guzzle_options)) {
+          $response = $client->request('GET', $guzzle_host . $path, $guzzle_options);
+        }
+        else {
+          $response = $client->request('GET', $guzzle_host . $path);
+        }
         if ($response) {
           $markup = $response->getBody();
         }
@@ -1181,12 +1255,6 @@ class StaticGenerator {
 
     if ($esi_sg_esi) {
 
-      // Remove three dashes - hack for site specific issue, will be removed.
-      //$three_dashes = $finder->query("//*[contains(@class, 'sg-esi---')]");
-      //foreach ($three_dashes as $three_dash) {
-      //  $three_dash->parentNode->removeChild($three_dash);
-      //}
-
       // Remove elements with class=sg--remove.
       $remove_elements = $finder->query("//*[contains(@class, 'sg--remove')]");
       foreach ($remove_elements as $remove_element) {
@@ -1207,10 +1275,10 @@ class StaticGenerator {
           //          continue;
           //        }
           if ($this->startsWith($esi_class, 'sg-esi--')) {
+            // Remove three dashes - hack for site specific issue, will be removed.
             if ($this->startsWith($esi_class, 'sg-esi---')) {
               continue;
             }
-            //str_replace('sg-esi---','sg-esi--',$esi_class);
             $esi_id = substr($esi_class, 8);
           }
         }
@@ -1300,6 +1368,59 @@ class StaticGenerator {
     // Generate esi fragment file.
     $markup = $element->ownerDocument->saveHTML($element);
     file_unmanaged_save_data($markup, $directory . '/' . $esi_filename, FILE_EXISTS_REPLACE);
+  }
+
+  /**
+   * Get verbose logging setting.
+   *
+   * @param $path
+   *
+   * @return void ;
+   */
+  public function queuePage($path) {
+
+    //$queue = $this->queue_factory->get('static_generator');
+
+    // Get the queue implementation for SG
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('page_generator');
+
+    // Create new queue item
+    $item = new \stdClass();
+    $item->path = $path;
+    $queue->createItem($item);
+  }
+
+  /**
+   * @param $path
+   */
+  public function processQueue() {
+
+    // Get the queue implementation for SG
+    $queue_factory = \Drupal::service('queue');
+    $queue = $queue_factory->get('page_generator');
+    //$queue_manager = \Drupal::service('queue_manager');
+    //$queue_worker = $queue_factory->createInstance('page_generator');
+    $queue_worker = \Drupal::service('plugin.manager.queue_worker')->createInstance('page_generator');
+
+    while ($item = $queue->claimItem()) {
+      try {
+        $queue_worker->processItem($item);
+        $queue->deleteItem($item);
+      } catch (SuspendQueueException $e) {
+        $queue->releaseItem($item);
+        break;
+      } catch (\Exception $e) {
+        watchdog_exception('static_generator', $e);
+      }
+    }
+  }
+
+  public function processQueuesave($path) {
+    /** @var QueueInterface $queue */
+    $queue = $this->queueFactory->get('page_generator');
+    /** @var QueueWorkerInterface $queue_worker */
+    $queue_worker = $this->queueManager->createInstance('page_generator');
   }
 
   /**
