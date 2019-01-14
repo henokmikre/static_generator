@@ -845,6 +845,10 @@ class StaticGenerator {
     $rsync_js = 'rsync -azr ' . $public_files_directory . '/js/ ' . $js_directory;
     exec($rsync_js);
 
+    // Create symlinks to static files directory from css and js directories.
+    symlink($css_directory,$generator_directory . '/sites/default/files/css');
+    symlink($js_directory,$generator_directory . '/sites/default/files/js');
+
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
@@ -1114,7 +1118,10 @@ class StaticGenerator {
         $guzzle_options = $this->configFactory->get('static_generator.settings')
           ->get('guzzle_options');
         if (!empty($guzzle_options)) {
-          $response = $client->request('GET', $guzzle_host . $path, $guzzle_options);
+          $guzzle_array = [];
+          $eval_cmd = '$guzzle_array=' . $guzzle_options . ';';
+          eval($eval_cmd);
+          $response = $client->request('GET', $guzzle_host . $path, $guzzle_array);
         }
         else {
           $response = $client->request('GET', $guzzle_host . $path);
