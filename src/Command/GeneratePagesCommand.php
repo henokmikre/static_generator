@@ -86,7 +86,7 @@ class GeneratePagesCommand extends ContainerAwareCommand {
           }
         }
         else {
-          $elapsed_time = $this->staticGenerator->generatePages();
+          $elapsed_time = $this->staticGenerator->generatePages(FALSE);
           $this->getIo()
             ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
         }

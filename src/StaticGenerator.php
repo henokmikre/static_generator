@@ -182,14 +182,17 @@ class StaticGenerator {
   /**
    * Generate pages.
    *
+   * @param bool $delete_pages
+   *
    * @return int
    *   Execution time in seconds.
    *
-   * @throws \Exception
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generatePages() {
-    $elapsed_time = $this->deletePages();
+  public function generatePages($delete_pages = TRUE) {
+    if ($delete_pages) {
+      $elapsed_time = $this->deletePages();
+    }
     $elapsed_time += $this->deleteBlocks();
     $elapsed_time += $this->generateNodes();
     $elapsed_time += $this->generatePaths();
@@ -403,14 +406,14 @@ class StaticGenerator {
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
     //if ($path_alias == '/patents-getting-started/general-information-concerning-patents') {
-      if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-        file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+      file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
 
-        if ($log) {
-          \Drupal::logger('static_generator')
-            ->notice('Generate Page: ' . $directory . '/' . $file_name);
-        }
+      if ($log) {
+        \Drupal::logger('static_generator')
+          ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
+    }
     //}
   }
 
@@ -424,7 +427,7 @@ class StaticGenerator {
   public function generatePagesMenuChildrenSiblings($menu_link, $path) {
 
     if ($path) {
-      $this->generatePage($path);
+      $this->queuePage($path);
     }
 
     // Get the menu link's children and generate their pages.
@@ -440,7 +443,7 @@ class StaticGenerator {
       $url = $child_item['url'];
       $path = $url->toString();
       if (substr($path, 0, 1) == '/') {
-        \Drupal::service('static_generator')->generatePage($path);
+        \Drupal::service('static_generator')->queuePage($path);
       }
     }
 
@@ -458,7 +461,7 @@ class StaticGenerator {
       $url = $child_item['url'];
       $path = $url->toString();
       if (substr($path, 0, 1) == '/') {
-        \Drupal::service('static_generator')->generatePage($path);
+        \Drupal::service('static_generator')->queuePage($path);
       }
     }
   }
@@ -846,8 +849,8 @@ class StaticGenerator {
     exec($rsync_js);
 
     // Create symlinks to static files directory from css and js directories.
-    symlink($css_directory,$generator_directory . '/sites/default/files/css');
-    symlink($js_directory,$generator_directory . '/sites/default/files/js');
+    symlink($css_directory, $generator_directory . '/sites/default/files/css');
+    symlink($js_directory, $generator_directory . '/sites/default/files/js');
 
     // Elapsed time.
     $end_time = time();
@@ -1408,7 +1411,8 @@ class StaticGenerator {
     $queue = $queue_factory->get('page_generator');
     //$queue_manager = \Drupal::service('queue_manager');
     //$queue_worker = $queue_factory->createInstance('page_generator');
-    $queue_worker = \Drupal::service('plugin.manager.queue_worker')->createInstance('page_generator');
+    $queue_worker = \Drupal::service('plugin.manager.queue_worker')
+      ->createInstance('page_generator');
 
     while ($item = $queue->claimItem()) {
       try {

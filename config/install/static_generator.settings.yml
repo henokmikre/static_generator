@@ -8,4 +8,4 @@ verbose_logging: false
 generate_index: true
 esi_blocks: false
 esi_sg_esi: true
-render_method: 'Core'
+render_method: 'Guzzle'
