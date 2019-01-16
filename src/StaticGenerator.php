@@ -20,6 +20,7 @@ use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
+use Drupal\media\Controller\OEmbedIframeController;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -1147,6 +1148,83 @@ class StaticGenerator {
     if ($account_switcher) {
       \Drupal::service('account_switcher')->switchBack();
     }
+
+    // Render video iframes.
+    $dom = new DomDocument();
+    @$dom->loadHTML($markup);
+    $finder = new DomXPath($dom);
+    $iframes = $finder->query("//iframe");
+    foreach ($iframes as $iframe) {
+
+      // iframe Markup looks like:
+      // '<iframe src="https://www.youtube.com/embed/Z2J_J2DY2-c" frameborder="0" width="480" height="270"></iframe>';
+
+      $iframe_src = $iframe->getAttribute('src');
+
+      //$youtubeRegExp = '/(?:[?&]vi ?=|\/embed\/ | \/\d\d ? \/ | \/vi ? \/ | https ?: \/\/(?:www\.)?youtu\.be\/)([^&\n ?#]+)/';
+      //$match = [];
+      //preg_match($youtubeRegExp, $iframe_src, $match);
+
+      // Get Youtube ID.
+      $start_pos = strpos($iframe_src, 'youtu.be/') + 9;
+      $end_pos = strpos($iframe_src, '&', $start_pos);
+      $youtube_id = substr($iframe_src, $start_pos, $end_pos - $start_pos);
+      if (empty($youtube_id)) {
+        continue;
+      }
+      // Get the width.
+      $start_pos = strpos($iframe_src, 'width=') + 6;
+      $end_pos = strpos($iframe_src, '&', $start_pos);
+      $width = substr($iframe_src, $start_pos, $end_pos - $start_pos);
+      if (!isset($width) || strlen($width) == 0) {
+        continue;
+      }
+      // Get the height.
+      $start_pos = strpos($iframe_src, 'height=') + 7;
+      $end_pos = strpos($iframe_src, '&', $start_pos);
+      $height = substr($iframe_src, $start_pos, $end_pos - $start_pos);
+      if (!isset($height) || strlen($height) == 0) {
+        continue;
+      }
+      $width = '480';
+      $height = '270';
+
+      $src = 'https://www.youtube.com/embed/' . $youtube_id;
+
+      $iframe_element = $dom->createElement('iframe');
+      $iframe_element->setAttribute('src', $src);
+      $iframe_element->setAttribute('frameborder', '0');
+      $iframe_element->setAttribute('width', $width);
+      $iframe_element->setAttribute('height', $height);
+
+      $iframe->parentNode->replaceChild($iframe_element, $iframe);
+
+      //@todo Use the oembed rendering controller instead of re=writing iframe.
+      //      $request = Request::create($iframe_src);
+      //      $container = \Drupal::getContainer();
+      //      $controller = OEmbedIframeController::create($container);
+      //      $response = $controller->render($request);
+      //      $iframe_markup = $response->getContent();
+      //      $span_element = $dom->createElement('iframe', $iframe_markup);
+      //      $iframe->parentNode->replaceChild($span_element, $iframe);
+
+      //$fragment = $iframe->ownerDocument->createDocumentFragment();
+      //$fragment->appendXML('<iframe width="480" height="270" src="https://www.youtube.com/embed/Z2J_J2DY2-c?rel=0&feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>');
+      //$fragment->appendXML($iframe_markup);
+      //while ($iframe->hasChildNodes()) {
+      //$iframe->removeChild($iframe->firstChild);
+      //}
+      //$iframe->appendChild($fragment);
+      //$iframe->parentNode->replaceChild($fragment, $iframe);
+      //$iframe_src = '/media/oembed?url=https%3A//youtu.be/Z2J_J2DY2-c&amp;max_width=0&amp;max_height=0&amp;hash=cJQtyPMXk835VuQ2-zE5bQ260m52nBbossji2XFDHYc';
+      //$request = Request::create($iframe_src);
+      //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+      //$iframe_new = $dom->createElement('iframe', $iframe_markup);
+      //$iframe->parentNode->replaceChild($iframe_new, $iframe);
+
+    }
+
+    $markup = $dom->saveHTML();
 
     // Return markup.
     return $markup;
