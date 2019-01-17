@@ -189,6 +189,7 @@ class StaticGenerator {
    *   Execution time in seconds.
    *
    * @throws \GuzzleHttp\Exception\GuzzleException
+   * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
   public function generatePages($delete_pages = TRUE) {
     if ($delete_pages) {
@@ -204,10 +205,10 @@ class StaticGenerator {
   }
 
   /**
-   * Generate nodes.
+   * Generate media entities.
    *
-   * @param bool $blocks_only
-   * @param string $type
+   * @param bool $esi_only
+   * @param string $bundle
    * @param int $start
    * @param int $length
    *
@@ -217,17 +218,17 @@ class StaticGenerator {
    * @throws \Exception
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generateNodes($type = '', $blocks_only = FALSE, $start = 0, $length = 100000) {
+  public function generateMedia($bundle = '', $esi_only = FALSE, $start = 0, $length = 100000) {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
-    if (empty($type)) {
-      $gen_node_bundles_string = $this->configFactory->get('static_generator.settings')
-        ->get('gen_node');
-      $gen_node_bundles = explode(',', $gen_node_bundles_string);
+    if (empty($bundle)) {
+      $bundles_string = $this->configFactory->get('static_generator.settings')
+        ->get('gen_media');
+      $bundles = explode(',', $bundles_string);
     }
     else {
-      $gen_node_bundles = [$type];
+      $bundles = [$bundle];
     }
 
     // Generate as Anonymous user.
@@ -245,7 +246,129 @@ class StaticGenerator {
     $blocks_processed = [];
     $sg_esi_processed = [];
     $sg_esi_existing = $this->existingSgEsiFiles();
-    foreach ($gen_node_bundles as $bundle) {
+    foreach ($bundles as $bundle) {
+      $start_time = time();
+
+      $query = \Drupal::entityQuery('media');
+      $query->condition('status', 1);
+      $query->condition('bundle', $bundle);
+      $count = $query->count()->execute();
+
+      $count_gen = 0;
+
+      for ($i = $start; $i <= $count; $i = $i + $length) {
+
+        // Reset memory
+        //        drupal_static_reset();
+        //        $manager = \Drupal::entityManager();
+        //        foreach ($manager->getDefinitions() as $id => $definition) {
+        //          $manager->getStorage($id)->resetCache();
+        //        }
+        // Run garbage collector to further reduce memory.
+        //        gc_collect_cycles();
+        // @TODO Can we reset container?
+
+        $query = \Drupal::entityQuery('media');
+        $query->condition('status', 1);
+        $query->condition('bundle', $bundle);
+        $query->range($i, $length);
+        $query->sort('mid', 'DESC');
+        $entity_ids = $query->execute();
+
+//        foreach ($entity_ids as $key => $entity_id) {
+//          if ($entity_id == '158364') {
+//            unset($entity_ids[$key]);
+//          }
+//        }
+//        $entity_ids['1'] = '158364';
+
+        // Generate pages for bundle.
+        foreach ($entity_ids as $entity_id) {
+          //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
+          //if($entity_id=='158364'){
+          //if ($entity_id == '158364' || $entity_id == '159193') {
+          //if ($entity_id == '14' || $entity_id == '158364') {
+          $path_alias = \Drupal::service('path.alias_manager')
+            ->getAliasByPath('/media/' . $entity_id);
+          $this->generatePage($path_alias, $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $count_gen++;
+          //}
+        }
+
+        // Exit if single run for specified content type.
+        if (!empty($bundle)) {
+          break;
+        }
+      }
+
+      // Elapsed time.
+      $end_time = time();
+      $elapsed_time = $end_time - $start_time;
+      $elapsed_time_total += $elapsed_time;
+      if ($count_gen > 0) {
+        $seconds_per_page = round($elapsed_time / $count_gen, 2);
+      }
+      else {
+        $seconds_per_page = 'n/a';
+      }
+
+      \Drupal::logger('static_generator')
+        ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
+          ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
+    }
+
+    // Switch back from anonymous user.
+    \Drupal::service('account_switcher')->switchBack();
+
+    // Switch back to active theme.
+    $this->themeManager->setActiveTheme($active_theme);
+
+    return $elapsed_time_total;
+  }
+
+  /**
+   * Generate nodes.
+   *
+   * @param string $bundle
+   * @param bool $esi_only
+   * @param int $start
+   * @param int $length
+   *
+   * @return int
+   *   Execution time in seconds.
+   *
+   * @throws \Drupal\Core\Theme\MissingThemeDependencyException
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   */
+  public function generateNodes($bundle = '', $esi_only = FALSE, $start = 0, $length = 100000) {
+    $elapsed_time_total = 0;
+
+    // Get bundles to generate from config if not specified in $type.
+    if (empty($type)) {
+      $bundles_string = $this->configFactory->get('static_generator.settings')
+        ->get('gen_node');
+      $bundles = explode(',', $bundles_string);
+    }
+    else {
+      $bundles = [$type];
+    }
+
+    // Generate as Anonymous user.
+    \Drupal::service('account_switcher')
+      ->switchTo(new AnonymousUserSession());
+
+    // Switch to default theme
+    $active_theme = $this->themeManager->getActiveTheme();
+    $default_theme_name = $this->configFactory->get('system.theme')
+      ->get('default');
+    $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
+    $this->themeManager->setActiveTheme($default_theme);
+
+    // Generate each bundle.
+    $blocks_processed = [];
+    $sg_esi_processed = [];
+    $sg_esi_existing = $this->existingSgEsiFiles();
+    foreach ($bundles as $bundle) {
       $start_time = time();
 
       $query = \Drupal::entityQuery('node');
@@ -274,12 +397,12 @@ class StaticGenerator {
         $query->sort('nid', 'DESC');
         $entity_ids = $query->execute();
 
-        foreach ($entity_ids as $key => $entity_id) {
-          if ($entity_id == '158364') {
-            unset($entity_ids[$key]);
-          }
-        }
-        $entity_ids['1'] = '158364';
+//        foreach ($entity_ids as $key => $entity_id) {
+//          if ($entity_id == '158364') {
+//            unset($entity_ids[$key]);
+//          }
+//        }
+//        $entity_ids['1'] = '158364';
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
@@ -289,7 +412,7 @@ class StaticGenerator {
           //if ($entity_id == '14' || $entity_id == '158364') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, $blocks_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $this->generatePage($path_alias, $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
           //}
         }

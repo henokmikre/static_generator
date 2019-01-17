@@ -28,7 +28,7 @@ class GeneratePagesTypeCommand extends ContainerAwareCommand {
   protected $staticGenerator;
 
   /**
-   * GenPageCommand constructor.
+   * GeneratePagesTypeCommand constructor.
    *
    * @param \Drupal\static_generator\StaticGenerator $static_generator
    */
@@ -49,6 +49,10 @@ class GeneratePagesTypeCommand extends ContainerAwareCommand {
         InputArgument::REQUIRED,
         $this->trans('commands.sg.generate-pages-type.arguments.type'))
       ->addArgument(
+        'bundle',
+        InputArgument::REQUIRED,
+        $this->trans('commands.sg.generate-pages-type.arguments.type'))
+      ->addArgument(
         'start',
         InputArgument::REQUIRED,
         $this->trans('commands.sg.generate-pages-type.arguments.start'))
@@ -63,14 +67,21 @@ class GeneratePagesTypeCommand extends ContainerAwareCommand {
    * {@inheritdoc}
    *
    * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $type = $input->getArgument('type');
+    $bundle = $input->getArgument('bundle');
     $start = $input->getArgument('start');
     $length = $input->getArgument('length');
-
-    $elapsed_time = $this->staticGenerator->generateNodes($type, FALSE, $start, $length);
+    $elapsed_time = 0;
+    if ($type == 'node') {
+      $elapsed_time = $this->staticGenerator->generateNodes($bundle, FALSE, $start, $length);
+    }
+    elseif ($type == 'media') {
+      $elapsed_time = $this->staticGenerator->generateMedia($bundle, FALSE, $start, $length);
+    }
     $this->getIo()
-      ->info('Generation of pages for type ' . $type . ' complete, elapsed time: ' . $elapsed_time . ' seconds.');
+      ->info('Generation of pages for type: ' . $type . ' bundle: '. $bundle . ' complete, elapsed time: ' . $elapsed_time . ' seconds.');
   }
 }
