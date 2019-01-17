@@ -76,17 +76,19 @@ class GeneratePagesCommand extends ContainerAwareCommand {
         $this->staticGenerator->processQueue();
       }
       else {
-        if (empty($input->getOption('q'))) {
+        if (empty($input->getOption('quiet'))) {
           $answer = $this->getIo()
             ->ask('Delete and re-generate all pages (yes/no)? ');
           if (strtolower($answer) == 'yes') {
-            $elapsed_time = $this->staticGenerator->generatePages();
+            $elapsed_time = $this->staticGenerator->generatePages(TRUE);
             $this->getIo()
               ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
           }
         }
         else {
-          $elapsed_time = $this->staticGenerator->generatePages(FALSE);
+          $elapsed_time = $this->staticGenerator->generatePages();
+          $elapsed_time += $this->staticGenerator->generateMedia('remote_video');
+
           $this->getIo()
             ->info('Generate pages completed, elapsed time: ' . $elapsed_time . ' seconds.');
         }

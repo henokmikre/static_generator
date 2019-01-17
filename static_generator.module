@@ -157,6 +157,12 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
       ->generationInfoForm('/node/' . $node->id(), $form, TRUE);
   }
 
+  if ($has_generate_permission && in_array($form_id, ['media_image_edit_form'])) {
+    $media = $form_state->getFormObject()->getEntity();
+    \Drupal::service('static_generator')
+      ->generationInfoForm('/media/' . $media->id(), $form, TRUE);
+  }
+
 }
 
 // as seen in the content_moderation_notifications.

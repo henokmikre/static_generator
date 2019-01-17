@@ -191,7 +191,8 @@ class StaticGenerator {
    * @throws \GuzzleHttp\Exception\GuzzleException
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
-  public function generatePages($delete_pages = TRUE) {
+  public function generatePages($delete_pages = FALSE) {
+    $elapsed_time  = 0;
     if ($delete_pages) {
       $elapsed_time = $this->deletePages();
     }
@@ -483,7 +484,7 @@ class StaticGenerator {
    * @param string $path
    *   The page's path.
    *
-   * @param bool $blocks_only
+   * @param bool $esi_only
    *   Optionally omit generating the page (just generate the blocks).
    *
    * @param bool $log
@@ -503,7 +504,7 @@ class StaticGenerator {
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generatePage($path, $blocks_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = []) {
+  public function generatePage($path, $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = []) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -530,7 +531,7 @@ class StaticGenerator {
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
     //if ($path_alias == '/patents-getting-started/general-information-concerning-patents') {
-    if (!$blocks_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+    if (!$esi_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
 
       if ($log) {
@@ -1273,6 +1274,7 @@ class StaticGenerator {
     }
 
     // Render video iframes.
+    // @todo need to implement this as a plugin, similar to a migrate process plugin
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
@@ -1289,7 +1291,17 @@ class StaticGenerator {
       //preg_match($youtubeRegExp, $iframe_src, $match);
 
       // Get Youtube ID.
-      $start_pos = strpos($iframe_src, 'youtu.be/') + 9;
+      $start_pos = strpos($iframe_src, 'youtu.be/');
+      if(empty($start_pos)) {
+        $iframe_src = urldecode($iframe_src);
+        $start_pos = strpos($iframe_src, 'youtube.com/watch?v=');
+        $start_pos += 20;
+      } else {
+        $start_pos += 9;
+      }
+      if (empty($start_pos)) {
+        continue;
+      }
       $end_pos = strpos($iframe_src, '&', $start_pos);
       $youtube_id = substr($iframe_src, $start_pos, $end_pos - $start_pos);
       if (empty($youtube_id)) {
@@ -1936,8 +1948,8 @@ class StaticGenerator {
       '#open' => FALSE,
       'markup' => [
         '#markup' => '<br/>' . $file_info . '<br/><br/>' .
-          '<a  target="_blank" href="' . $path . '/gen' . '">Generate Static Page</a><br/><br/>' .
-          '<a  target="_blank" href="' . $static_url . $path_alias . '">View Static Page</a>',
+          '<a  target="_blank" href="' . $path . '/gen' . '">' . t("Generate Static Page") . '</a><br/><br/>' .
+          '<a  target="_blank" href="' . $static_url . $path_alias . '">' . t("View Static Page") . '</a>',
       ],
       //      'button' =>
       //        [
