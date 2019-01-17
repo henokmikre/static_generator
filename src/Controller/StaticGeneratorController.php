@@ -3,6 +3,7 @@
 namespace Drupal\static_generator\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\media\MediaInterface;
 use Drupal\node\NodeInterface;
 
 /**
@@ -68,4 +69,43 @@ class StaticGeneratorController extends ControllerBase {
     return $build;
   }
 
+
+  /**
+   * Generate a specified media page.
+   *
+   * @param $mid
+   * The media id.
+   *
+   * @return array
+   * The markup.
+   */
+  public function generateMedia($mid) {
+    try {
+      \Drupal::service('static_generator')
+        ->generatePage('/media/' . $mid, FALSE, TRUE);
+    } catch (\Exception $exception) {
+    }
+
+    $build = [
+      '#markup' => $this->t('Page generation complete.'),
+    ];
+    return $build;
+  }
+
+  /**
+   * Static generation info for a media.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *
+   * @return array
+   * The markup.
+   */
+  public function generationInfoMedia(MediaInterface $media) {
+    $build = [
+      '#markup' => \Drupal::service('static_generator')
+        ->generationInfo('/media/' . $media->id()),
+    ];
+    return $build;
+  }
+  
 }

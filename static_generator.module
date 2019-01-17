@@ -73,10 +73,13 @@ function process_workflow(EntityInterface $entity, $operation) {
     if ($operation == 'update') {
       $path = $entity->toUrl()->toString();
     }
-    else {
+    elseif (\Drupal::hasService('pathauto.generator')) {
       $path_array = \Drupal::service('pathauto.generator')
         ->createEntityAlias($entity, 'insert');
       $path = $path_array['alias'];
+    }
+    if (!isset($path)) {
+      $path = $entity->toUrl()->toString();
     }
 
     if (substr($path, 0, 1) !== '/') {
@@ -91,19 +94,19 @@ function process_workflow(EntityInterface $entity, $operation) {
   }
 
   // Media.
-//  if ($entity->getEntityTypeId() === 'media') {
-//    \Drupal::service('static_generator')->generatePublicFiles();
-//  }
+  //  if ($entity->getEntityTypeId() === 'media') {
+  //    \Drupal::service('static_generator')->generatePublicFiles();
+  //  }
 
   // Menu Item.
-//  if ($entity->getEntityTypeId() === 'menu_link_content') {
-//
-//      // Generate page for this link, children and siblings..
-//      $menu_link_uri = $entity->link->uri;
-//      $path = '/' . substr($menu_link_uri, 7);
-//
-//      \Drupal::service('static_generator')->generatePagesMenuChildrenSiblings($entity, $path);
-//  }
+  //  if ($entity->getEntityTypeId() === 'menu_link_content') {
+  //
+  //      // Generate page for this link, children and siblings..
+  //      $menu_link_uri = $entity->link->uri;
+  //      $path = '/' . substr($menu_link_uri, 7);
+  //
+  //      \Drupal::service('static_generator')->generatePagesMenuChildrenSiblings($entity, $path);
+  //  }
 
   // Block.
   //  if ($entity->getEntityTypeId() === 'block') {

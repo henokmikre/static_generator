@@ -6,14 +6,6 @@ static_generator.settings:
   requirements:
     _permission: 'administer static generator'
 
-static_generator.test_route:
-  path: '/sgtest'
-  defaults:
-    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::sgTest'
-    _title: 'SG Test'
-  requirements:
-    _permission: 'administer static generator'
-
 static_generator.type_edit_form:
   path: '/admin/config/system/static_generator/type/{entity_type_id}'
   defaults:
@@ -30,6 +22,14 @@ static_generator.generate_node:
   requirements:
     _permission: 'administer static generator'
 
+static_generator.generate_media:
+  path: '/media/{mid}/gen'
+  defaults:
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generateMedia'
+    _title: 'Generate Media'
+  requirements:
+    _permission: 'administer static generator'
+
 static_generator.generation_info_node:
   path: '/node/{node}/sg'
   defaults:
@@ -38,3 +38,21 @@ static_generator.generation_info_node:
     _permission: 'administer static generator'
   options:
       _admin_route: FALSE
+
+static_generator.generation_info_media:
+  path: '/node/{media}/sg'
+  defaults:
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generationInfoMedia'
+  requirements:
+    _permission: 'administer static generator'
+  options:
+    _admin_route: FALSE
+
+static_generator.test_route:
+  path: '/sgtest'
+  defaults:
+    _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::sgTest'
+    _title: 'SG Test'
+  requirements:
+    _permission: 'administer static generator'
+
