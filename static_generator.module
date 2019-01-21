@@ -93,11 +93,6 @@ function process_workflow(EntityInterface $entity, $operation) {
     }
   }
 
-  // Media.
-  //  if ($entity->getEntityTypeId() === 'media') {
-  //    \Drupal::service('static_generator')->generatePublicFiles();
-  //  }
-
   // Menu Item.
   //  if ($entity->getEntityTypeId() === 'menu_link_content') {
   //

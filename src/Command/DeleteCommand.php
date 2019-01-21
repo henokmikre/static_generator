@@ -77,7 +77,7 @@ class DeleteCommand extends ContainerAwareCommand {
     elseif ($input->getOption('esi')) {
       $answer = $this->getIo()->ask('Delete all ESIs (yes/no)?');
       if (strtolower($answer) == 'yes') {
-        $elapsed_time = $this->staticGenerator->deleteBlocks();
+        $elapsed_time = $this->staticGenerator->deleteEsi();
         $this->getIo()
           ->info('Delete all generated ESIs completed, elapsed time: ' . $elapsed_time . ' seconds.');
       }

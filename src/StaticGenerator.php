@@ -63,6 +63,13 @@ class StaticGenerator {
   protected $requestStack;
 
   /**
+   * The current request.
+   *
+   * @var \Symfony\Component\HttpFoundation\Request
+   */
+  protected $currentRequest;
+
+  /**
    * The HTTP kernel.
    *
    * @var \Symfony\Component\HttpKernel\HttpKernelInterface
@@ -150,6 +157,7 @@ class StaticGenerator {
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
     $this->requestStack = $request_stack;
+    $this->currentRequest = $request_stack->getCurrentRequest();
     $this->httpKernel = $http_kernel;
     $this->themeManager = $theme_manager;
     $this->themeInitialization = $theme_initialization;
@@ -195,8 +203,8 @@ class StaticGenerator {
     $elapsed_time  = 0;
     if ($delete_pages) {
       $elapsed_time = $this->deletePages();
+      $elapsed_time += $this->deleteEsi();
     }
-    $elapsed_time += $this->deleteBlocks();
     $elapsed_time += $this->generateNodes();
     $elapsed_time += $this->generatePaths();
     //$elapsed_time += $this->generateRedirects();
@@ -345,13 +353,13 @@ class StaticGenerator {
     $elapsed_time_total = 0;
 
     // Get bundles to generate from config if not specified in $type.
-    if (empty($type)) {
+    if (empty($bundle)) {
       $bundles_string = $this->configFactory->get('static_generator.settings')
         ->get('gen_node');
       $bundles = explode(',', $bundles_string);
     }
     else {
-      $bundles = [$type];
+      $bundles = [$bundle];
     }
 
     // Generate as Anonymous user.
@@ -649,7 +657,7 @@ class StaticGenerator {
     }
     else {
       // Generate all blocks.
-      $this->deleteBlocks();
+      $this->deleteEsi();
       return $this->generateNodes('', TRUE);
     }
   }
@@ -1229,10 +1237,31 @@ class StaticGenerator {
       //$request = Request::createFromGlobals();
       //$request = Request::create($path, 'GET', [], [], [], ['clear' => TRUE]);
       //$request = Request::create($path, 'GET', [], [], [], []);
-      $request = Request::create($path);
-      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-      $markup = $response->getContent();
 
+//      $request = Request::create($path);
+//      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+//      $markup = $response->getContent();
+      //drupal_static_reset();
+      $request = Request::create($path, 'GET', [], [], [], $this->currentRequest->server->all());
+      //drupal_static_reset();
+      //$request->attributes->set(static::REQUEST_KEY, static::REQUEST_KEY);
+
+      try {
+        $response = $this->httpKernel->handle($request, HttpKernelInterface::MASTER_REQUEST);
+        $markup = $response->getContent();
+      }
+      catch (\Exception $exception) {
+        // Switch back to active theme.
+        if ($theme_switcher) {
+          $this->themeManager->setActiveTheme($active_theme);
+        }
+        // Switch back from anonymous user.
+        if ($account_switcher) {
+          \Drupal::service('account_switcher')->switchBack();
+        }
+        watchdog_exception('static_generator', $exception);
+        return t('RequestException in Static Generator');
+      }
     }
     else {
 
@@ -1258,6 +1287,15 @@ class StaticGenerator {
           $markup = $response->getBody();
         }
       } catch (RequestException $exception) {
+        // Switch back to active theme.
+        if ($theme_switcher) {
+          $this->themeManager->setActiveTheme($active_theme);
+        }
+        // Switch back from anonymous user.
+        if ($account_switcher) {
+          \Drupal::service('account_switcher')->switchBack();
+        }
+
         watchdog_exception('static_generator', $exception);
         return t('RequestException in Static Generator');
       }
@@ -1359,8 +1397,14 @@ class StaticGenerator {
 
     }
 
+
     $markup = $dom->saveHTML();
 
+    $configuration = \Drupal::service('config.factory')
+      ->get('static_generator.settings');
+    $static_url = $configuration->get('static_url');
+    $server_name = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['SERVER_NAME'];
+    $markup = str_replace($server_name, $static_url, $markup);
     // Return markup.
     return $markup;
 
@@ -1705,7 +1749,7 @@ class StaticGenerator {
    */
   public function deleteAll() {
     $elapsed_time = $this->deletePages();
-    $elapsed_time += $this->deleteBlocks();
+    $elapsed_time += $this->deleteEsi();
     $elapsed_time += $this->deleteDrupal();
 
     // Elapsed time.
@@ -1792,7 +1836,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function deleteBlocks() {
+  public function deleteEsi() {
     $start_time = time();
 
     // Delete Blocks
