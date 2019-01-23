@@ -94,14 +94,15 @@ function process_workflow(EntityInterface $entity, $operation) {
   }
 
   // Menu Item.
-  //  if ($entity->getEntityTypeId() === 'menu_link_content') {
-  //
-  //      // Generate page for this link, children and siblings..
-  //      $menu_link_uri = $entity->link->uri;
-  //      $path = '/' . substr($menu_link_uri, 7);
-  //
-  //      \Drupal::service('static_generator')->generatePagesMenuChildrenSiblings($entity, $path);
-  //  }
+  if ($entity->getEntityTypeId() === 'menu_link_content') {
+
+    // Generate page for this link, children and siblings..
+    $menu_link_uri = $entity->link->uri;
+    $path = '/' . substr($menu_link_uri, 7);
+
+    \Drupal::service('static_generator')
+      ->generatePagesMenuChildrenSiblings($entity, $path);
+  }
 
   // Block.
   //  if ($entity->getEntityTypeId() === 'block') {

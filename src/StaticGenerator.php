@@ -200,7 +200,7 @@ class StaticGenerator {
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    */
   public function generatePages($delete_pages = FALSE) {
-    $elapsed_time  = 0;
+    $elapsed_time = 0;
     if ($delete_pages) {
       $elapsed_time = $this->deletePages();
       $elapsed_time += $this->deleteEsi();
@@ -284,12 +284,12 @@ class StaticGenerator {
         $query->sort('mid', 'DESC');
         $entity_ids = $query->execute();
 
-//        foreach ($entity_ids as $key => $entity_id) {
-//          if ($entity_id == '158364') {
-//            unset($entity_ids[$key]);
-//          }
-//        }
-//        $entity_ids['1'] = '158364';
+        //        foreach ($entity_ids as $key => $entity_id) {
+        //          if ($entity_id == '158364') {
+        //            unset($entity_ids[$key]);
+        //          }
+        //        }
+        //        $entity_ids['1'] = '158364';
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
@@ -406,12 +406,12 @@ class StaticGenerator {
         $query->sort('nid', 'DESC');
         $entity_ids = $query->execute();
 
-//        foreach ($entity_ids as $key => $entity_id) {
-//          if ($entity_id == '158364') {
-//            unset($entity_ids[$key]);
-//          }
-//        }
-//        $entity_ids['1'] = '158364';
+        //        foreach ($entity_ids as $key => $entity_id) {
+        //          if ($entity_id == '158364') {
+        //            unset($entity_ids[$key]);
+        //          }
+        //        }
+        //        $entity_ids['1'] = '158364';
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
@@ -571,12 +571,15 @@ class StaticGenerator {
     $menu_tree_service = \Drupal::service('menu.link_tree');
     $tree = $menu_tree_service->load('main', $menu_parameters);
     $children = $menu_tree_service->build($tree);
-    $child_items = $children['#items'];
-    foreach ($child_items as $child_item) {
-      $url = $child_item['url'];
-      $path = $url->toString();
-      if (substr($path, 0, 1) == '/') {
-        \Drupal::service('static_generator')->queuePage($path);
+
+    if (isset($child_items) && array_key_exists('#items', $child_items)) {
+      $child_items = $children['#items'];
+      foreach ($child_items as $child_item) {
+        $url = $child_item['url'];
+        $path = $url->toString();
+        if (substr($path, 0, 1) == '/') {
+          \Drupal::service('static_generator')->queuePage($path);
+        }
       }
     }
 
@@ -1238,9 +1241,9 @@ class StaticGenerator {
       //$request = Request::create($path, 'GET', [], [], [], ['clear' => TRUE]);
       //$request = Request::create($path, 'GET', [], [], [], []);
 
-//      $request = Request::create($path);
-//      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-//      $markup = $response->getContent();
+      //      $request = Request::create($path);
+      //      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+      //      $markup = $response->getContent();
       //drupal_static_reset();
       $request = Request::create($path, 'GET', [], [], [], $this->currentRequest->server->all());
       //drupal_static_reset();
@@ -1249,8 +1252,7 @@ class StaticGenerator {
       try {
         $response = $this->httpKernel->handle($request, HttpKernelInterface::MASTER_REQUEST);
         $markup = $response->getContent();
-      }
-      catch (\Exception $exception) {
+      } catch (\Exception $exception) {
         // Switch back to active theme.
         if ($theme_switcher) {
           $this->themeManager->setActiveTheme($active_theme);
@@ -1330,11 +1332,12 @@ class StaticGenerator {
 
       // Get Youtube ID.
       $start_pos = strpos($iframe_src, 'youtu.be/');
-      if(empty($start_pos)) {
+      if (empty($start_pos)) {
         $iframe_src = urldecode($iframe_src);
         $start_pos = strpos($iframe_src, 'youtube.com/watch?v=');
         $start_pos += 20;
-      } else {
+      }
+      else {
         $start_pos += 9;
       }
       if (empty($start_pos)) {

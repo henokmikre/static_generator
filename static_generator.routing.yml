@@ -40,7 +40,7 @@ static_generator.generation_info_node:
       _admin_route: FALSE
 
 static_generator.generation_info_media:
-  path: '/node/{media}/sg'
+  path: '/media/{media}/sg'
   defaults:
     _controller: '\Drupal\static_generator\Controller\StaticGeneratorController::generationInfoMedia'
   requirements:
