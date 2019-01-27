@@ -81,6 +81,9 @@ class GeneratePagesTypeCommand extends ContainerAwareCommand {
     elseif ($type == 'media') {
       $elapsed_time = $this->staticGenerator->generateMedia($bundle, FALSE, $start, $length);
     }
+    elseif ($type == 'vocabulary') {
+      $elapsed_time = $this->staticGenerator->generateVocabulary($bundle, FALSE, $start, $length);
+    }
     $this->getIo()
       ->info('Generation of pages for type: ' . $type . ' bundle: '. $bundle . ' complete, elapsed time: ' . $elapsed_time . ' seconds.');
   }

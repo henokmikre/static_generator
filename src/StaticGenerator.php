@@ -336,6 +336,128 @@ class StaticGenerator {
   }
 
   /**
+   * Generate term entities.
+   *
+   * @param bool $esi_only
+   * @param string $bundle
+   * @param int $start
+   * @param int $length
+   *
+   * @return int
+   *   Execution time in seconds.
+   *
+   * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   */
+  public function generateVocabulary($bundle = '', $esi_only = FALSE, $start = 0, $length = 100000) {
+    $elapsed_time_total = 0;
+
+    // Get bundles to generate from config if not specified in $type.
+    if (empty($bundle)) {
+      $bundles_string = $this->configFactory->get('static_generator.settings')
+        ->get('gen_taxonomy');
+      $bundles = explode(',', $bundles_string);
+    }
+    else {
+      $bundles = [$bundle];
+    }
+
+    // Generate as Anonymous user.
+    \Drupal::service('account_switcher')
+      ->switchTo(new AnonymousUserSession());
+
+    // Switch to default theme
+    $active_theme = $this->themeManager->getActiveTheme();
+    $default_theme_name = $this->configFactory->get('system.theme')
+      ->get('default');
+    $default_theme = $this->themeInitialization->getActiveThemeByName($default_theme_name);
+    $this->themeManager->setActiveTheme($default_theme);
+
+    // Get vocabulary id.
+    $vocabulary = $this->entityTypeManager->getStorage('taxonomy_vocabulary')->load($bundle);
+    $vid = $vocabulary->id();
+
+    // Generate each bundle.
+    $blocks_processed = [];
+    $sg_esi_processed = [];
+    $sg_esi_existing = $this->existingSgEsiFiles();
+    foreach ($bundles as $bundle) {
+      $start_time = time();
+
+      $query = \Drupal::entityQuery('taxonomy_term');
+      $query->condition('status', 1);
+      $query->condition('vid', $vid);
+      $count = $query->count()->execute();
+
+      $count_gen = 0;
+
+      for ($i = $start; $i <= $count; $i = $i + $length) {
+
+        // Reset memory
+        //        drupal_static_reset();
+        //        $manager = \Drupal::entityManager();
+        //        foreach ($manager->getDefinitions() as $id => $definition) {
+        //          $manager->getStorage($id)->resetCache();
+        //        }
+        // Run garbage collector to further reduce memory.
+        //        gc_collect_cycles();
+        // @TODO Can we reset container?
+
+
+        $query = \Drupal::entityQuery('taxonomy_term');
+        $query->condition('status', 1);
+        $query->condition('vid', $vid);
+        $query->sort('weight');
+        $query->range($i, $length);
+        $entity_ids = $query->execute();
+
+        //        foreach ($entity_ids as $key => $entity_id) {
+        //          if ($entity_id == '158364') {
+        //            unset($entity_ids[$key]);
+        //          }
+        //        }
+        //        $entity_ids['1'] = '158364';
+
+        // Generate pages for bundle.
+        foreach ($entity_ids as $entity_id) {
+          $path_alias = \Drupal::service('path.alias_manager')
+            ->getAliasByPath('/taxonomy/term/' . $entity_id);
+          $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $count_gen++;
+        }
+
+        // Exit if single run for specified content type.
+        if (!empty($bundle)) {
+          break;
+        }
+      }
+
+      // Elapsed time.
+      $end_time = time();
+      $elapsed_time = $end_time - $start_time;
+      $elapsed_time_total += $elapsed_time;
+      if ($count_gen > 0) {
+        $seconds_per_page = round($elapsed_time / $count_gen, 2);
+      }
+      else {
+        $seconds_per_page = 'n/a';
+      }
+
+      \Drupal::logger('static_generator')
+        ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
+          ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
+    }
+
+    // Switch back from anonymous user.
+    \Drupal::service('account_switcher')->switchBack();
+
+    // Switch back to active theme.
+    $this->themeManager->setActiveTheme($active_theme);
+
+    return $elapsed_time_total;
+  }
+
+  /**
    * Generate nodes.
    *
    * @param string $bundle
