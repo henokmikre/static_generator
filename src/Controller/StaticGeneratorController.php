@@ -18,12 +18,13 @@ class StaticGeneratorController extends ControllerBase {
    */
   public function sgTest() {
     $build = [
+      '#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/inventors-eye-archive'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/158364'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/175312'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/patent'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/187833'),
       //'#markup' => \Drupal::service('static_generator')->processQueue(),
-      '#markup' => \Drupal::service('static_generator')->generateMedia('remote_video',FALSE, 0, 10000),
+      //'#markup' => \Drupal::service('static_generator')->generateMedia('remote_video',FALSE, 0, 10000),
       //'#markup' => \Drupal::service('static_generator')->generatePages(),
       //'#markup' => \Drupal::service('static_generator')->generateNodes('bio'),
       //'#markup' => \Drupal::service('static_generator')->generateBlocks(TRUE),
@@ -43,7 +44,7 @@ class StaticGeneratorController extends ControllerBase {
   public function generateNode($nid) {
     try {
       \Drupal::service('static_generator')
-        ->generatePage('/node/' . $nid, FALSE, TRUE);
+        ->generatePage('/node/' . $nid, '', FALSE, TRUE);
     } catch (\Exception $exception) {
     }
 
@@ -69,7 +70,6 @@ class StaticGeneratorController extends ControllerBase {
     return $build;
   }
 
-
   /**
    * Generate a specified media page.
    *
@@ -82,7 +82,7 @@ class StaticGeneratorController extends ControllerBase {
   public function generateMedia($mid) {
     try {
       \Drupal::service('static_generator')
-        ->generatePage('/media/' . $mid, FALSE, TRUE);
+        ->generatePage('/media/' . $mid, '', FALSE, TRUE);
     } catch (\Exception $exception) {
     }
 

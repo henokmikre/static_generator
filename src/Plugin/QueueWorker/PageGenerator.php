@@ -54,9 +54,18 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
 
   /**
    * {@inheritdoc}
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function processItem($item) {
     $path = $item->data->path;
-    $this->staticGenerator->generatePage($path);
+    if(isset($item->data->path_generate)) {
+      $path_generate = $item->data->path_generate;
+    }
+    if (empty($path_generate)) {
+      $this->staticGenerator->generatePage($path);
+    }
+    else {
+      $this->staticGenerator->generatePage($path, $path_generate);
+    }
   }
 }

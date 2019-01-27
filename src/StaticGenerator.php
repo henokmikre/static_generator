@@ -299,7 +299,7 @@ class StaticGenerator {
           //if ($entity_id == '14' || $entity_id == '158364') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/media/' . $entity_id);
-          $this->generatePage($path_alias, $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
           //}
         }
@@ -421,7 +421,7 @@ class StaticGenerator {
           //if ($entity_id == '14' || $entity_id == '158364') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
           //}
         }
@@ -492,6 +492,7 @@ class StaticGenerator {
    * @param string $path
    *   The page's path.
    *
+   * @param string $path_generate
    * @param bool $esi_only
    *   Optionally omit generating the page (just generate the blocks).
    *
@@ -512,7 +513,7 @@ class StaticGenerator {
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generatePage($path, $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = []) {
+  public function generatePage($path, $path_generate = '', $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = []) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -528,8 +529,14 @@ class StaticGenerator {
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
 
     // Get file name.
-    $web_directory = $this->directoryFromPath($path_alias);
-    $file_name = $this->filenameFromPath($path_alias);
+    if (empty($path_generate)) {
+      $web_directory = $this->directoryFromPath($path_alias);
+      $file_name = $this->filenameFromPath($path_alias);
+    }
+    else {
+      $web_directory = $this->directoryFromPath($path_generate);
+      $file_name = $this->filenameFromPath($path_generate);
+    }
 
     // Return if on index.html and gen index is false.
     if ($file_name == "index.html" && !$this->generateIndex()) {
@@ -775,7 +782,7 @@ class StaticGenerator {
       if ($block_id === $block_id_file) {
         $path_str = substr($block_id, strpos($block_id, '__'));
         $path = '/' . str_replace('-', '/', $path_str);
-        $this->generatePage($path, TRUE, TRUE);
+        $this->generatePage($path, '', TRUE);
       }
     }
 
@@ -844,7 +851,7 @@ class StaticGenerator {
       if ($generate_page) {
         $path_str = substr($filename, strpos($filename, '__') + 2);
         $path = '/' . str_replace('--', '/', $path_str);
-        $this->generatePage($path, TRUE, TRUE);
+        $this->generatePage($path, '', TRUE);
       }
     }
 
@@ -1400,15 +1407,39 @@ class StaticGenerator {
 
     }
 
+    // Generation of pages for Views pagers.
+    if (strpos($path, '?') === FALSE) {
+      $last_page_lis = $finder->query("//li[contains(@class, 'pager__item--last')]");
+      foreach ($last_page_lis as $last_page_li) {
+        $last_page_href = $last_page_li->childNodes->item(1)
+          ->getAttribute('href');
+        $last_page = intval(substr($last_page_href, 6));
+        for ($i = 1; $i <= $last_page; $i++) {
+          //$this->queuePage($path . '?page=' . $i, $path . '/page/' . $i);
+          $this->generatePage($path . '?page=' . $i, $path . '/page/' . $i);
+        }
+      }
+    }
+
+    // Fix pager links in markup.
+    /** @var \DOMElement $node */
+    foreach ($finder->query('//a[contains(@href,"?page=")]') as $node) {
+      $original_href = $node->getAttribute('href');
+      $new_href = str_replace('?', '/', $original_href);
+      $new_href = str_replace('=', '/', $new_href);
+      $node->setAttribute('href', $new_href);
+    }
 
     $markup = $dom->saveHTML();
 
+    // Fix canonical link so it has static site url.
     $configuration = \Drupal::service('config.factory')
       ->get('static_generator.settings');
     $static_url = $configuration->get('static_url');
-    $server_name = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['SERVER_NAME'];
-    $markup = str_replace($server_name, $static_url, $markup);
-    // Return markup.
+    $guzzle_url = $configuration->get('guzzle_url');
+    $markup = str_replace($guzzle_url, $static_url, $markup);
+
+    // Return the markup.
     return $markup;
 
   }
@@ -1645,9 +1676,11 @@ class StaticGenerator {
    *
    * @param $path
    *
+   * @param string $path_generate
+   *
    * @return void ;
    */
-  public function queuePage($path) {
+  public function queuePage($path, $path_generate = '') {
 
     //$queue = $this->queue_factory->get('static_generator');
 
@@ -1658,6 +1691,7 @@ class StaticGenerator {
     // Create new queue item
     $item = new \stdClass();
     $item->path = $path;
+    $item->path_generate = $path_generate;
     $queue->createItem($item);
   }
 
