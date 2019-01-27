@@ -1414,7 +1414,7 @@ class StaticGenerator {
         $last_page_href = $last_page_li->childNodes->item(1)
           ->getAttribute('href');
         $last_page = intval(substr($last_page_href, 6));
-        for ($i = 1; $i <= $last_page; $i++) {
+        for ($i = 0; $i <= $last_page; $i++) {
           //$this->queuePage($path . '?page=' . $i, $path . '/page/' . $i);
           $this->generatePage($path . '?page=' . $i, $path . '/page/' . $i);
         }
