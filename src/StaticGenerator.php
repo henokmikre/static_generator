@@ -1425,10 +1425,15 @@ class StaticGenerator {
     /** @var \DOMElement $node */
     foreach ($finder->query('//a[contains(@href,"?page=")]') as $node) {
       $original_href = $node->getAttribute('href');
-      $new_href = str_replace('?', '/', $original_href);
-      $new_href = str_replace('=', '/', $new_href);
+      if (strpos($path, '?') === FALSE) {
+        $new_path = $path;
+      } else {
+        $new_path = substr($path, 0, strpos($path, '?'));
+      }
+      $new_href = $new_path . str_replace('?page=', '/page/', $original_href);
       $node->setAttribute('href', $new_href);
     }
+
 
     $markup = $dom->saveHTML();
 
