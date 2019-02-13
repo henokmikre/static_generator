@@ -1270,7 +1270,12 @@ class StaticGenerator {
       $file_name = 'index.html';
     }
     else {
-      $file_name = strrchr($path_alias, '/') . '.html';
+      if(!$this->endsWith($path_alias, '.xml')){
+        $file_name = strrchr($path_alias, '/') . '.html';
+      } else {
+        $file_name = $path_alias;
+        $file_name = str_replace('/rss', '', $file_name);
+      }
       $file_name = substr($file_name, 1);
     }
     return $file_name;
@@ -1443,6 +1448,14 @@ class StaticGenerator {
       \Drupal::service('account_switcher')->switchBack();
     }
 
+
+    if($this->endsWith($path, '.xml')) {
+      $markup = html_entity_decode($markup);
+      $this->log($markup);
+      return $markup;
+    }
+
+
     // Render video iframes.
     // @todo need to implement this as a plugin, similar to a migrate process plugin
     $dom = new DomDocument();
@@ -1581,6 +1594,12 @@ class StaticGenerator {
     $static_url = $configuration->get('static_url');
     $guzzle_url = $configuration->get('guzzle_url');
     $markup = str_replace($guzzle_url, $static_url, $markup);
+
+    if($this->endsWith($path, '.xml')) {
+      $markup = html_entity_decode($markup);
+      $this->log($path);
+      $this->log($markup);
+    }
 
     // Return the markup.
     return $markup;
@@ -1729,7 +1748,6 @@ class StaticGenerator {
 
         // Must have an sg esi id.
         if (empty($esi_id)) {
-          //$this->log('esi_id empty!!!!!!!!!');
           continue;
         }
 
