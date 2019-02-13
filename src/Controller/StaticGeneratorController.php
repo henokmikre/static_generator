@@ -17,8 +17,14 @@ class StaticGeneratorController extends ControllerBase {
    * @return array
    */
   public function sgTest() {
+    //$migration = \Drupal::service('plugin.manager.migration')->createInstance('uspto_d7_node_section_landing');
+    //$executable = new \Drupal\migrate_tools\MigrateExecutable($migration, new \Drupal\migrate\MigrateMessage());
+    //164559  / 170235
+    //$executable->import();
+
     $build = [
-      '#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/inventors-eye-archive'),
+      '#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/ip-policy/intellectual-property-rights-ipr-attach-program/ip-attache-careers'),
+      //'#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/inventors-eye-archive'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/158364'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/175312'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/patent'),

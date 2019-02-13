@@ -374,7 +374,8 @@ class StaticGenerator {
     $this->themeManager->setActiveTheme($default_theme);
 
     // Get vocabulary id.
-    $vocabulary = $this->entityTypeManager->getStorage('taxonomy_vocabulary')->load($bundle);
+    $vocabulary = $this->entityTypeManager->getStorage('taxonomy_vocabulary')
+      ->load($bundle);
     $vid = $vocabulary->id();
 
     // Generate each bundle.
@@ -1461,21 +1462,35 @@ class StaticGenerator {
 
       // Get Youtube ID.
       $start_pos = strpos($iframe_src, 'youtu.be/');
-      if (empty($start_pos)) {
+      if ($start_pos === FALSE) {
         $iframe_src = urldecode($iframe_src);
         $start_pos = strpos($iframe_src, 'youtube.com/watch?v=');
-        $start_pos += 20;
+        if ($start_pos === FALSE) {
+          $start_pos = strpos($iframe_src, '//www.youtube.com/embed/');
+          if ($start_pos !== FALSE) {
+            $start_pos += 24;
+          }
+        }
+        else {
+          $start_pos += 20;
+        }
+
       }
       else {
         $start_pos += 9;
       }
-      if (empty($start_pos)) {
+      if ($start_pos === FALSE) {
         continue;
       }
-      $end_pos = strpos($iframe_src, '&', $start_pos);
+      if (strpos($iframe_src, '//www.youtube.com/embed/') === FALSE) {
+        $end_pos = strpos($iframe_src, '&', $start_pos);
+      }
+      else {
+        $end_pos = strpos($iframe_src, '?', $start_pos);
+      }
       $youtube_id = substr($iframe_src, $start_pos, $end_pos - $start_pos);
       if (empty($youtube_id)) {
-        continue;
+          continue;
       }
       // Get the width.
       $start_pos = strpos($iframe_src, 'width=') + 6;
@@ -1549,7 +1564,8 @@ class StaticGenerator {
       $original_href = $node->getAttribute('href');
       if (strpos($path, '?') === FALSE) {
         $new_path = $path;
-      } else {
+      }
+      else {
         $new_path = substr($path, 0, strpos($path, '?'));
       }
       $new_href = $new_path . str_replace('?page=', '/page/', $original_href);
