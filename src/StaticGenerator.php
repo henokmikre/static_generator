@@ -354,6 +354,7 @@ class StaticGenerator {
 
     // Get bundles to generate from config if not specified in $type.
     if (empty($bundle)) {
+      // @todo Implement settings page UI for this.
       $bundles_string = $this->configFactory->get('static_generator.settings')
         ->get('gen_taxonomy');
       $bundles = explode(',', $bundles_string);
@@ -403,7 +404,6 @@ class StaticGenerator {
         // Run garbage collector to further reduce memory.
         //        gc_collect_cycles();
         // @TODO Can we reset container?
-
 
         $query = \Drupal::entityQuery('taxonomy_term');
         $query->condition('status', 1);
@@ -475,7 +475,7 @@ class StaticGenerator {
   public function generateNodes($bundle = '', $esi_only = FALSE, $start = 0, $length = 100000) {
     $elapsed_time_total = 0;
 
-    // Get bundles to generate from config if not specified in $type.
+    // Get bundles to generate from config if not specified in $bundle.
     if (empty($bundle)) {
       $bundles_string = $this->configFactory->get('static_generator.settings')
         ->get('gen_node');

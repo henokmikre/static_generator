@@ -63,13 +63,19 @@ function static_generator_entity_update(EntityInterface $entity) {
  */
 function process_workflow(EntityInterface $entity, $operation) {
 
-  // @todo need some sortof check here?
+  // @todo need some sortof check here
   //  if (!isset($entity->moderation_state)) {
   //    return;
   //  }
 
   // Node.
   if ($entity->getEntityTypeId() === 'node') {
+    $bundles_string = $this->configFactory->get('static_generator.settings')
+            ->get('gen_node');
+    $bundles = explode(',', $bundles_string);
+    if (!in_array($entity->bundle(), $bundles)) {
+      return;
+    }
     if ($operation == 'update') {
       $path = $entity->toUrl()->toString();
     }
@@ -81,7 +87,41 @@ function process_workflow(EntityInterface $entity, $operation) {
     if (!isset($path)) {
       $path = $entity->toUrl()->toString();
     }
+    if (substr($path, 0, 1) !== '/') {
+      $path = '/' . $path;
+    }
+    if ($entity->get('moderation_state')->value == 'published') {
+      \Drupal::service('static_generator')->queuePage($path);
+    }
+    elseif ($entity->get('moderation_state')->value == 'archived') {
+      \Drupal::service('static_generator')->deletePage($path);
+    }
+  }
 
+  // Media.
+  if ($entity->getEntityTypeId() === 'media') {
+    // @todo Make picker for media bundles on settings page.
+//    $bundles_string = $this->configFactory->get('static_generator.settings')
+//      ->get('gen_media');
+//    $bundles = explode(',', $bundles_string);
+
+    $bundles = [];
+    $bundles[] = 'remote_video';
+    if (!in_array($entity->bundle(), $bundles)) {
+      return;
+    }
+
+    if ($operation == 'update') {
+      $path = $entity->toUrl()->toString();
+    }
+    elseif (\Drupal::hasService('pathauto.generator')) {
+      $path_array = \Drupal::service('pathauto.generator')
+        ->createEntityAlias($entity, 'insert');
+      $path = $path_array['alias'];
+    }
+    if (!isset($path)) {
+      $path = $entity->toUrl()->toString();
+    }
     if (substr($path, 0, 1) !== '/') {
       $path = '/' . $path;
     }

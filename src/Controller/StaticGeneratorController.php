@@ -17,23 +17,15 @@ class StaticGeneratorController extends ControllerBase {
    * @return array
    */
   public function sgTest() {
-    //$migration = \Drupal::service('plugin.manager.migration')->createInstance('uspto_d7_node_section_landing');
-    //$executable = new \Drupal\migrate_tools\MigrateExecutable($migration, new \Drupal\migrate\MigrateMessage());
-    //164559  / 170235
-    //$executable->import();
-
     $build = [
-      '#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/ip-policy/intellectual-property-rights-ipr-attach-program/ip-attache-careers'),
-      //'#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/inventors-eye-archive'),
-      //'#markup' => \Drupal::service('static_generator')->generatePage('/node/158364'),
+      '#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/uspto-videos/steveo1'),
+//      '#markup' => \Drupal::service('static_generator')->generatePage('/node/158364'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/175312'),
-      //'#markup' => \Drupal::service('static_generator')->generatePage('/patent'),
       //'#markup' => \Drupal::service('static_generator')->generatePage('/node/187833'),
       //'#markup' => \Drupal::service('static_generator')->processQueue(),
       //'#markup' => \Drupal::service('static_generator')->generateMedia('remote_video',FALSE, 0, 10000),
       //'#markup' => \Drupal::service('static_generator')->generatePages(),
       //'#markup' => \Drupal::service('static_generator')->generateNodes('bio'),
-      //'#markup' => \Drupal::service('static_generator')->generateBlocks(TRUE),
     ];
     return $build;
   }

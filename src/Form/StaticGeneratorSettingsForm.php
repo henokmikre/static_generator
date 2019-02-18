@@ -242,14 +242,14 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     // Guzzle Host.
     $form['guzzle_host'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Guzzle Host'),
+      '#title' => $this->t('Guzzle host'),
       '#default_value' => $config->get('guzzle_host'),
     ];
 
     // Guzzle Options.
     $form['guzzle_options'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Guzzle Options'),
+      '#title' => $this->t('Guzzle options'),
       '#default_value' => $config->get('guzzle_options'),
       '#description' => $this->t('Guzzle options, e.g. [\'verify\' => false] to turn off HTTPS checking.'),
     ];
@@ -281,15 +281,15 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     // Paths to generate.
     $form['paths_generate'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Paths to Generate'),
+      '#title' => $this->t('Paths to generate'),
       '#description' => $this->t('Specify paths to generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_generate'),
     ];
 
     // Paths to not generate.
     $form['paths_do_not_generate'] = [
-      '#type' => 'C',
-      '#title' => $this->t('Paths and Path Patterns to not Generate'),
+      '#type' => 'textarea',
+      '#title' => $this->t('Paths and path wildcards to not generate'),
       '#description' => $this->t('Specify paths or path wildcards (ending with *) to not generate - comma separated, no spaces.'),
       '#default_value' => $config->get('paths_do_not_generate'),
     ];

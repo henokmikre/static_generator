@@ -6,6 +6,7 @@ paths_generate: '/node'
 drupal: 'sites,modules,themes,core'
 verbose_logging: false
 generate_index: true
+process_video: true
 esi_blocks: false
 esi_sg_esi: true
 render_method: 'Guzzle'

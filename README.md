@@ -17,20 +17,19 @@ A static page generator for Drupal
     
 ## Overview
 
-Typically the Static Generator module is installed on a Drupal site that is located behind a firewall.
+Typically the Static Generator (SG) module is installed on a Drupal site that is located behind a firewall.
 That way content editors can edit the content in a more secure environment.  As content 
 is published, static HTML files are generated and then pushed out to a public facing static site, along
-with other required files, e.g. css, javascript, media assets files.
+with other required files, e.g. css, javascript, media asset files etc.
 
 Blocks and elements having a class name beginning with 'sg-esi--' may be replaced with ESI markup that
-references ESI fragment include files,
-which makes possible the changing of blocks and sg-esi elements' content without having to re-generate every page that
-has the content, only the ESI fragment needs to be regenerated.  By default all blocks are ESIed, but
-may be excluded on the settings page. ESI may also be implemented by
-assigning a class name beginning with "sg-esi--\<id\>' 
-where id is a user assigned id that is used for the ESI filename, thus the id must be a valid filename.  For best
-performance only the sg-esi-- tags should be used, in which case the generation of Block ESIs may be disabled
-from the settings page.
+references ESI fragment include files.  This makes possible the changing of blocks and sg-esi elements' 
+content without having to re-generate every page that has the content, only the ESI fragment needs to be regenerated.
+By default all blocks are ESIed, but may be excluded on the settings page. Note that ESI of blocks has proved problematic,
+as the block system itself is very complex.  The preferred method of implementing ESI is by assigning at the theme level
+a class name beginning with "sg-esi--\<id\>' where id is a user assigned id that is used for the ESI filename,
+thus the id must be a valid filename.  For best performance only the sg-esi-- tags should be used,
+in which case the generation of Block ESIs may be disabled from the settings page.
 
 ### Requirements
 
@@ -41,10 +40,13 @@ from the settings page.
 ### Installation
 - Install this module using the normal Drupal module installation process.
 
-- Configure a private directory in settings.php.
-- Configure static generation settings at /admin/config/system/static_generator.
+- Configure a private directory in settings.php and enter in SG settings page.
+- Create directories for static css and js, e.g. /var/www/static-css-js/css and  /var/www/static-css-js/js.  Enter
+these directories in the SG settings page.
+- Configure other SG settings at /admin/config/system/static_generator.
 - Create a script that uses rsync to push generated static files to a public facing server that serves
-the static files.
+the static files.  An example script is included in the SG module's scripts directory.
+- Create a script to generate xml files, e.g. rss files. An example script is included in the SG module's scripts directory.
 
 ## Settings
  
@@ -63,14 +65,18 @@ the static files.
 - Paths to generate: Specify paths to generate.  This often includes paths for views that have a page display,
  or the "Default front page" setting from /admin/config/system/site-information (generated as index.html).
 - Paths and Patterns to not generate: Specify which paths and/or patterns to never generate. For example, to never
-generate the /about page, enter "/about", or to never generate any path starting with /about, enter "/about/*".
+  generate the /about page, enter "/about", or to never generate any path starting with /about, enter "/about/*".  
+  This setting is helpful in the situation where a specific page is not generating correctly, the generation 
+  can be halted and the generated page replaced with a manually created page.  That way the site is functional until the
+  generation issue is resolved.
 - Blocks to ESI: Specify which blocks to ESI include. If left blank, all blocks are ESI included.
 - Blocks and Patterns to not ESI: Specify block id's for blocks that should not be ESI included.  
   Patterns may be specified by appending an asterisk, e.g. "some_block_id*" indicates that all blocks with a 
   block id beginning with "some_block_id" should not be ESI included.  This is typically done for blocks 
   that are unique to each page, for example a breadcrumb block, so there is not advantage to removing the block markup
   from the page and placing it in a block fragment file.
-- Frequently changing blocks: Specify blocks that change frequently.
+- Frequently changing ESIs: Specify <sg-esi--> tags and blocks that change frequently.  Typically a cron process will 
+  be run periodically, e.g. once per hour, to update these ESIs.  To generate from the command line: drupal sgp --frequent.
 - Entity Types: Specify which entity types to generate. Currently only nodes are supported. IMPORTANT NOTE: 
 It is required that whatever content types are selected, the same content types be selected in the workflow
 configuration at /admin/config/workflow/workflows.  This is required because the workflow system is used to 
@@ -81,13 +87,7 @@ automatically generate a static page .html file when a node (content) is publish
 The Static Generator module renders each page and then creates a file for the page
 in the appropriate directory within the static generation directory, which is specified
 in the settings. The pages are rendered for the Annonymous user.  Only published pages 
-are generated.
-
-
-The Drupal 8 Static Generator module generates four types of files, all of which are placed in the directory specified in the setting "Generator Directory"
-
-creates ESI includes for blocks, so that if a block is used on many pages, only the block fragment would need to be re-generated.
-
+are generated. 
 
 ### Full Site Generation
 To generate the entire site, including pages, ESI's, and public files and code files:
@@ -96,6 +96,10 @@ drupal sg
 ```
 Note that whatever files are in the static directory are deleted first, 
 except for those files or directories specified in settings as "non-Drupal".
+
+A preferable method of generating the entire site is to create a script that specifies each entity type to generate. 
+An example script is included in the SG module's scripts directory.
+
 ### Page Generation
 
 To generate all pages:
@@ -123,10 +127,10 @@ drupal sgb
 To generate a specific block:
 
 ```
-drupal sgp 'block_id'
+drupal sgb 'block_id'
 ```
 
-To generate frequently changing blocks:
+To generate frequently changing ESIs:
 
 ```
 drupal sgp --frequent
@@ -161,41 +165,37 @@ drupal sgd
 ```
 To delete all generated pages:
 ```
-drupal sgd -- pages
+drupal sgd --pages
 ```
 The delete all pages command will not delete those files and directories listed in the 
-SG Settings "Drupal files and directories" and "Non-Drupal files and directories"
+SG Settings "Drupal files and directories" and "non-Drupal files and directories"
 
 ### Workflow Integration
 
 Once the Drupal core workflow module has been installed, and workflow 
-has been enabled for a specific content type at /admin/config/workflow/workflows,
+has been enabled for a specific content, media, or taxonomy vocabulary type at /admin/config/workflow/workflows,
 page files will be automatically generated whenever a new version of 
 the page is published.
 
+### Performance
+
+It would be ideal if the core rendering worked, it has a bug when rendering blocks that have content that varies 
+by page.  For that reason, the SG settings page has the render method defaulted to Guzzle, which is much slower.
+When generating an entire site, see the example script full_site_gen.sh in the scripts directory to lean how to
+launch multiple generating processes at once using the &.  Test timings show that breaking the generation up into small pieces
+and running simultaneously is much faster than generating pages sequentially.
+
 ### CSS/JS Aggregation
 
-The SG Public file generation process (drupal sgf --public) replicates the aggregated CSS and JS files located in 
-/sites/default/files/css and /sites/default/files/js.  The steps required for changing CSS/JS are:
-
-1) Change the CSS/JS files (or source SCSS files etc).
-2) Clear the cache (causes new aggregated CSS/JS files to be created).
-3) Run "drupal sgp --public" to generate (using rsync) the public files directory, which includes the aggregated
- CSS and JS files.
+The SG public files (/sites/default/files) rsync process (drupal sgf --public) excludes the aggregated CSS and JS files located in 
+/sites/default/files/css and /sites/default/files/js.  This is because the type of rsync command required differs for css/js files 
+compared to the other files in the /sites/default/files.  For css/js, a non-deleting rsync is required so that older
+versions of css/js files are available (they have unique names based on a hash).  In order for this to work, special
+css/js directories must be created and then saved in the SG settings page (see css and js fields).  Then the static
+location is automatically generated to have sym links to the actual css and js directories.  This in turn effects the main rsync
+script which must have the "copy links" option so that the sym linked files are pushed to the static website.  See
+the rsync.sh script example in the scripts directory to better understand this process.  Essentially the css and js files
+are never deleted, they just "pile up".  Some sort of maintenance process will be needed to clean up old the old
+css and js files, e.g delete ones older than a year.
 
 ### Example cron settings
-
-0 * * * * cd /var/www/my_project/docroot && /var/www/my_project/vendor/drupal/console/bin/drupal sgb > /dev/null 2>&1
-
-This cron entry does a full generation of all blocks at the top of each hour.  This assures that any
-blocks that change are regenerated, as some may not regenerate in real time.  This is because only Custom
-Blocks, which can be published using the core workflow module, are generated in real time.
-
-*/2 * * * * cd /var/www/my_project/docroot && /var/www/my_project/vendor/drupal/console/bin/drupal sgb --frequent > /dev/null 2>&1
-
-Generates frequently changing blocks every two minutes.  For example, if you had a block
-that displayed the current temperature using a web service, then the temperature would never be more
-than two minutes out of date. 
-
-A third entry is typically required that call a custom script that pushes, using rsync, the generated static files,
-to the static public facing production web server.
