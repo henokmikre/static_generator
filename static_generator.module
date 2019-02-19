@@ -70,8 +70,8 @@ function process_workflow(EntityInterface $entity, $operation) {
 
   // Node.
   if ($entity->getEntityTypeId() === 'node') {
-    $bundles_string = $this->configFactory->get('static_generator.settings')
-            ->get('gen_node');
+
+    $bundles_string = \Drupal::service('config.factory')->get('static_generator.settings')->get('gen_node');
     $bundles = explode(',', $bundles_string);
     if (!in_array($entity->bundle(), $bundles)) {
       return;
