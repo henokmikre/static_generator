@@ -198,4 +198,15 @@ the rsync.sh script example in the scripts directory to better understand this p
 are never deleted, they just "pile up".  Some sort of maintenance process will be needed to clean up old the old
 css and js files, e.g delete ones older than a year.
 
-### Example cron settings
+### Example scripts and cron settings
+S
+See the scripts directory included with this module for example scripts and cron settings.
+The rsync.sh script does an rsync from the behind the firewall static directory to
+the public facing website.  A script is also included (gen_pages.sh) that typically runs during site off-peak hours
+(often at night) to regenerate all files, to assure the static site is up to date with CMS changes.  Note that the script
+has an option to delete all pages and ESI's, which is typically not done by cron, as the static site would be temporily 
+blank until the pages were re-generated.  For this reason the delete pages/ESI lines are typically commented out and 
+the cron calls the script which simply writes over  
+
+
+

@@ -647,6 +647,10 @@ class StaticGenerator {
       return;
     }
 
+    if ($this->endsWith($path_alias, '.xml')) {
+      return;
+    }
+
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
@@ -668,7 +672,7 @@ class StaticGenerator {
 
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
-    //if ($path_alias == '/patents-getting-started/general-information-concerning-patents') {
+    //if ($path_alias == '/problem-page') {
     if (!$esi_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
 
@@ -677,7 +681,6 @@ class StaticGenerator {
           ->notice('Generate Page: ' . $directory . '/' . $file_name);
       }
     }
-    //}
   }
 
   /**
@@ -1270,12 +1273,7 @@ class StaticGenerator {
       $file_name = 'index.html';
     }
     else {
-      if(!$this->endsWith($path_alias, '.xml')){
-        $file_name = strrchr($path_alias, '/') . '.html';
-      } else {
-        $file_name = $path_alias;
-        $file_name = str_replace('/rss', '', $file_name);
-      }
+      $file_name = strrchr($path_alias, '/') . '.html';
       $file_name = substr($file_name, 1);
     }
     return $file_name;
@@ -1448,14 +1446,6 @@ class StaticGenerator {
       \Drupal::service('account_switcher')->switchBack();
     }
 
-
-    if($this->endsWith($path, '.xml')) {
-      $markup = html_entity_decode($markup);
-      $this->log($markup);
-      return $markup;
-    }
-
-
     // Render video iframes.
     // @todo need to implement this as a plugin, similar to a migrate process plugin
     $dom = new DomDocument();
@@ -1503,7 +1493,7 @@ class StaticGenerator {
       }
       $youtube_id = substr($iframe_src, $start_pos, $end_pos - $start_pos);
       if (empty($youtube_id)) {
-          continue;
+        continue;
       }
       // Get the width.
       $start_pos = strpos($iframe_src, 'width=') + 6;
@@ -1592,13 +1582,54 @@ class StaticGenerator {
     $configuration = \Drupal::service('config.factory')
       ->get('static_generator.settings');
     $static_url = $configuration->get('static_url');
-    $guzzle_url = $configuration->get('guzzle_url');
-    $markup = str_replace($guzzle_url, $static_url, $markup);
+    $guzzle_host = $configuration->get('guzzle_host');
+    $markup = str_replace($guzzle_host, $static_url, $markup);
 
-    if($this->endsWith($path, '.xml')) {
-      $markup = html_entity_decode($markup);
-      $this->log($path);
-      $this->log($markup);
+    // Convert canonical path to aliased paths.
+    $i = 0;
+    while (strpos($markup, 'node/') !== FALSE && $i < 100) {
+      $i++;
+      $pos = strpos($markup, 'node/');
+      $next_char = substr($markup, $pos + 5, 1);
+      $nid = '';
+
+      if (!is_numeric($next_char)) {
+        continue;
+      }
+      $nid = $next_char;
+
+      $next_char = substr($markup, $pos + 6, 1);
+      if (is_numeric($next_char)) {
+        $nid .= $next_char;
+      }
+
+      $next_char = substr($markup, $pos + 7, 1);
+      if (is_numeric($next_char)) {
+        $nid .= $next_char;
+      }
+
+      $next_char = substr($markup, $pos + 8, 1);
+      if (is_numeric($next_char)) {
+        $nid .= $next_char;
+      }
+
+      $next_char = substr($markup, $pos + 9, 1);
+      if (is_numeric($next_char)) {
+        $nid .= $next_char;
+      }
+
+      $next_char = substr($markup, $pos + 10, 1);
+      if (is_numeric($next_char)) {
+        $nid .= $next_char;
+      }
+      $node_path = 'node/' . $nid;
+
+      $path_alias = \Drupal::service('path.alias_manager')
+        ->getAliasByPath('/' . $node_path);
+       $this->log($node_path);
+       $this->log($path_alias);
+       $this->log($i);
+      $markup = str_replace($node_path, substr($path_alias, 1), $markup);
     }
 
     // Return the markup.
