@@ -1575,7 +1575,6 @@ class StaticGenerator {
       $node->setAttribute('href', $new_href);
     }
 
-
     $markup = $dom->saveHTML();
 
     // Fix canonical link so it has static site url.
@@ -1585,50 +1584,55 @@ class StaticGenerator {
     $guzzle_host = $configuration->get('guzzle_host');
     $markup = str_replace($guzzle_host, $static_url, $markup);
 
+
+
     // Convert canonical path to aliased paths.
-    $i = 0;
-    while (strpos($markup, 'node/') !== FALSE && $i < 100) {
-      $i++;
-      $pos = strpos($markup, 'node/');
-      $next_char = substr($markup, $pos + 5, 1);
-      $nid = '';
+    $nids = [];
+    $pos = 0;
+    while (strpos($markup, 'node/', $pos) !== FALSE) {
+
+      $pos = strpos($markup, 'node/', $pos) + 5;
+      $next_char = substr($markup, $pos, 1);
 
       if (!is_numeric($next_char)) {
         continue;
       }
       $nid = $next_char;
 
-      $next_char = substr($markup, $pos + 6, 1);
+      $next_char = substr($markup, $pos + 1, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
 
-      $next_char = substr($markup, $pos + 7, 1);
+      $next_char = substr($markup, $pos + 2, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
 
-      $next_char = substr($markup, $pos + 8, 1);
+      $next_char = substr($markup, $pos + 3, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
 
-      $next_char = substr($markup, $pos + 9, 1);
+      $next_char = substr($markup, $pos + 4, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
 
-      $next_char = substr($markup, $pos + 10, 1);
+      $next_char = substr($markup, $pos + 5, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
+      $nids[] = $nid;
+    }
+
+    rsort($nids);
+    foreach ($nids as $nid) {
       $node_path = 'node/' . $nid;
-
       $path_alias = \Drupal::service('path.alias_manager')
         ->getAliasByPath('/' . $node_path);
-       $this->log($node_path);
-       $this->log($path_alias);
-       $this->log($i);
+      $this->log($node_path);
+      $this->log($path_alias);
       $markup = str_replace($node_path, substr($path_alias, 1), $markup);
     }
 
