@@ -1028,11 +1028,17 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function generateFiles() {
-    \Drupal::logger('static_generator')->notice('Begin generateFiles()');
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')->notice('Begin generateFiles()');
+    }
+
     $elapsed_time = $this->generateCodeFiles();
     $elapsed_time += $this->generatePublicFiles();
-    \Drupal::logger('static_generator')
-      ->notice('End generateFiles(), elapsed time: ' . $elapsed_time . ' seconds.');
+
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('End generateFiles(), elapsed time: ' . $elapsed_time . ' seconds.');
+    }
     return $elapsed_time;
   }
 
