@@ -653,6 +653,9 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
+    if(empty($markup)) {
+      return;
+    }
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
 
     // Get file name.
@@ -1395,7 +1398,7 @@ class StaticGenerator {
           \Drupal::service('account_switcher')->switchBack();
         }
         watchdog_exception('static_generator', $exception);
-        return t('RequestException in Static Generator');
+        return '';
       }
     }
     else {
@@ -1432,7 +1435,7 @@ class StaticGenerator {
         }
 
         watchdog_exception('static_generator', $exception);
-        return t('RequestException in Static Generator');
+        return '';
       }
     }
 
@@ -1584,13 +1587,16 @@ class StaticGenerator {
     $guzzle_host = $configuration->get('guzzle_host');
     $markup = str_replace($guzzle_host, $static_url, $markup);
 
-
-
     // Convert canonical path to aliased paths.
     $nids = [];
     $pos = 0;
+    $i = 0;
     while (strpos($markup, 'node/', $pos) !== FALSE) {
-
+      $i++;
+      if($i > 300) {
+        $this->log('/node/<non-numeric> in page: ' . $path);
+        exit;
+      }
       $pos = strpos($markup, 'node/', $pos) + 5;
       $next_char = substr($markup, $pos, 1);
 
@@ -1625,7 +1631,7 @@ class StaticGenerator {
       }
       $nids[] = $nid;
     }
-
+    $nids = array_unique($nids);
     rsort($nids);
     foreach ($nids as $nid) {
       $node_path = 'node/' . $nid;
