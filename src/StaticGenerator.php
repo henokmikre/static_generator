@@ -1637,8 +1637,6 @@ class StaticGenerator {
       $node_path = 'node/' . $nid;
       $path_alias = \Drupal::service('path.alias_manager')
         ->getAliasByPath('/' . $node_path);
-      $this->log($node_path);
-      $this->log($path_alias);
       $markup = str_replace($node_path, substr($path_alias, 1), $markup);
     }
 
@@ -1816,8 +1814,6 @@ class StaticGenerator {
             $esi_filename = $esi_id . '__' . $path_str;
           }
         }
-
-        //$this->log('Process ' . $path . ' esi_id: ' . $esi_id);
 
         // @TODO Special handling for Views Blocks
         //      if (substr($block_id, 0, 12) == 'views_block_') {
