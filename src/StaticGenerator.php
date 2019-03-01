@@ -1595,7 +1595,7 @@ class StaticGenerator {
       $i++;
       if($i > 300) {
         $this->log('/node/<non-numeric> in page: ' . $path);
-        exit;
+        return $markup;
       }
       $pos = strpos($markup, 'node/', $pos) + 5;
       $next_char = substr($markup, $pos, 1);
