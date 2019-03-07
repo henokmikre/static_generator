@@ -55,6 +55,9 @@ static_generator.settings:
     verbose_logging:
       type: boolean
       label: 'Turn on verbose logging.'
+    gen_unpublished:
+      type: boolean
+      label: "Generate pages with class node--unpublished."
     generate_index:
       type: boolean
       label: 'Generate index.html.'
@@ -82,6 +85,3 @@ static_generator.settings:
     guzzle_options:
       type: string
       label: "Guzzle options, e.g. ['verify' => false] to turn off HTTPS checking."
-    gen_unpublished:
-      type: string
-      label: "Generate pages with class node--unpublished (Yes/No)."

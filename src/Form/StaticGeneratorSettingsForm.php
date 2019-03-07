@@ -71,12 +71,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('js_directory', $js_directory)
       ->save();
 
-    // Gen unpublished.
-    $gen_unpublished = $form_state->getValue('gen_unpublished');
-    $this->config('static_generator.settings')
-      ->set('gen_unpublished', $gen_unpublished)
-      ->save();
-
     // Paths - generate.
     $paths_generate = $form_state->getValue('paths_generate');
     $this->config('static_generator.settings')
@@ -123,6 +117,12 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $verbose_logging = $form_state->getValue('verbose_logging');
     $this->config('static_generator.settings')
       ->set('verbose_logging', $verbose_logging)
+      ->save();
+
+    // Generate Unpublished
+    $gen_unpublished = $form_state->getValue('gen_unpublished');
+    $this->config('static_generator.settings')
+      ->set('gen_unpublished', $gen_unpublished)
       ->save();
 
     // Generate index.html
@@ -217,6 +217,13 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('verbose_logging'),
     ];
 
+    // Generate unpublished.
+    $form['gen_unpublished'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate unpublished (has class node--unpublished)'),
+      '#default_value' => $config->get('gen_unpublished'),
+    ];
+
     // Generate index.html.
     $form['generate_index'] = [
       '#type' => 'checkbox',
@@ -282,14 +289,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#title' => $this->t('JS directory'),
       '#default_value' => $config->get('js_directory'),
       '#description' => $this->t('The JS rsync target directory.'),
-    ];
-
-    // Gen unpublished.
-    $form['gen_unpublished'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Generate unpublished pages'),
-      '#default_value' => $config->get('gen_unpublished'),
-      '#description' => $this->t('Generate pages with node--unpublished class (Yes/No).'),
     ];
 
     // Paths to generate.

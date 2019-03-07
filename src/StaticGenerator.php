@@ -1464,16 +1464,18 @@ class StaticGenerator {
     }
 
     // Do not generate unpublished pages (based on setting).
-    $gen_unpubished = $this->configFactory->get('static_generator.settings')
-      ->get('gen_unpublished');
-    if ($gen_unpubished == 'No') {
+    if ($this->generateUnpublished()) {
       if (strpos($markup, 'node--unpublished') !== FALSE) {
-        \Drupal::logger('static_generator_unpublished')->notice($path . ' Did not generate unpublished page');
-        return '';
+        \Drupal::logger('static_generator_unpublished')
+          ->notice($path . ' Generated unpublished page');
       }
     }
     else {
-      \Drupal::logger('static_generator_unpublished')->notice($path . ' Generated unpublished page');
+      if (strpos($markup, 'node--unpublished') !== FALSE) {
+        \Drupal::logger('static_generator_unpublished')
+          ->notice($path . ' Did not generate unpublished page');
+        return '';
+      }
     }
 
     // Render video iframes.
@@ -1904,7 +1906,7 @@ class StaticGenerator {
   }
 
   /**
-   * Get verbose logging setting.
+   * Place page into queue.
    *
    * @param $path
    *
@@ -1969,6 +1971,17 @@ class StaticGenerator {
     $verbose_logging = $this->configFactory->get('static_generator.settings')
       ->get('verbose_logging');
     return $verbose_logging;
+  }
+
+  /**
+   * Get generate unpublished setting.
+   *
+   * @return boolean;
+   */
+  public function generateUnpublished() {
+    $gen_unpublished = $this->configFactory->get('static_generator.settings')
+      ->get('gen_unpublished');
+    return $gen_unpublished;
   }
 
   /**
