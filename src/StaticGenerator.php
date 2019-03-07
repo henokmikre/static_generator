@@ -1441,11 +1441,11 @@ class StaticGenerator {
           \Drupal::service('account_switcher')->switchBack();
         }
 
-        $msg = $path . '  ' . $exception;
+        //$msg = $path . '  ' . $exception;
         if(strpos($exception, '404') !== FALSE) {
-          \Drupal::logger('static_generator_404')->notice($msg);
+          \Drupal::logger('static_generator_404')->notice($path);
         } else {
-          watchdog_exception('static_generator', $msg);
+          watchdog_exception('static_generator', $exception);
         }
 
         return '';
@@ -1460,6 +1460,12 @@ class StaticGenerator {
     // Switch back from anonymous user.
     if ($account_switcher) {
       \Drupal::service('account_switcher')->switchBack();
+    }
+
+    // Do not generate unpublished pages.
+    if(strpos($markup,'node--unpublished') !== FALSE) {
+      \Drupal::logger('static_generator_unpublished')->notice('Attempt to generate unpublished path: ' . $path);
+      return '';
     }
 
     // Render video iframes.
