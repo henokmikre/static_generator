@@ -10,3 +10,4 @@ process_video: true
 esi_blocks: false
 esi_sg_esi: true
 render_method: 'Guzzle'
+gen_unpublished: 'Yes'

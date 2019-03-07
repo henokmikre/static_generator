@@ -82,3 +82,6 @@ static_generator.settings:
     guzzle_options:
       type: string
       label: "Guzzle options, e.g. ['verify' => false] to turn off HTTPS checking."
+    gen_unpublished:
+      type: string
+      label: "Generate pages with class node-unpublished (Yes/No)."

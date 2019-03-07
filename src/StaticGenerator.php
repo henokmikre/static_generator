@@ -653,7 +653,7 @@ class StaticGenerator {
 
     // Get/Process markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    if(empty($markup)) {
+    if (empty($markup)) {
       return;
     }
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
@@ -1370,7 +1370,7 @@ class StaticGenerator {
 
     $render_method = $this->configFactory->get('static_generator.settings')
       ->get('render_method');
-    $markup = t('Error in SG Rendering');
+    $markup = '';
 
     // Make Request
     $configuration = \Drupal::service('config.factory')
@@ -1442,9 +1442,10 @@ class StaticGenerator {
         }
 
         //$msg = $path . '  ' . $exception;
-        if(strpos($exception, '404') !== FALSE) {
+        if (strpos($exception, '404') !== FALSE) {
           \Drupal::logger('static_generator_404')->notice($path);
-        } else {
+        }
+        else {
           watchdog_exception('static_generator', $exception);
         }
 
@@ -1462,10 +1463,17 @@ class StaticGenerator {
       \Drupal::service('account_switcher')->switchBack();
     }
 
-    // Do not generate unpublished pages.
-    if(strpos($markup,'node--unpublished') !== FALSE) {
-      \Drupal::logger('static_generator_unpublished')->notice('Attempt to generate unpublished path: ' . $path);
-      return '';
+    // Do not generate unpublished pages (based on setting).
+    $gen_unpubished = $this->configFactory->get('static_generator.settings')
+      ->get('gen_unpublished');
+    if ($gen_unpubished == 'No') {
+      if (strpos($markup, 'node--unpublished') !== FALSE) {
+        \Drupal::logger('static_generator_unpublished')->notice($path . ' Did not generate unpublished page');
+        return '';
+      }
+    }
+    else {
+      \Drupal::logger('static_generator_unpublished')->notice($path . ' Generated unpublished page');
     }
 
     // Render video iframes.
@@ -1619,7 +1627,7 @@ class StaticGenerator {
     $i = 0;
     while (strpos($markup, 'node/', $pos) !== FALSE) {
       $i++;
-      if($i > 300) {
+      if ($i > 300) {
         $this->log('/node/<non-numeric> in page: ' . $path);
         return $markup;
       }
