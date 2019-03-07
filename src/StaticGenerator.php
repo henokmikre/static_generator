@@ -1376,6 +1376,7 @@ class StaticGenerator {
     $configuration = \Drupal::service('config.factory')
       ->get('static_generator.settings');
     $static_url = $configuration->get('static_url');
+
     if ($render_method == 'Core') {
 
       // Internal request using Drupal Core.
@@ -1440,7 +1441,13 @@ class StaticGenerator {
           \Drupal::service('account_switcher')->switchBack();
         }
 
-        watchdog_exception('static_generator', $exception);
+        $msg = $path . '  ' . $exception;
+        if(strpos($exception, '404') !== FALSE) {
+          \Drupal::logger('static_generator_404')->notice($msg);
+        } else {
+          watchdog_exception('static_generator', $msg);
+        }
+
         return '';
       }
     }
@@ -1460,6 +1467,13 @@ class StaticGenerator {
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
+
+    // Remove elements with class=block-local-task-block
+    $remove_local_tasks = $finder->query("//*[contains(@class, 'block-local-tasks-block')]");
+    foreach ($remove_local_tasks as $local_task) {
+      $local_task->parentNode->removeChild($local_task);
+    }
+
     $iframes = $finder->query("//iframe");
     foreach ($iframes as $iframe) {
 
