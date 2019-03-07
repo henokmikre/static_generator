@@ -288,7 +288,7 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
     $form['gen_unpublished'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Generate unpublished pages'),
-      '#default_value' => $config->get('js_directory'),
+      '#default_value' => $config->get('gen_unpublished'),
       '#description' => $this->t('Generate pages with node-unpublished class (Yes/No).'),
     ];
 
