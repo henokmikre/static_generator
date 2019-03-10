@@ -5,7 +5,7 @@ rsync_code: 'rsync -azr --prune-empty-dirs --delete --include="*/" --include="*.
 paths_generate: '/node'
 drupal: 'sites,modules,themes,core'
 verbose_logging: false
-gen_unpublished: true
+gen_unpublished: false
 generate_index: true
 process_video: true
 esi_blocks: false
