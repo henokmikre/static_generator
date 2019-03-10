@@ -119,12 +119,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('verbose_logging', $verbose_logging)
       ->save();
 
-    // Generate Unpublished
-    $gen_unpublished = $form_state->getValue('gen_unpublished');
-    $this->config('static_generator.settings')
-      ->set('gen_unpublished', $gen_unpublished)
-      ->save();
-
     // Generate index.html
     $generate_index = $form_state->getValue('generate_index');
     $this->config('static_generator.settings')
@@ -215,13 +209,6 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Verbose logging'),
       '#default_value' => $config->get('verbose_logging'),
-    ];
-
-    // Generate unpublished.
-    $form['gen_unpublished'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Generate unpublished (has class node--unpublished)'),
-      '#default_value' => $config->get('gen_unpublished'),
     ];
 
     // Generate index.html.

@@ -632,11 +632,15 @@ class StaticGenerator {
    *
    * @param array $sg_esi_existing
    *
+   * @param bool $check_published
+   *
    * @return string|void
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function generatePage($path, $path_generate = '', $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = []) {
+  public function generatePage($path, $path_generate = '', $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = [], $check_published = FALSE) {
 
     // Get path alias for path.
     $path_alias = \Drupal::service('path.alias_manager')
@@ -649,6 +653,18 @@ class StaticGenerator {
 
     if ($this->endsWith($path_alias, '.xml')) {
       return;
+    }
+
+    // Return if check published and not published.
+    if ($check_published) {
+      $node_storage = $this->entityTypeManager->getStorage('node');
+      $path_canonical = \Drupal::service('path.alias_manager')
+        ->getPathByAlias($path);
+      $nid = substr($path_canonical, strpos($path, '/') + 1);
+      $node = $node_storage->load($nid);
+      if (!$node->isPublished()) {
+        return;
+      }
     }
 
     // Get/Process markup.
@@ -1464,32 +1480,38 @@ class StaticGenerator {
     }
 
     // Do not generate unpublished pages (based on setting).
-    if ($this->generateUnpublished()) {
-      if (strpos($markup, 'node--unpublished') !== FALSE) {
-        \Drupal::logger('static_generator_unpublished')
-          ->notice($path . ' Generated unpublished page');
-      }
-    }
-    else {
-      if (strpos($markup, 'node--unpublished') !== FALSE) {
-        \Drupal::logger('static_generator_unpublished')
-          ->notice($path . ' Did not generate unpublished page');
-        return '';
-      }
-    }
+//    if ($this->generateUnpublished()) {
+//      if (strpos($markup, 'node--unpublished') !== FALSE) {
+//        \Drupal::logger('static_generator_unpublished')
+//          ->notice($path . ' Generated unpublished page');
+//      }
+//    }
+//    else {
+//      if (strpos($markup, 'node--unpublished') !== FALSE) {
+//        \Drupal::logger('static_generator_unpublished')
+//          ->notice($path . ' Did not generate unpublished page');
+//        return '';
+//      }
+//    }
 
-    // Render video iframes.
     // @todo need to implement this as a plugin, similar to a migrate process plugin
     $dom = new DomDocument();
     @$dom->loadHTML($markup);
     $finder = new DomXPath($dom);
 
-    // Remove elements with class=block-local-task-block
+    // Remove elements with class = block-local-task-block
     $remove_local_tasks = $finder->query("//*[contains(@class, 'block-local-tasks-block')]");
     foreach ($remove_local_tasks as $local_task) {
       $local_task->parentNode->removeChild($local_task);
     }
 
+    // Remove parent of elements with class = node--unpublished
+    $remove_unpublished = $finder->query("//*[contains(@class, 'node--unpublished')]");
+    foreach ($remove_unpublished as $unpublished) {
+      $unpublished->parentNode->parentNode->removeChild($unpublished->parentNode);
+    }
+
+    // Render video iframes.
     $iframes = $finder->query("//iframe");
     foreach ($iframes as $iframe) {
 
@@ -1516,7 +1538,6 @@ class StaticGenerator {
         else {
           $start_pos += 20;
         }
-
       }
       else {
         $start_pos += 9;
@@ -1629,10 +1650,11 @@ class StaticGenerator {
     $i = 0;
     while (strpos($markup, 'node/', $pos) !== FALSE) {
       $i++;
-      if ($i > 300) {
-        $this->log('/node/<non-numeric> in page: ' . $path);
+      if ($i > 500) {
+        $this->log('> 500 looping in page: ' . $path);
         return $markup;
       }
+
       $pos = strpos($markup, 'node/', $pos) + 5;
       $next_char = substr($markup, $pos, 1);
 
@@ -1645,28 +1667,49 @@ class StaticGenerator {
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
+      else {
+        $nids[] = $nid;
+        continue;
+      }
 
       $next_char = substr($markup, $pos + 2, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
+      }
+      else {
+        $nids[] = $nid;
+        continue;
       }
 
       $next_char = substr($markup, $pos + 3, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
+      else {
+        $nids[] = $nid;
+        continue;
+      }
 
       $next_char = substr($markup, $pos + 4, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
       }
+      else {
+        $nids[] = $nid;
+        continue;
+      }
 
       $next_char = substr($markup, $pos + 5, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
+        $nids[] = $nid;
       }
-      $nids[] = $nid;
+      else {
+        $nids[] = $nid;
+        continue;
+      }
     }
+
     $nids = array_unique($nids);
     rsort($nids);
     foreach ($nids as $nid) {
