@@ -54,18 +54,23 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
 
   /**
    * {@inheritdoc}
+   * @param $item
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function processItem($item) {
     $path = $item->data->path;
-    if(isset($item->data->path_generate)) {
+    if (isset($item->data->path_generate)) {
       $path_generate = $item->data->path_generate;
     }
     if (empty($path_generate)) {
-      $this->staticGenerator->generatePage($path);
+      $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, [], [], [], TRUE);
     }
     else {
-      $this->staticGenerator->generatePage($path, $path_generate);
+      $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, [], [], [], TRUE);
     }
   }
 }

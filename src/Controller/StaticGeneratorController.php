@@ -18,14 +18,10 @@ class StaticGeneratorController extends ControllerBase {
    */
   public function sgTest() {
     $build = [
-      '#markup' => \Drupal::service('static_generator')->generatePage('/learning-and-resources/uspto-videos/steveo1'),
-//      '#markup' => \Drupal::service('static_generator')->generatePage('/node/158364'),
-      //'#markup' => \Drupal::service('static_generator')->generatePage('/node/175312'),
-      //'#markup' => \Drupal::service('static_generator')->generatePage('/node/187833'),
+      '#markup' => \Drupal::service('static_generator')->generatePage('/patent', '', FALSE, TRUE, TRUE, TRUE, $fake_array, $fake_array, $fake_array, TRUE),
       //'#markup' => \Drupal::service('static_generator')->processQueue(),
       //'#markup' => \Drupal::service('static_generator')->generateMedia('remote_video',FALSE, 0, 10000),
       //'#markup' => \Drupal::service('static_generator')->generatePages(),
-      //'#markup' => \Drupal::service('static_generator')->generateNodes('bio'),
     ];
     return $build;
   }

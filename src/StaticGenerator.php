@@ -321,7 +321,7 @@ class StaticGenerator {
         $seconds_per_page = 'n/a';
       }
 
-      \Drupal::logger('static_generator')
+      \Drupal::logger('static_generator_time')
         ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
           ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
     }
@@ -444,7 +444,7 @@ class StaticGenerator {
         $seconds_per_page = 'n/a';
       }
 
-      \Drupal::logger('static_generator')
+      \Drupal::logger('static_generator_time')
         ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
           ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
     }
@@ -566,7 +566,7 @@ class StaticGenerator {
         $seconds_per_page = 'n/a';
       }
 
-      \Drupal::logger('static_generator')
+      \Drupal::logger('static_generator_time')
         ->notice('Gen bundle ' . $bundle . ' ' . $count_gen .
           ' pages in ' . $elapsed_time . ' seconds, ' . $seconds_per_page . ' seconds per page.');
     }
@@ -660,7 +660,7 @@ class StaticGenerator {
       $node_storage = $this->entityTypeManager->getStorage('node');
       $path_canonical = \Drupal::service('path.alias_manager')
         ->getPathByAlias($path);
-      $nid = substr($path_canonical, strpos($path, '/') + 1);
+      $nid = substr($path_canonical, strpos($path_canonical, '/',1) + 1);
       $node = $node_storage->load($nid);
       if (!$node->isPublished()) {
         return;
