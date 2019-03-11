@@ -59,7 +59,7 @@ class StaticGeneratorController extends ControllerBase {
   public function generationInfoNode(NodeInterface $node) {
     $build = [
       '#markup' => \Drupal::service('static_generator')
-        ->generationInfo('/node/' . $node->id()),
+        ->generationInfo('/node/' . $node->id(), $node),
     ];
     return $build;
   }
@@ -97,7 +97,7 @@ class StaticGeneratorController extends ControllerBase {
   public function generationInfoMedia(MediaInterface $media) {
     $build = [
       '#markup' => \Drupal::service('static_generator')
-        ->generationInfo('/media/' . $media->id()),
+        ->generationInfo('/media/' . $media->id(), $media),
     ];
     return $build;
   }

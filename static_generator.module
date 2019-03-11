@@ -192,19 +192,22 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
   $has_generate_permission = \Drupal\user\Entity\User::load(\Drupal::currentUser()
     ->id())->hasPermission('generate static pages');
 
-  if ($has_generate_permission && in_array($form_id, ['node_page_edit_form'])) {
+  if ($has_generate_permission && substr($form_id,0,5) == 'node_' && \Drupal::service('static_generator')->endsWith($form_id,'_edit_form')) {
     $node = $form_state->getFormObject()->getEntity();
     if ($node->isPublished()) {
       \Drupal::service('static_generator')
-        ->generationInfoForm('/node/' . $node->id(), $form, TRUE);
+        ->generationInfoForm('/node/' . $node->id(), $node, $form, TRUE);
     }
   }
 
-  if ($has_generate_permission && in_array($form_id, ['media_image_edit_form'])) {
+  if ($has_generate_permission && in_array($form_id, [
+      'media_image_edit_form',
+      'media_remote_video_edit_form',
+    ])) {
     $media = $form_state->getFormObject()->getEntity();
     if ($media->isPublished()) {
       \Drupal::service('static_generator')
-        ->generationInfoForm('/media/' . $media->id(), $form, TRUE);
+        ->generationInfoForm('/media/' . $media->id(), $media, $form, TRUE);
     }
   }
 }

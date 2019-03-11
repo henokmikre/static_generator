@@ -660,7 +660,7 @@ class StaticGenerator {
       $node_storage = $this->entityTypeManager->getStorage('node');
       $path_canonical = \Drupal::service('path.alias_manager')
         ->getPathByAlias($path);
-      $nid = substr($path_canonical, strpos($path_canonical, '/',1) + 1);
+      $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
       $node = $node_storage->load($nid);
       if (!$node->isPublished()) {
         return;
@@ -1026,7 +1026,7 @@ class StaticGenerator {
    *
    * @return bool
    */
-  protected function endsWith($haystack, $needle) {
+  public function endsWith($haystack, $needle) {
     $length = strlen($needle);
     if ($length == 0) {
       return TRUE;
@@ -1480,19 +1480,19 @@ class StaticGenerator {
     }
 
     // Do not generate unpublished pages (based on setting).
-//    if ($this->generateUnpublished()) {
-//      if (strpos($markup, 'node--unpublished') !== FALSE) {
-//        \Drupal::logger('static_generator_unpublished')
-//          ->notice($path . ' Generated unpublished page');
-//      }
-//    }
-//    else {
-//      if (strpos($markup, 'node--unpublished') !== FALSE) {
-//        \Drupal::logger('static_generator_unpublished')
-//          ->notice($path . ' Did not generate unpublished page');
-//        return '';
-//      }
-//    }
+    //    if ($this->generateUnpublished()) {
+    //      if (strpos($markup, 'node--unpublished') !== FALSE) {
+    //        \Drupal::logger('static_generator_unpublished')
+    //          ->notice($path . ' Generated unpublished page');
+    //      }
+    //    }
+    //    else {
+    //      if (strpos($markup, 'node--unpublished') !== FALSE) {
+    //        \Drupal::logger('static_generator_unpublished')
+    //          ->notice($path . ' Did not generate unpublished page');
+    //        return '';
+    //      }
+    //    }
 
     // @todo need to implement this as a plugin, similar to a migrate process plugin
     $dom = new DomDocument();
@@ -2288,6 +2288,7 @@ class StaticGenerator {
    *
    * @param $path
    *
+   * @param $entity
    * @param array $form
    *
    * @param bool $details
@@ -2296,7 +2297,7 @@ class StaticGenerator {
    *
    * @throws \Exception
    */
-  public function generationInfoForm($path, &$form = [], $details = FALSE) {
+  public function generationInfoForm($path, $entity = NULL, &$form = [], $details = FALSE) {
 
     // Name and date info for static file.
     $file_info = $this->fileInfo($path);
@@ -2310,23 +2311,23 @@ class StaticGenerator {
       ->get('static_generator.settings');
     $static_url = $configuration->get('static_url');
 
+    $markup = '<br/>' . $file_info . '<br/><br/>';
+    if (!is_null($entity) && $entity->isPublished()) {
+      $markup .= '<a  target="_blank" href="' . $path . '/gen' . '">' . t("Generate Static Page") . '</a>';
+    }
+    else {
+      $markup .= t('This item is unpublished and may not be generated.');
+    }
+    $markup .= '<br/><br/><a  target="_blank" href="' . $static_url . $path_alias . '">' . t("View Static Page") . '</a>';
+
     $form['static_generator'] = [
       '#title' => t('Static Generation'),
       '#description' => t(''),
       '#group' => 'advanced',
       '#open' => FALSE,
       'markup' => [
-        '#markup' => '<br/>' . $file_info . '<br/><br/>' .
-          '<a  target="_blank" href="' . $path . '/gen' . '">' . t("Generate Static Page") . '</a><br/><br/>' .
-          '<a  target="_blank" href="' . $static_url . $path_alias . '">' . t("View Static Page") . '</a>',
+        '#markup' => $markup,
       ],
-      //      'button' =>
-      //        [
-      //          '#type' => 'button',
-      //          '#value' => 'Generate Page',
-      //          //'#value' => $this->t('Ajax refresh'),
-      //          //'#ajax' => ['callback' => [$this, 'ajaxCallback']],
-      //        ],
       '#weight' => 1000,
     ];
 
@@ -2341,58 +2342,18 @@ class StaticGenerator {
   /**
    * @param $path
    *
+   * @param $entity
+   *
    * @return \Drupal\Component\Render\MarkupInterface
    * @throws \Exception
    */
-  public function generationInfo($path) {
-    $form = $this->generationInfoForm($path);
+  public function generationInfo($path, $entity) {
+    $form = $this->generationInfoForm($path, $entity);
     $markup = $this->renderer->render($form);
     return $markup;
   }
 
 }
-
-
-
-//    $entity_type = 'node';
-//    $view_mode = 'full';
-//    $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load(1);
-//    $node_render_array = \Drupal::entityTypeManager()
-//      ->getViewBuilder($entity_type)
-//      ->view($node, $view_mode);
-//
-//$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
-//    $render = $this->renderer->render($render_array, NULL, NULL);
-//    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
-//    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
-//    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
-//    $entity_type_id = $node->getEntityTypeId();
-//$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
-
-// Remove admin menu.
-//      $dom->validateOnParse = FALSE;
-//      $xp = new DOMXPath($dom);
-//      $col = $xp->query('//div[ @id="toolbar-administration" ]');
-//      if (!empty($col)) {
-//        foreach ($col as $node) {
-//          $node->parentNode->removeChild($node);
-//        }
-//      }
-
-// Get a response.
-//    $request = Request::create($path);
-//    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-//    $request->server->set('SCRIPT_FILENAME', 'index.php');
-//    $response = $this->httpKernel->handle($request);
-
-//\Drupal::service('account_switcher')->switchBack();
-//\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
-//$request = $this->requestStack->getCurrentRequest();
-//$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
-//$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-//$session_manager = Drupal::service('session_manager');
-//$request->setSession(new AnonymousUserSession());
-
 
 /**
  * Creates a block instance based on default settings.
@@ -2456,3 +2417,43 @@ class StaticGenerator {
 //    //$block->save();
 //    return $block;
 //  }
+
+
+//    $entity_type = 'node';
+//    $view_mode = 'full';
+//    $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load(1);
+//    $node_render_array = \Drupal::entityTypeManager()
+//      ->getViewBuilder($entity_type)
+//      ->view($node, $view_mode);
+//
+//$response = $this->htmlRenderer->renderResponse($node_render_array, $request, $this->routeMatch);
+//    $render = $this->renderer->render($render_array, NULL, NULL);
+//    $render_root = $this->renderer->renderRoot($render_array, NULL, NULL);
+//    $renderer = $this->classResolver->getInstanceFromDefinition($this->mainContentRenderers['html']);
+//    $response = $renderer->renderResponse($render_array, NULL, $this->routeMatch);
+//    $entity_type_id = $node->getEntityTypeId();
+//$output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
+
+// Remove admin menu.
+//      $dom->validateOnParse = FALSE;
+//      $xp = new DOMXPath($dom);
+//      $col = $xp->query('//div[ @id="toolbar-administration" ]');
+//      if (!empty($col)) {
+//        foreach ($col as $node) {
+//          $node->parentNode->removeChild($node);
+//        }
+//      }
+
+// Get a response.
+//    $request = Request::create($path);
+//    $request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
+//    $request->server->set('SCRIPT_FILENAME', 'index.php');
+//    $response = $this->httpKernel->handle($request);
+
+//\Drupal::service('account_switcher')->switchBack();
+//\Drupal::service('account_switcher')->switchTo(new AnonymousUserSession());
+//$request = $this->requestStack->getCurrentRequest();
+//$subrequest = Request::create($request->getBaseUrl() . '/node/1', 'GET', array(), $request->cookies->all(), array(), $request->server->all());
+//$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+//$session_manager = Drupal::service('session_manager');
+//$request->setSession(new AnonymousUserSession());
