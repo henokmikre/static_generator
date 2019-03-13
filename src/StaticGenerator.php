@@ -1031,7 +1031,6 @@ class StaticGenerator {
     if ($length == 0) {
       return TRUE;
     }
-
     return (substr($haystack, -$length) === $needle);
   }
 
@@ -1070,7 +1069,7 @@ class StaticGenerator {
     $start_time = time();
 
     // Unpublished files to exclude.
-    //$exclude_media_ids = $this->excludeMediaIdsUnpublished();
+    $exclude_media_ids = $this->excludeMediaIdsUnpublished();
     if (!isset($exclude_media_ids) || empty($exclude_media_ids)) {
       $exclude_media_ids = [];
     }
