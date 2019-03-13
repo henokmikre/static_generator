@@ -1096,10 +1096,12 @@ class StaticGenerator {
       }
       if ($fid > 0) {
         $file = File::load($fid);
-        $url = Url::fromUri($file->getFileUri());
-        $uri = $url->getUri();
-        $exclude_file = substr($uri, 9);
-        $exclude_files .= $exclude_file . "\r\n";
+        if (!is_null($file)) {
+          $url = Url::fromUri($file->getFileUri());
+          $uri = $url->getUri();
+          $exclude_file = substr($uri, 9);
+          $exclude_files .= $exclude_file . "\r\n";
+        }
       }
     }
 
@@ -1142,8 +1144,12 @@ class StaticGenerator {
     exec($rsync_js);
 
     // Create symlinks to static files directory from css and js directories.
-    symlink($css_directory, $generator_directory . '/sites/default/files/css');
-    symlink($js_directory, $generator_directory . '/sites/default/files/js');
+//    if (empty(linkinfo($generator_directory . '/sites/default/files/css'))) {
+//      symlink($css_directory, $generator_directory . '/sites/default/files/css');
+//    }
+//    if (empty(linkinfo($generator_directory . '/sites/default/files/js'))) {
+//      symlink($js_directory, $generator_directory . '/sites/default/files/js');
+//    }
 
     // Elapsed time.
     $end_time = time();
