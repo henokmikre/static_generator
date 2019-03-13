@@ -1088,7 +1088,10 @@ class StaticGenerator {
         $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
       }
       elseif ($media->hasField('field_media_file')) {
-        $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
+        $value = $media->get('field_media_file')->getValue();
+        if(!is_null($value) && is_array($value) && count($value)>0 && array_key_exists('target_id',$value)) {
+          $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
+        }
       }
       elseif ($media->hasField('field_media_audio_file')) {
         $fid = $media->get('field_media_audio_file')
