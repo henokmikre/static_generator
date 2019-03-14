@@ -66,11 +66,12 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
     if (isset($item->data->path_generate)) {
       $path_generate = $item->data->path_generate;
     }
+    $empty_array = [];
     if (empty($path_generate)) {
-      $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, [], [], [], TRUE);
+      $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
     }
     else {
-      $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, [], [], [], TRUE);
+      $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
     }
   }
 }
