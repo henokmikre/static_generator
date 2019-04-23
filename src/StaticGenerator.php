@@ -1132,6 +1132,7 @@ class StaticGenerator {
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
     $rsync_public_command = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+
     exec($rsync_public_command);
 
     // rSync CSS.
@@ -1147,12 +1148,8 @@ class StaticGenerator {
     exec($rsync_js);
 
     // Create symlinks to static files directory from css and js directories.
-//    if (empty(linkinfo($generator_directory . '/sites/default/files/css'))) {
-//      symlink($css_directory, $generator_directory . '/sites/default/files/css');
-//    }
-//    if (empty(linkinfo($generator_directory . '/sites/default/files/js'))) {
-//      symlink($js_directory, $generator_directory . '/sites/default/files/js');
-//    }
+    symlink($css_directory, $generator_directory . '/sites/default/files/css');
+    symlink($js_directory, $generator_directory . '/sites/default/files/js');
 
     // Elapsed time.
     $end_time = time();
