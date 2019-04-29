@@ -22,6 +22,7 @@ use Drupal\Core\Url;
 use Drupal\file\Entity\File;
 use Drupal\media\Controller\OEmbedIframeController;
 use GuzzleHttp\Exception\RequestException;
+use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -196,8 +197,10 @@ class StaticGenerator {
    * @return int
    *   Execution time in seconds.
    *
-   * @throws \GuzzleHttp\Exception\GuzzleException
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function generatePages($delete_pages = FALSE) {
     $elapsed_time = 0;
@@ -469,6 +472,8 @@ class StaticGenerator {
    * @return int
    *   Execution time in seconds.
    *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
@@ -529,7 +534,7 @@ class StaticGenerator {
         $query->sort('nid', 'DESC');
         $entity_ids = $query->execute();
 
-        //        foreach ($entity_ids as $key => $entity_id) {
+        //foreach ($entity_ids as $key => $entity_id) {
         //          if ($entity_id == '158364') {
         //            unset($entity_ids[$key]);
         //          }
@@ -544,9 +549,15 @@ class StaticGenerator {
           //if ($entity_id == '14' || $entity_id == '158364') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
-          $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          $error_time = $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+          if (!is_null($error_time)) {
+            $error_times[] = $error_time;
+            if ($this->errorThresholdExceeded($error_times)) {
+              watchdog_exception('static_generator_flood', new Exception('Static Generator - error log flooding.'));
+              break;
+            }
+          }
           $count_gen++;
-          //}
         }
 
         // Exit if single run for specified content type.
@@ -578,6 +589,31 @@ class StaticGenerator {
     $this->themeManager->setActiveTheme($active_theme);
 
     return $elapsed_time_total;
+  }
+
+  /**
+   * Examin array of errors to determine if log is being flooded.
+   *
+   * @param $errors
+   *
+   * @return bool
+   */
+  public function errorThresholdExceeded($errors) {
+    $threshold_time = 30; // seconds
+    $threshold_errors = 10; // number of errors
+
+    $error_count = 0;
+    for ($i = count($errors) - 1; $i >= 0; $i--) {
+      if (time() - $errors[$i] < $threshold_time) {
+        $error_count++;
+        if ($error_count > $threshold_errors) {
+          return TRUE;
+        }
+      }
+      else {
+        return FALSE;
+      }
+    }
   }
 
   /**
@@ -635,6 +671,8 @@ class StaticGenerator {
    * @param bool $check_published
    *
    * @return string|void
+   *   Returns null if no errors. If an error occurs, returns the time() of the error.
+   *
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
@@ -648,11 +686,11 @@ class StaticGenerator {
 
     // Return if path is excluded.
     if ($this->excludePath($path)) {
-      return;
+      return null;
     }
 
     if ($this->endsWith($path_alias, '.xml')) {
-      return;
+      return null;
     }
 
     // Return if check published and not published.
@@ -663,15 +701,22 @@ class StaticGenerator {
       $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
       $node = $node_storage->load($nid);
       if (!$node->isPublished()) {
-        return;
+        return null;
       }
     }
 
-    // Get/Process markup.
+    // Get the markup.
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
-    if (empty($markup)) {
-      return;
+
+    // Return if error.
+    if ( $markup == 'error') {
+      return time();
     }
+    if ( $markup == '404') {
+      return null;
+    }
+
+    // Prcoess ESIs.
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
 
     // Get file name.
@@ -686,12 +731,12 @@ class StaticGenerator {
 
     // Return if on index.html and gen index is false.
     if ($file_name == "index.html" && !$this->generateIndex()) {
-      return;
+      return null;
     }
 
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
-    //if ($path_alias == '/problem-page') {
+    //if ($path_alias == '/problem-page') { // This is good way to quickly debug bad page in batch.
     if (!$esi_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
       file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
 
@@ -1015,7 +1060,7 @@ class StaticGenerator {
    *
    * @return bool
    */
-  function startsWith($haystack, $needle) {
+  public function startsWith($haystack, $needle) {
     $length = strlen($needle);
     return (substr($haystack, 0, $length) === $needle);
   }
@@ -1089,7 +1134,7 @@ class StaticGenerator {
       }
       elseif ($media->hasField('field_media_file')) {
         $value = $media->get('field_media_file')->getValue();
-        if(!is_null($value) && is_array($value) && count($value)>0 && array_key_exists('target_id',$value)) {
+        if (!is_null($value) && is_array($value) && count($value) > 0 && array_key_exists('target_id', $value)) {
           $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
         }
       }
@@ -1352,8 +1397,11 @@ class StaticGenerator {
    * is not repeatedly switched, if repeated calls to this function are made.
    *
    * @return string
-   *   The rendered markup.
+   *   The rendered markup. The string '404' is returned if a 404 error is thrown, 
+   *   the strng 'error' is returned if any other error is thrown.
    *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
@@ -1465,12 +1513,13 @@ class StaticGenerator {
         //$msg = $path . '  ' . $exception;
         if (strpos($exception, '404') !== FALSE) {
           \Drupal::logger('static_generator_404')->notice($path);
+          return '404';
         }
         else {
           watchdog_exception('static_generator', $exception);
+          return 'error';
         }
 
-        return '';
       }
     }
 
