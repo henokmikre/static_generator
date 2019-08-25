@@ -194,9 +194,11 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
 
   if ($has_generate_permission && substr($form_id,0,5) == 'node_' && \Drupal::service('static_generator')->endsWith($form_id,'_edit_form')) {
     $node = $form_state->getFormObject()->getEntity();
-    if ($node->isPublished()) {
-      \Drupal::service('static_generator')
-        ->generationInfoForm('/node/' . $node->id(), $node, $form, TRUE);
+    if ($node instanceof \Drupal\node\NodeInterface) {
+      if ($node->isPublished()) {
+        \Drupal::service('static_generator')
+          ->generationInfoForm('/node/' . $node->id(), $node, $form, TRUE);
+      }
     }
   }
 
