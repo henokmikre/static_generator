@@ -633,7 +633,7 @@ class StaticGenerator {
     if (!empty($paths_string)) {
       $paths = explode(',', $paths_string);
       foreach ($paths as $path) {
-        $this->generatePage($path);
+        $this->generatePage(trim($path));
       }
     }
 
