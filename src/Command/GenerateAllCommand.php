@@ -59,19 +59,28 @@ class GenerateAllCommand extends ContainerAwareCommand {
    * @throws \Exception
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    if (empty($input->getOption('q'))) {
-      $answer = $this->getIo()
-        ->ask('Delete and re-generate entire static site (yes/no)? ');
+    // Get confirmation option.
+    $confirmed = $input->getOption('yes');
+
+    // Initiatlize answer var in case confirmation is not set.
+    $answer = 'no';
+
+    // If not confirmed with '--yes', ask.
+    if (!$confirmed) {
+      if (empty($input->getOption('q'))) {
+        $answer = $this->getIo()
+          ->ask('Delete and re-generate entire static site (yes/no)? ');
+      }
+      else {
+        $answer = 'yes';
+      }
     }
-    else {
-      $answer = 'yes';
-    }
-    if (strtolower($answer) == 'yes') {
+
+    if ($confirmed || strtolower($answer) == 'yes') {
       $elapsed_time = $this->staticGenerator->generateAll();
       $this->getIo()
         ->info('Full site static generation complete, elapsed time: ' . $elapsed_time . ' seconds.');
       //$this->getIo()->info($this->trans('commands.sg.generate-pages.messages.success'));
     }
   }
-
 }
