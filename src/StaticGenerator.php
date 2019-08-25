@@ -1134,7 +1134,7 @@ class StaticGenerator {
       }
       elseif ($media->hasField('field_media_file')) {
         $value = $media->get('field_media_file')->getValue();
-        if (!is_null($value) && is_array($value) && count($value) > 0 && array_key_exists('target_id', $value)) {
+        if (!is_null($value) && is_array($value) && count($value) > 0 && array_key_exists('target_id', $value[0])) {
           $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
         }
       }
