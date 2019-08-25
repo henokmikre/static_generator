@@ -700,8 +700,10 @@ class StaticGenerator {
         ->getPathByAlias($path);
       $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
       $node = $node_storage->load($nid);
-      if (!$node->isPublished()) {
-        return null;
+      if ($node instanceof NodeInterface) {
+        if (!$node->isPublished()) {
+          return null;
+        }
       }
     }
 
