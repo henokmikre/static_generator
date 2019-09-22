@@ -20,13 +20,11 @@ use Drupal\Core\Theme\ThemeInitializationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\Core\Url;
 use Drupal\file\Entity\File;
-use Drupal\media\Controller\OEmbedIframeController;
 use GuzzleHttp\Exception\RequestException;
 use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
-
 
 /**
  * Static Generator Service.
@@ -238,8 +236,7 @@ class StaticGenerator {
       $bundles_string = $this->configFactory->get('static_generator.settings')
         ->get('gen_media');
       $bundles = explode(',', $bundles_string);
-    }
-    else {
+    } else {
       $bundles = [$bundle];
     }
 
@@ -319,8 +316,7 @@ class StaticGenerator {
       $elapsed_time_total += $elapsed_time;
       if ($count_gen > 0) {
         $seconds_per_page = round($elapsed_time / $count_gen, 2);
-      }
-      else {
+      } else {
         $seconds_per_page = 'n/a';
       }
 
@@ -361,8 +357,7 @@ class StaticGenerator {
       $bundles_string = $this->configFactory->get('static_generator.settings')
         ->get('gen_taxonomy');
       $bundles = explode(',', $bundles_string);
-    }
-    else {
+    } else {
       $bundles = [$bundle];
     }
 
@@ -442,8 +437,7 @@ class StaticGenerator {
       $elapsed_time_total += $elapsed_time;
       if ($count_gen > 0) {
         $seconds_per_page = round($elapsed_time / $count_gen, 2);
-      }
-      else {
+      } else {
         $seconds_per_page = 'n/a';
       }
 
@@ -485,8 +479,7 @@ class StaticGenerator {
       $bundles_string = $this->configFactory->get('static_generator.settings')
         ->get('gen_node');
       $bundles = explode(',', $bundles_string);
-    }
-    else {
+    } else {
       $bundles = [$bundle];
     }
 
@@ -572,8 +565,7 @@ class StaticGenerator {
       $elapsed_time_total += $elapsed_time;
       if ($count_gen > 0) {
         $seconds_per_page = round($elapsed_time / $count_gen, 2);
-      }
-      else {
+      } else {
         $seconds_per_page = 'n/a';
       }
 
@@ -609,8 +601,7 @@ class StaticGenerator {
         if ($error_count > $threshold_errors) {
           return TRUE;
         }
-      }
-      else {
+      } else {
         return FALSE;
       }
     }
@@ -711,10 +702,10 @@ class StaticGenerator {
     $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
 
     // Return if error.
-    if ( $markup == 'error') {
+    if ($markup == 'error') {
       return time();
     }
-    if ( $markup == '404') {
+    if ($markup == '404') {
       return null;
     }
 
@@ -725,8 +716,7 @@ class StaticGenerator {
     if (empty($path_generate)) {
       $web_directory = $this->directoryFromPath($path_alias);
       $file_name = $this->filenameFromPath($path_alias);
-    }
-    else {
+    } else {
       $web_directory = $this->directoryFromPath($path_generate);
       $file_name = $this->filenameFromPath($path_generate);
     }
@@ -735,6 +725,9 @@ class StaticGenerator {
     if ($file_name == "index.html" && !$this->generateIndex()) {
       return null;
     }
+
+    // Generate redirect page for path.
+    $this->generateRedirectPageForPath($path);
 
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
@@ -745,6 +738,38 @@ class StaticGenerator {
       if ($log) {
         \Drupal::logger('static_generator')
           ->notice('Generate Page: ' . $directory . '/' . $file_name);
+      }
+    }
+
+  }
+
+  /**
+   * Generates static pages for redirects.
+   */
+  public function generateRedirectPageForPath($path) {
+    if (!empty($path) && \Drupal::moduleHandler()->moduleExists('redirect')) {
+
+      $path_canonical = \Drupal::service('path.alias_manager')
+        ->getPathByAlias($path);
+      $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
+
+      $redirect_storage = $this->entityTypeManager->getStorage('redirect');
+
+      $redirect_ids = $redirect_storage->getQuery()
+        ->condition('redirect_redirect__uri', '%' . $nid, 'LIKE')
+        ->execute();
+      $redirects = $redirect_storage->loadMultiple($redirect_ids);
+
+      foreach ($redirects as $redirect) {
+        $source_url = $redirect->getSourceUrl();
+        $target_array = $redirect->getRedirect();
+        $target_uri = $target_array['uri'];
+        $target_url = \Drupal::service('path.alias_manager')->getAliasByPath(substr($target_uri, 9));
+        $this->generateRedirect($source_url, $target_url);
+        if ($this->verboseLogging()) {
+          \Drupal::logger('static_generator')
+            ->notice('generateRedirects() source: ' . $source_url . ' target: ' . $target_url);
+        }
       }
     }
   }
@@ -856,8 +881,7 @@ class StaticGenerator {
           $this->generateEsiById($esi_id);
         }
       }
-    }
-    else {
+    } else {
       // Generate all blocks.
       $this->deleteEsi();
       return $this->generateNodes('', TRUE);
@@ -897,8 +921,7 @@ class StaticGenerator {
         }
       }
       return $ids_match_pattern;
-    }
-    else {
+    } else {
       return 'done';
     }
   }
@@ -960,8 +983,7 @@ class StaticGenerator {
 
     if (substr($block_id, 0, 8) === 'sg-esi--') {
       $generator_directory = $this->generatorDirectory() . '/esi/sg-esi';
-    }
-    else {
+    } else {
       $generator_directory = $this->generatorDirectory() . '/esi/block';
     }
 
@@ -1034,8 +1056,7 @@ class StaticGenerator {
         if (substr($esi_id_file, 0, strlen($esi_id_real)) === $esi_id_real) {
           $generate_page = TRUE;
         }
-      }
-      else {
+      } else {
         if ($esi_id === $esi_id_file) {
           $generate_page = TRUE;
         }
@@ -1133,14 +1154,12 @@ class StaticGenerator {
       $fid = 0;
       if ($media->hasField('field_media_image')) {
         $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
-      }
-      elseif ($media->hasField('field_media_file')) {
+      } elseif ($media->hasField('field_media_file')) {
         $value = $media->get('field_media_file')->getValue();
         if (!is_null($value) && is_array($value) && count($value) > 0 && array_key_exists('target_id', $value[0])) {
           $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
         }
-      }
-      elseif ($media->hasField('field_media_audio_file')) {
+      } elseif ($media->hasField('field_media_audio_file')) {
         $fid = $media->get('field_media_audio_file')
           ->getValue()[0]['target_id'];
       }
@@ -1286,7 +1305,9 @@ class StaticGenerator {
         $source_url = $redirect->getSourceUrl();
         $target_array = $redirect->getRedirect();
         $target_uri = $target_array['uri'];
-        $target_url = substr($target_uri, 9);
+        // $target_url = substr($target_uri, 9);
+        // Grab alias instead of internal url;
+        $target_url = \Drupal::service('path.alias_manager')->getAliasByPath(substr($target_uri, 9));
         $this->generateRedirect($source_url, $target_url);
         if ($this->verboseLogging()) {
           \Drupal::logger('static_generator')
@@ -1348,8 +1369,7 @@ class StaticGenerator {
       ->getAliasByPath($front);
     if ($path_alias == $front_alias) {
       $file_name = 'index.html';
-    }
-    else {
+    } else {
       $file_name = strrchr($path_alias, '/') . '.html';
       $file_name = substr($file_name, 1);
     }
@@ -1370,7 +1390,7 @@ class StaticGenerator {
   public function directoryFromPath($path) {
     $directory = '';
     $front = $this->configFactory->get('system.site')->get('page.front');
-    if ($path <> $front) {
+    if ($path != $front) {
       $alias = \Drupal::service('path.alias_manager')
         ->getAliasByPath($path);
       $occur = substr_count($alias, '/');
@@ -1399,7 +1419,7 @@ class StaticGenerator {
    * is not repeatedly switched, if repeated calls to this function are made.
    *
    * @return string
-   *   The rendered markup. The string '404' is returned if a 404 error is thrown, 
+   *   The rendered markup. The string '404' is returned if a 404 error is thrown,
    *   the strng 'error' is returned if any other error is thrown.
    *
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
@@ -1478,8 +1498,7 @@ class StaticGenerator {
         watchdog_exception('static_generator', $exception);
         return '';
       }
-    }
-    else {
+    } else {
 
       // Guzzle request using Drupal core (much slower than internal request).
       $client = \Drupal::httpClient(['SERVER_NAME' => $static_url]);
@@ -1495,8 +1514,7 @@ class StaticGenerator {
           $eval_cmd = '$guzzle_array=' . $guzzle_options . ';';
           eval($eval_cmd);
           $response = $client->request('GET', $guzzle_host . $path, $guzzle_array);
-        }
-        else {
+        } else {
           $response = $client->request('GET', $guzzle_host . $path);
         }
         if ($response) {
@@ -1516,8 +1534,7 @@ class StaticGenerator {
         if (strpos($exception, '404') !== FALSE) {
           \Drupal::logger('static_generator_404')->notice($path);
           return '404';
-        }
-        else {
+        } else {
           watchdog_exception('static_generator', $exception);
           return 'error';
         }
@@ -1590,12 +1607,10 @@ class StaticGenerator {
           if ($start_pos !== FALSE) {
             $start_pos += 24;
           }
-        }
-        else {
+        } else {
           $start_pos += 20;
         }
-      }
-      else {
+      } else {
         $start_pos += 9;
       }
       if ($start_pos === FALSE) {
@@ -1603,8 +1618,7 @@ class StaticGenerator {
       }
       if (strpos($iframe_src, '//www.youtube.com/embed/') === FALSE) {
         $end_pos = strpos($iframe_src, '&', $start_pos);
-      }
-      else {
+      } else {
         $end_pos = strpos($iframe_src, '?', $start_pos);
       }
       $youtube_id = substr($iframe_src, $start_pos, $end_pos - $start_pos);
@@ -1683,8 +1697,7 @@ class StaticGenerator {
       $original_href = $node->getAttribute('href');
       if (strpos($path, '?') === FALSE) {
         $new_path = $path;
-      }
-      else {
+      } else {
         $new_path = substr($path, 0, strpos($path, '?'));
       }
       $new_href = $new_path . str_replace('?page=', '/page/', $original_href);
@@ -1722,8 +1735,7 @@ class StaticGenerator {
       $next_char = substr($markup, $pos + 1, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
-      }
-      else {
+      } else {
         $nids[] = $nid;
         continue;
       }
@@ -1731,8 +1743,7 @@ class StaticGenerator {
       $next_char = substr($markup, $pos + 2, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
-      }
-      else {
+      } else {
         $nids[] = $nid;
         continue;
       }
@@ -1740,8 +1751,7 @@ class StaticGenerator {
       $next_char = substr($markup, $pos + 3, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
-      }
-      else {
+      } else {
         $nids[] = $nid;
         continue;
       }
@@ -1749,8 +1759,7 @@ class StaticGenerator {
       $next_char = substr($markup, $pos + 4, 1);
       if (is_numeric($next_char)) {
         $nid .= $next_char;
-      }
-      else {
+      } else {
         $nids[] = $nid;
         continue;
       }
@@ -1759,8 +1768,7 @@ class StaticGenerator {
       if (is_numeric($next_char)) {
         $nid .= $next_char;
         $nids[] = $nid;
-      }
-      else {
+      } else {
         $nids[] = $nid;
         continue;
       }
@@ -1813,7 +1821,6 @@ class StaticGenerator {
 
     if ($esi_blocks) {
 
-
       $blocks = $finder->query("//*[contains(@class, 'block')]");
 
       // @todo add support for block inclusion.
@@ -1833,8 +1840,7 @@ class StaticGenerator {
           if (!in_array('block', $block_classes)) {
             continue;
           }
-        }
-        else {
+        } else {
           continue;
         }
 
@@ -1879,8 +1885,7 @@ class StaticGenerator {
         if (in_array($block_id, $blocks_processed)) {
           // Return if block has been processed.
           continue;
-        }
-        else {
+        } else {
           $this->generateEsiFileByElement($esi_filename, $block, 'block');
           $blocks_processed[] = $block_id;
         }
@@ -1934,13 +1939,11 @@ class StaticGenerator {
         if (array_key_exists($esi_id, $sg_esi_processed)) {
           // If esi id already processed, use existing file name.
           $esi_filename = $sg_esi_processed[$esi_id];
-        }
-        else {
+        } else {
           if (array_key_exists($esi_id, $sg_esi_existing)) {
             // Fragment file with esi_id exists, so use that file name.
             $esi_filename = $sg_esi_existing[$esi_id];
-          }
-          else {
+          } else {
             // Get new filename.
             $path_id = \Drupal::service('path.alias_manager')
               ->getPathByAlias($path);
@@ -1965,8 +1968,7 @@ class StaticGenerator {
         if (array_key_exists($esi_id, $sg_esi_processed)) {
           // Return if esi_id has been processed.
           continue;
-        }
-        else {
+        } else {
           $this->generateEsiFileByElement($esi_filename, $element, 'sg-esi');
           $sg_esi_processed[$esi_id] = $esi_filename;
         }
@@ -2163,8 +2165,7 @@ class StaticGenerator {
     if (!empty($drupal)) {
       $drupal_array = explode(',', $drupal);
       $drupal_array[] = 'esi';
-    }
-    else {
+    } else {
       $drupal_array = ['esi'];
     }
 
@@ -2183,8 +2184,7 @@ class StaticGenerator {
       $html_file = substr($filename, -strlen('html')) == 'html';
       if ($html_file && !in_array($filename, $non_drupal_array)) {
         file_unmanaged_delete_recursive($file->uri, $callback = NULL);
-      }
-      else {
+      } else {
         if (!in_array($filename, $drupal_array) && !in_array($filename, $non_drupal_array)) {
           if ($filename == 'node') {
             $node_files = file_scan_directory($generator_directory . '/node', '/.*/', ['recurse' => TRUE]);
@@ -2192,8 +2192,7 @@ class StaticGenerator {
               file_unmanaged_delete_recursive($node_file->uri, $callback = NULL);
             }
             file_unmanaged_delete_recursive($file->uri, $callback = NULL);
-          }
-          else {
+          } else {
             file_unmanaged_delete_recursive($file->uri, $callback = NULL);
             exec('rm -rf ' . $file->uri);
           }
@@ -2329,11 +2328,10 @@ class StaticGenerator {
    */
   public function fileInfo($path) {
     $file_name = $this->generatorDirectory(TRUE) . $this->directoryFromPath($path) . '/' .
-      $this->filenameFromPath($path);
+    $this->filenameFromPath($path);
     if (file_exists($file_name)) {
       $return_string = $file_name . '<br/>' . date("F j, Y, g:i a", filemtime($file_name));
-    }
-    else {
+    } else {
       $return_string = 'Static page file not found.';
     }
     return $return_string;
@@ -2370,8 +2368,7 @@ class StaticGenerator {
     $markup = '<br/>' . $file_info . '<br/><br/>';
     if (!is_null($entity) && $entity->isPublished()) {
       $markup .= '<a  target="_blank" href="' . $path . '/gen' . '">' . t("Generate Static Page") . '</a>';
-    }
-    else {
+    } else {
       $markup .= t('This item is unpublished and may not be generated.');
     }
     $markup .= '<br/><br/><a  target="_blank" href="' . $static_url . $path_alias . '">' . t("View Static Page") . '</a>';
@@ -2473,7 +2470,6 @@ class StaticGenerator {
 //    //$block->save();
 //    return $block;
 //  }
-
 
 //    $entity_type = 'node';
 //    $view_mode = 'full';
