@@ -1428,7 +1428,6 @@ class StaticGenerator {
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
-
     // Switch to anonymous user.
     if ($account_switcher) {
       // Generate as Anonymous user.
@@ -1445,22 +1444,9 @@ class StaticGenerator {
       $this->themeManager->setActiveTheme($default_theme);
     }
 
-    //create($uri, $method = 'GET', $parameters = array(), $cookies = array(), $files = array(), $server = array(), $content = null)
-    //      $server = array_replace(array(
-    //        'SERVER_NAME' => 'localhost',
-    //        'SERVER_PORT' => 80,
-    //        'HTTP_HOST' => 'localhost',
-    //
-
-    //$request = Request::createFromGlobals();
-    //$request->
-    //$request->server->set('SCRIPT_NAME', $GLOBALS['base_path'] . 'index.php');
-    //$request->server->set('SCRIPT_FILENAME', 'index.php');
-    //$request = Request::create($path, 'GET', [], [], [], ['SERVER_NAME' => $static_url]);
-    //$_SERVER['REQUEST_URI'] = '/';
-
     $render_method = $this->configFactory->get('static_generator.settings')
       ->get('render_method');
+
     $markup = '';
 
     // Make Request
@@ -1469,19 +1455,7 @@ class StaticGenerator {
     $static_url = $configuration->get('static_url');
 
     if ($render_method == 'Core') {
-
-      // Internal request using Drupal Core.
-      //$request = Request::createFromGlobals();
-      //$request = Request::create($path, 'GET', [], [], [], ['clear' => TRUE]);
-      //$request = Request::create($path, 'GET', [], [], [], []);
-
-      //      $request = Request::create($path);
-      //      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-      //      $markup = $response->getContent();
-      //drupal_static_reset();
       $request = Request::create($path, 'GET', [], [], [], $this->currentRequest->server->all());
-      //drupal_static_reset();
-      //$request->attributes->set(static::REQUEST_KEY, static::REQUEST_KEY);
 
       try {
         $response = $this->httpKernel->handle($request, HttpKernelInterface::MASTER_REQUEST);
@@ -1499,12 +1473,9 @@ class StaticGenerator {
         return '';
       }
     } else {
-
       // Guzzle request using Drupal core (much slower than internal request).
       $client = \Drupal::httpClient(['SERVER_NAME' => $static_url]);
       try {
-        //$response = $client->request('GET', 'd8.local' . $path, ['SERVER_NAME' => $static_url]);
-
         $guzzle_host = $this->configFactory->get('static_generator.settings')
           ->get('guzzle_host');
         $guzzle_options = $this->configFactory->get('static_generator.settings')
@@ -1529,8 +1500,6 @@ class StaticGenerator {
         if ($account_switcher) {
           \Drupal::service('account_switcher')->switchBack();
         }
-
-        //$msg = $path . '  ' . $exception;
         if (strpos($exception, '404') !== FALSE) {
           \Drupal::logger('static_generator_404')->notice($path);
           return '404';
@@ -1538,7 +1507,6 @@ class StaticGenerator {
           watchdog_exception('static_generator', $exception);
           return 'error';
         }
-
       }
     }
 
@@ -1551,21 +1519,6 @@ class StaticGenerator {
     if ($account_switcher) {
       \Drupal::service('account_switcher')->switchBack();
     }
-
-    // Do not generate unpublished pages (based on setting).
-    //    if ($this->generateUnpublished()) {
-    //      if (strpos($markup, 'node--unpublished') !== FALSE) {
-    //        \Drupal::logger('static_generator_unpublished')
-    //          ->notice($path . ' Generated unpublished page');
-    //      }
-    //    }
-    //    else {
-    //      if (strpos($markup, 'node--unpublished') !== FALSE) {
-    //        \Drupal::logger('static_generator_unpublished')
-    //          ->notice($path . ' Did not generate unpublished page');
-    //        return '';
-    //      }
-    //    }
 
     // @todo need to implement this as a plugin, similar to a migrate process plugin
     $dom = new DomDocument();
@@ -1592,10 +1545,6 @@ class StaticGenerator {
       // '<iframe src="https://www.youtube.com/embed/Z2J_J2DY2-c" frameborder="0" width="480" height="270"></iframe>';
 
       $iframe_src = $iframe->getAttribute('src');
-
-      //$youtubeRegExp = '/(?:[?&]vi ?=|\/embed\/ | \/\d\d ? \/ | \/vi ? \/ | https ?: \/\/(?:www\.)?youtu\.be\/)([^&\n ?#]+)/';
-      //$match = [];
-      //preg_match($youtubeRegExp, $iframe_src, $match);
 
       // Get Youtube ID.
       $start_pos = strpos($iframe_src, 'youtu.be/');
@@ -1653,28 +1602,6 @@ class StaticGenerator {
       $iframe->parentNode->replaceChild($iframe_element, $iframe);
 
       //@todo Use the oembed rendering controller instead of re=writing iframe.
-      //      $request = Request::create($iframe_src);
-      //      $container = \Drupal::getContainer();
-      //      $controller = OEmbedIframeController::create($container);
-      //      $response = $controller->render($request);
-      //      $iframe_markup = $response->getContent();
-      //      $span_element = $dom->createElement('iframe', $iframe_markup);
-      //      $iframe->parentNode->replaceChild($span_element, $iframe);
-
-      //$fragment = $iframe->ownerDocument->createDocumentFragment();
-      //$fragment->appendXML('<iframe width="480" height="270" src="https://www.youtube.com/embed/Z2J_J2DY2-c?rel=0&feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>');
-      //$fragment->appendXML($iframe_markup);
-      //while ($iframe->hasChildNodes()) {
-      //$iframe->removeChild($iframe->firstChild);
-      //}
-      //$iframe->appendChild($fragment);
-      //$iframe->parentNode->replaceChild($fragment, $iframe);
-      //$iframe_src = '/media/oembed?url=https%3A//youtu.be/Z2J_J2DY2-c&amp;max_width=0&amp;max_height=0&amp;hash=cJQtyPMXk835VuQ2-zE5bQ260m52nBbossji2XFDHYc';
-      //$request = Request::create($iframe_src);
-      //$response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-      //$iframe_new = $dom->createElement('iframe', $iframe_markup);
-      //$iframe->parentNode->replaceChild($iframe_new, $iframe);
-
     }
 
     // Generation of pages for Views pagers.
