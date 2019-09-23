@@ -39,7 +39,7 @@ fi
 # Production rsync
 if [ `hostname` == "cms.example.oom" ]; then
   # Scheduled publishing.
-  #/usr/bin/curl -k --silent --compressed https://example.com/scheduler/cron/18f26fba8f0217d3147d 
+  #/usr/bin/curl -k --silent --compressed https://example.com/scheduler/cron/18f26fba8f0217d3147d
   echo "Updating build date"
   # Create an updated.txt file with the current timestamp.
   echo `date` > $STATIC_DIR/updated.txt
@@ -51,11 +51,11 @@ if [ `hostname` == "cms.example.oom" ]; then
      #response=`curl -sI "http://$REMOTE_HOST" | grep HTTP/1.1 | awk {'print $2'}`;
      #if [ $response -eq 200 ]
      #then
-	 # Now copy the html and module files on remote host
-	 echo "Syncing site to $REMOTE_HOST"
+   # Now copy the html and module files on remote host
+   echo "Syncing site to $REMOTE_HOST"
          timeout 5m $RSYNC $RSYNC_OPTIONS $STATIC_DIR $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR > $LOG_FILE 2>&1
      #else
-     #	echo `hostname` Rsync failed to $REMOTE_HOST |mail -s "RSYNC STATUS: FAILED - $REMOTE_HOST" support@example.com
+     #  echo `hostname` Rsync failed to $REMOTE_HOST |mail -s "RSYNC STATUS: FAILED - $REMOTE_HOST" support@example.com
      #fi
   done
 fi
