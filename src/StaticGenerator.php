@@ -1352,6 +1352,7 @@ class StaticGenerator {
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
+    global $base_url;
 
     // Switch to anonymous user.
     if ($account_switcher) {
@@ -1369,6 +1370,7 @@ class StaticGenerator {
       $this->themeManager->setActiveTheme($default_theme);
     }
 
+    // Get render method (core or guzzle).
     $render_method = $this->configFactory->get('static_generator.settings')
       ->get('render_method');
     $markup = '';
@@ -1390,15 +1392,16 @@ class StaticGenerator {
         if ($theme_switcher) {
           $this->themeManager->setActiveTheme($active_theme);
         }
+
         // Switch back from anonymous user.
         if ($account_switcher) {
           \Drupal::service('account_switcher')->switchBack();
         }
+
         watchdog_exception('static_generator', $exception);
         return '';
       }
     } else {
-
       // Guzzle request using Drupal core (much slower than internal request).
       $client = \Drupal::httpClient(['SERVER_NAME' => $static_url]);
       try {
@@ -1490,18 +1493,23 @@ class StaticGenerator {
       } else {
         $start_pos += 9;
       }
+
       if ($start_pos === FALSE) {
         continue;
       }
+
       if (strpos($iframe_src, '//www.youtube.com/embed/') === FALSE) {
         $end_pos = strpos($iframe_src, '&', $start_pos);
       } else {
         $end_pos = strpos($iframe_src, '?', $start_pos);
       }
+
       $youtube_id = substr($iframe_src, $start_pos, $end_pos - $start_pos);
+
       if (empty($youtube_id)) {
         continue;
       }
+
       // Get the width.
       $start_pos = strpos($iframe_src, 'width=') + 6;
       $end_pos = strpos($iframe_src, '&', $start_pos);
@@ -1509,6 +1517,7 @@ class StaticGenerator {
       if (!isset($width) || strlen($width) == 0) {
         continue;
       }
+
       // Get the height.
       $start_pos = strpos($iframe_src, 'height=') + 7;
       $end_pos = strpos($iframe_src, '&', $start_pos);
@@ -1560,11 +1569,17 @@ class StaticGenerator {
     $markup = $dom->saveHTML();
 
     // Fix canonical link so it has static site url.
-    $configuration = \Drupal::service('config.factory')
-      ->get('static_generator.settings');
-    $static_url = $configuration->get('static_url');
-    $guzzle_host = $configuration->get('guzzle_host');
-    $markup = str_replace($guzzle_host, $static_url, $markup);
+    $configuration = \Drupal::service('config.factory')->get('static_generator.settings');
+
+    // If we are using core, the source URL will be http://default.
+    if ($render_method == 'Core') {
+      // $markup = str_replace('http://default', $static_url, $markup);
+      $markup = str_replace($base_url, '', $markup);
+    } else {
+      $static_url = $configuration->get('static_url');
+      $guzzle_host = $configuration->get('guzzle_host');
+      $markup = str_replace($guzzle_host, $static_url, $markup);
+    }
 
     // Convert canonical path to aliased paths.
     $nids = [];
