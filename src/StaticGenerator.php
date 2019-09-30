@@ -266,17 +266,6 @@ class StaticGenerator {
       $count_gen = 0;
 
       for ($i = $start; $i <= $count; $i = $i + $length) {
-
-        // Reset memory
-        //        drupal_static_reset();
-        //        $manager = \Drupal::entityManager();
-        //        foreach ($manager->getDefinitions() as $id => $definition) {
-        //          $manager->getStorage($id)->resetCache();
-        //        }
-        // Run garbage collector to further reduce memory.
-        //        gc_collect_cycles();
-        // @TODO Can we reset container?
-
         $query = \Drupal::entityQuery('media');
         $query->condition('status', 1);
         $query->condition('bundle', $bundle);
@@ -284,24 +273,12 @@ class StaticGenerator {
         $query->sort('mid', 'DESC');
         $entity_ids = $query->execute();
 
-        //        foreach ($entity_ids as $key => $entity_id) {
-        //          if ($entity_id == '158364') {
-        //            unset($entity_ids[$key]);
-        //          }
-        //        }
-        //        $entity_ids['1'] = '158364';
-
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
-          //if($entity_id=='158364'){
-          //if ($entity_id == '158364' || $entity_id == '159193') {
-          //if ($entity_id == '14' || $entity_id == '158364') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/media/' . $entity_id);
           $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
-          //}
         }
 
         // Exit if single run for specified content type.
@@ -410,13 +387,6 @@ class StaticGenerator {
         $query->range($i, $length);
         $entity_ids = $query->execute();
 
-        //        foreach ($entity_ids as $key => $entity_id) {
-        //          if ($entity_id == '158364') {
-        //            unset($entity_ids[$key]);
-        //          }
-        //        }
-        //        $entity_ids['1'] = '158364';
-
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
           $path_alias = \Drupal::service('path.alias_manager')
@@ -509,17 +479,6 @@ class StaticGenerator {
       $count_gen = 0;
 
       for ($i = $start; $i <= $count; $i = $i + $length) {
-
-        // Reset memory
-        //        drupal_static_reset();
-        //        $manager = \Drupal::entityManager();
-        //        foreach ($manager->getDefinitions() as $id => $definition) {
-        //          $manager->getStorage($id)->resetCache();
-        //        }
-        // Run garbage collector to further reduce memory.
-        //        gc_collect_cycles();
-        // @TODO Can we reset container?
-
         $query = \Drupal::entityQuery('node');
         $query->condition('status', 1);
         $query->condition('type', $bundle);
@@ -527,19 +486,8 @@ class StaticGenerator {
         $query->sort('nid', 'DESC');
         $entity_ids = $query->execute();
 
-        //foreach ($entity_ids as $key => $entity_id) {
-        //          if ($entity_id == '158364') {
-        //            unset($entity_ids[$key]);
-        //          }
-        //        }
-        //        $entity_ids['1'] = '158364';
-
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          //if($entity_id=='158364' || $entity_id=='158860' || $entity_id=='159193'){
-          //if($entity_id=='158364'){
-          //if ($entity_id == '158364' || $entity_id == '159193') {
-          //if ($entity_id == '14' || $entity_id == '158364') {
           $path_alias = \Drupal::service('path.alias_manager')
             ->getAliasByPath('/node/' . $entity_id);
           $error_time = $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
@@ -904,15 +852,8 @@ class StaticGenerator {
     $ids = [];
     foreach ($controller->loadMultiple() as $return_block) {
       $ids[] = $return_block->id();
-      //if ($return_block_weight = $return_block->getWeight()) {
-      //$this->assertTrue($test_blocks[$id]['weight'] == $return_block_weight, 'Block weight is set as "' . $return_block_weight . '" for ' . $id . ' block.');
-      //$position[$id] = strpos($test_content, Html::getClass('block-' . $test_blocks[$id]['id']));
-      //}
     }
 
-    //$storage = $this->entityTypeManager->getStorage('block');
-    //$ids = $storage->getQuery()
-    //  ->execute();
     if (!empty($pattern)) {
       $ids_match_pattern = [];
       foreach ($ids as $id) {
@@ -999,14 +940,6 @@ class StaticGenerator {
         $this->generatePage($path, '', TRUE);
       }
     }
-
-    // Old way of generating blocks by using render of element.
-    //    $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
-    //    $block_markup = $this->renderer->renderRoot($block_render_array);
-    //
-    //if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
-    //  file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
-    //}
   }
 
   /**
@@ -1067,14 +1000,6 @@ class StaticGenerator {
         $this->generatePage($path, '', TRUE);
       }
     }
-
-    // Old way of generating blocks by using render of element.
-    //    $block_render_array = BlockViewBuilder::lazyBuilder($block_id, "full");
-    //    $block_markup = $this->renderer->renderRoot($block_render_array);
-    //
-    //if (file_prepare_directory($dir, FILE_CREATE_DIRECTORY)) {
-    //  file_unmanaged_save_data($block_markup, $dir . '/' . $block_id, FILE_EXISTS_REPLACE);
-    //}
   }
 
   /**
@@ -1190,7 +1115,6 @@ class StaticGenerator {
     file_unmanaged_save_data($exclude_files, $public_files_directory . '/rsync_public_exclude.tmp', FILE_EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
-    //$public_files_directory = $this->fileSystem->realpath('public://');
     $generator_directory = $this->generatorDirectory(TRUE);
     exec('mkdir -p ' . $generator_directory . '/sites/default/files');
 
@@ -1305,7 +1229,7 @@ class StaticGenerator {
         $source_url = $redirect->getSourceUrl();
         $target_array = $redirect->getRedirect();
         $target_uri = $target_array['uri'];
-        // $target_url = substr($target_uri, 9);
+
         // Grab alias instead of internal url;
         $target_url = \Drupal::service('path.alias_manager')->getAliasByPath(substr($target_uri, 9));
         $this->generateRedirect($source_url, $target_url);
@@ -1428,6 +1352,7 @@ class StaticGenerator {
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
+
     // Switch to anonymous user.
     if ($account_switcher) {
       // Generate as Anonymous user.
@@ -1446,7 +1371,6 @@ class StaticGenerator {
 
     $render_method = $this->configFactory->get('static_generator.settings')
       ->get('render_method');
-
     $markup = '';
 
     // Make Request
@@ -1455,6 +1379,7 @@ class StaticGenerator {
     $static_url = $configuration->get('static_url');
 
     if ($render_method == 'Core') {
+      // Internal request using Drupal Core.
       $request = Request::create($path, 'GET', [], [], [], $this->currentRequest->server->all());
 
       try {
@@ -1473,6 +1398,7 @@ class StaticGenerator {
         return '';
       }
     } else {
+
       // Guzzle request using Drupal core (much slower than internal request).
       $client = \Drupal::httpClient(['SERVER_NAME' => $static_url]);
       try {
@@ -1500,6 +1426,7 @@ class StaticGenerator {
         if ($account_switcher) {
           \Drupal::service('account_switcher')->switchBack();
         }
+
         if (strpos($exception, '404') !== FALSE) {
           \Drupal::logger('static_generator_404')->notice($path);
           return '404';
@@ -1507,6 +1434,7 @@ class StaticGenerator {
           watchdog_exception('static_generator', $exception);
           return 'error';
         }
+
       }
     }
 
@@ -1600,8 +1528,6 @@ class StaticGenerator {
       $iframe_element->setAttribute('height', $height);
 
       $iframe->parentNode->replaceChild($iframe_element, $iframe);
-
-      //@todo Use the oembed rendering controller instead of re=writing iframe.
     }
 
     // Generation of pages for Views pagers.
@@ -1750,14 +1676,6 @@ class StaticGenerator {
 
       $blocks = $finder->query("//*[contains(@class, 'block')]");
 
-      // @todo add support for block inclusion.
-      // Get list of blocks to ESI.
-      //    $blocks_esi = $this->configFactory->get('static_generator.settings')
-      //      ->get('blocks_esi');
-      //    if (!empty($blocks_esi)) {
-      //      $blocks_esi = explode(',', $blocks_esi);
-      //    }
-
       foreach ($blocks as $block) {
 
         // Make sure class = "block".
@@ -1787,21 +1705,7 @@ class StaticGenerator {
         }
 
         // Get ESI filename.
-        //if (strpos($block_id, '__') > 0) {
-        //@todo Support block names that have '__' in id.
-        //$block_id = substr($block_id, 0, strpos($block_id, '__'));
-        //$path_str = str_replace('/', '-', $path);
-        //$esi_filename = $block_id . '__' . $path_str;
-        //}
-        //else {
         $esi_filename = $block_id;
-        //}
-
-        // @TODO Special handling for Views Blocks
-        //      if (substr($block_id, 0, 12) == 'views_block_') {
-        //        //str_replace('views_block_', 'views_block__', $block_id);
-        //        $block_id = 'views_block__' . substr($block_id, 12);
-        //      }
 
         // Create the ESI and then replace the block with the ESI markup.
         $esi_markup = '<!--#include virtual="/esi/block/' . Html::escape($esi_filename) . '" -->';
@@ -1840,9 +1744,6 @@ class StaticGenerator {
         $classes_array = explode(' ', $classes);
         $esi_id = '';
         foreach ($classes_array as $esi_class) {
-          //        if ($this->startsWith($esi_class, 'sg-esi--sidebar-menu-block')) {
-          //          continue;
-          //        }
           if ($this->startsWith($esi_class, 'sg-esi--')) {
             // Remove three dashes - hack for site specific issue, will be removed.
             if ($this->startsWith($esi_class, 'sg-esi---')) {
@@ -1879,12 +1780,6 @@ class StaticGenerator {
             $esi_filename = $esi_id . '__' . $path_str;
           }
         }
-
-        // @TODO Special handling for Views Blocks
-        //      if (substr($block_id, 0, 12) == 'views_block_') {
-        //        //str_replace('views_block_', 'views_block__', $block_id);
-        //        $block_id = 'views_block__' . substr($block_id, 12);
-        //      }
 
         // Replace the original element with the ESI markup.
         $esi_markup = '<!--#include virtual="/esi/sg-esi/' . Html::escape($esi_filename) . '" -->';
@@ -1943,9 +1838,6 @@ class StaticGenerator {
    * @return void ;
    */
   public function queuePage($path, $path_generate = '') {
-
-    //$queue = $this->queue_factory->get('static_generator');
-
     // Get the queue implementation for SG
     $queue_factory = \Drupal::service('queue');
     $queue = $queue_factory->get('page_generator');
@@ -1965,8 +1857,6 @@ class StaticGenerator {
     // Get the queue implementation for SG
     $queue_factory = \Drupal::service('queue');
     $queue = $queue_factory->get('page_generator');
-    //$queue_manager = \Drupal::service('queue_manager');
-    //$queue_worker = $queue_factory->createInstance('page_generator');
     $queue_worker = \Drupal::service('plugin.manager.queue_worker')
       ->createInstance('page_generator');
 
@@ -2079,12 +1969,6 @@ class StaticGenerator {
    */
   public function deletePages() {
     $start_time = time();
-
-    // Delete .html files
-    //    $files = file_scan_directory($generator_directory, '(.*?)\.(html)$', ['recurse' => FALSE]);
-    //    foreach ($files as $file) {
-    //      file_unmanaged_delete_recursive($file, $callback = NULL);
-    //    }
 
     // Get Drupal dirs setting.
     $drupal = $this->configFactory->get('static_generator.settings')
