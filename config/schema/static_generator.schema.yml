@@ -46,7 +46,7 @@ static_generator.settings:
     rsync_public:
       type: string
       label: 'rSync for generating Drupal public files.'
-    rsync_public_exlude:
+    rsync_public_exclude:
       type: string
       label: 'Public files to exclude.'
     rsync_code:
