@@ -22,11 +22,9 @@ class StaticGeneratorTest extends BrowserTestBase {
   ];
 
   /**
-   * Installation profile.
-   *
-   * @var string
+   * {@inheritdoc}
    */
-  protected $profile = 'standard';
+  protected $defaultTheme = 'bartik';
 
   /**
    * Permissions to grant admin user.
@@ -52,7 +50,6 @@ class StaticGeneratorTest extends BrowserTestBase {
 
     // Create a page node.
     $this->drupalCreateNode(['type' => 'page', 'title' => 'Test']);
-
   }
 
   /**
@@ -76,15 +73,8 @@ class StaticGeneratorTest extends BrowserTestBase {
    * Tests generating markup for a single route.
    */
   public function testGenerateStaticMarkupForRoute() {
-    $static_markup = \Drupal::service('static_generator.static_generator')->generateStaticMarkupForNode(1);
+    $static_markup = \Drupal::service('static_generator')->markupForPage('/node/1');
     $this->assertContains('html', $static_markup);
-  }
-
-  /**
-   * Tests full generation.
-   */
-  public function testGenerateAll() {
-    $this->assertTrue(TRUE);
   }
 
 }
