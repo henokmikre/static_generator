@@ -3,6 +3,7 @@ type: module
 description: "Generates a static version of a Drupal site."
 package:  "Static Generator"
 core: 8.x
+core_version_requirement: ^8 || ^9
 configure: static_generator.settings
 dependencies:
   - system

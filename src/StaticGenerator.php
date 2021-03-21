@@ -2,6 +2,7 @@
 
 namespace Drupal\static_generator;
 
+use Drupal\Core\Menu\MenuTreeParameters;
 use DOMDocument;
 use DOMXPath;
 use Drupal\Component\Utility\Html;
@@ -275,7 +276,7 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $path_alias = \Drupal::service('path.alias_manager')
+          $path_alias = \Drupal::service('path_alias.manager')
             ->getAliasByPath('/media/' . $entity_id);
           $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
@@ -389,7 +390,7 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $path_alias = \Drupal::service('path.alias_manager')
+          $path_alias = \Drupal::service('path_alias.manager')
             ->getAliasByPath('/taxonomy/term/' . $entity_id);
           $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           $count_gen++;
@@ -488,7 +489,7 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $path_alias = \Drupal::service('path.alias_manager')
+          $path_alias = \Drupal::service('path_alias.manager')
             ->getAliasByPath('/node/' . $entity_id);
           $error_time = $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
           if (!is_null($error_time)) {
@@ -620,7 +621,7 @@ class StaticGenerator {
   public function generatePage($path, $path_generate = '', $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = [], $check_published = FALSE) {
 
     // Get path alias for path.
-    $path_alias = \Drupal::service('path.alias_manager')
+    $path_alias = \Drupal::service('path_alias.manager')
       ->getAliasByPath($path);
 
     // Return if path is excluded.
@@ -635,7 +636,7 @@ class StaticGenerator {
     // Return if check published and not published.
     if ($check_published) {
       $node_storage = $this->entityTypeManager->getStorage('node');
-      $path_canonical = \Drupal::service('path.alias_manager')
+      $path_canonical = \Drupal::service('path_alias.manager')
         ->getPathByAlias($path);
       $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
       $node = $node_storage->load($nid);
@@ -680,8 +681,8 @@ class StaticGenerator {
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
     //if ($path_alias == '/problem-page') { // This is good way to quickly debug bad page in batch.
-    if (!$esi_only && file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    if (!$esi_only && \Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY)) {
+      \Drupal::service('file_system')->saveData($markup, $directory . '/' . $file_name, FileSystemInterface::EXISTS_REPLACE);
 
       if ($log) {
         \Drupal::logger('static_generator')
@@ -697,7 +698,7 @@ class StaticGenerator {
   public function generateRedirectPageForPath($path) {
     if (!empty($path) && \Drupal::moduleHandler()->moduleExists('redirect')) {
 
-      $path_canonical = \Drupal::service('path.alias_manager')
+      $path_canonical = \Drupal::service('path_alias.manager')
         ->getPathByAlias($path);
       $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
 
@@ -712,7 +713,7 @@ class StaticGenerator {
         $source_url = $redirect->getSourceUrl();
         $target_array = $redirect->getRedirect();
         $target_uri = $target_array['uri'];
-        $target_url = \Drupal::service('path.alias_manager')->getAliasByPath(substr($target_uri, 9));
+        $target_url = \Drupal::service('path_alias.manager')->getAliasByPath(substr($target_uri, 9));
         $this->generateRedirect($source_url, $target_url);
         if ($this->verboseLogging()) {
           \Drupal::logger('static_generator')
@@ -736,7 +737,7 @@ class StaticGenerator {
     }
 
     // Get the menu link's children and generate their pages.
-    $menu_parameters = new \Drupal\Core\Menu\MenuTreeParameters();
+    $menu_parameters = new MenuTreeParameters();
     $menu_parameters->setMaxDepth(1);
     $menu_parameters->setRoot($menu_link->getPluginId());
     $menu_parameters->excludeRoot();
@@ -756,7 +757,7 @@ class StaticGenerator {
     }
 
     // Get this link's parent and generate its pages.
-    $menu_parameters_siblings = new \Drupal\Core\Menu\MenuTreeParameters();
+    $menu_parameters_siblings = new MenuTreeParameters();
     $menu_parameters_siblings->setMaxDepth(1);
     $parent_id = $menu_link->getParentId();
     $menu_parameters_siblings->setRoot($parent_id);
@@ -785,7 +786,7 @@ class StaticGenerator {
    */
   public function excludePath($path) {
 
-    $path_alias = \Drupal::service('path.alias_manager')
+    $path_alias = \Drupal::service('path_alias.manager')
       ->getAliasByPath($path);
 
     // Get paths to exclude (not generate)
@@ -928,7 +929,7 @@ class StaticGenerator {
       $generator_directory = $this->generatorDirectory() . '/esi/block';
     }
 
-    $files = file_scan_directory($generator_directory, '/*/', ['recurse' => FALSE]);
+    $files = \Drupal::service('file_system')->scanDirectory($generator_directory, '/*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
 
@@ -950,8 +951,8 @@ class StaticGenerator {
 
     $generator_directory = $this->generatorDirectory();
     $directory = $generator_directory . 'esi/sg-esi';
-    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
-    $files = file_scan_directory($directory, '/.*/', ['recurse' => FALSE]);
+    \Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY);
+    $files = \Drupal::service('file_system')->scanDirectory($directory, '/.*/', ['recurse' => FALSE]);
     //$files = scandir($directory);
     $existingSgEsiFiles = [];
     foreach ($files as $file) {
@@ -977,7 +978,7 @@ class StaticGenerator {
 
     $generator_directory = $this->generatorDirectory() . '/esi/sg-esi';
 
-    $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
+    $files = \Drupal::service('file_system')->scanDirectory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
       $esi_id_file = substr($filename, 0, strpos($filename, '__'));
@@ -1112,7 +1113,7 @@ class StaticGenerator {
     //$tmp_files_directory = $this->fileSystem->realpath('tmp://');
     $public_files_directory = $this->fileSystem->realpath('public://');
 
-    file_unmanaged_save_data($exclude_files, $public_files_directory . '/rsync_public_exclude.tmp', FILE_EXISTS_REPLACE);
+    \Drupal::service('file_system')->saveData($exclude_files, $public_files_directory . '/rsync_public_exclude.tmp', FileSystemInterface::EXISTS_REPLACE);
 
     // Create files directory if it does not exist.
     $generator_directory = $this->generatorDirectory(TRUE);
@@ -1231,7 +1232,7 @@ class StaticGenerator {
         $target_uri = $target_array['uri'];
 
         // Grab alias instead of internal url;
-        $target_url = \Drupal::service('path.alias_manager')->getAliasByPath(substr($target_uri, 9));
+        $target_url = \Drupal::service('path_alias.manager')->getAliasByPath(substr($target_uri, 9));
         $this->generateRedirect($source_url, $target_url);
         if ($this->verboseLogging()) {
           \Drupal::logger('static_generator')
@@ -1269,8 +1270,8 @@ class StaticGenerator {
     $web_directory = $this->directoryFromPath($source_url);
     $file_name = $this->filenameFromPath($source_url);
     $directory = $this->generatorDirectory() . $web_directory;
-    if (file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      file_unmanaged_save_data($redirect_markup, $directory . '/' . $file_name, FILE_EXISTS_REPLACE);
+    if (\Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY)) {
+      \Drupal::service('file_system')->saveData($redirect_markup, $directory . '/' . $file_name, FileSystemInterface::EXISTS_REPLACE);
     }
   }
 
@@ -1286,10 +1287,10 @@ class StaticGenerator {
    * @throws \Exception
    */
   public function filenameFromPath($path) {
-    $path_alias = \Drupal::service('path.alias_manager')
+    $path_alias = \Drupal::service('path_alias.manager')
       ->getAliasByPath($path);
     $front = $this->configFactory->get('system.site')->get('page.front');
-    $front_alias = \Drupal::service('path.alias_manager')
+    $front_alias = \Drupal::service('path_alias.manager')
       ->getAliasByPath($front);
     if ($path_alias == $front_alias) {
       $file_name = 'index.html';
@@ -1315,7 +1316,7 @@ class StaticGenerator {
     $directory = '';
     $front = $this->configFactory->get('system.site')->get('page.front');
     if ($path != $front) {
-      $alias = \Drupal::service('path.alias_manager')
+      $alias = \Drupal::service('path_alias.manager')
         ->getAliasByPath($path);
       $occur = substr_count($alias, '/');
       if ($occur > 1) {
@@ -1646,7 +1647,7 @@ class StaticGenerator {
     rsort($nids);
     foreach ($nids as $nid) {
       $node_path = 'node/' . $nid;
-      $path_alias = \Drupal::service('path.alias_manager')
+      $path_alias = \Drupal::service('path_alias.manager')
         ->getAliasByPath('/' . $node_path);
       $markup = str_replace($node_path, substr($path_alias, 1), $markup);
     }
@@ -1788,7 +1789,7 @@ class StaticGenerator {
             $esi_filename = $sg_esi_existing[$esi_id];
           } else {
             // Get new filename.
-            $path_id = \Drupal::service('path.alias_manager')
+            $path_id = \Drupal::service('path_alias.manager')
               ->getPathByAlias($path);
             $path_id = substr($path_id, 1);
             $path_str = str_replace('/', '--', $path_id);
@@ -1836,11 +1837,11 @@ class StaticGenerator {
 
     // Make sure directory exists.
     $directory = $this->generatorDirectory() . '/esi/' . $directory;
-    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+    \Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY);
 
     // Generate esi fragment file.
     $markup = $element->ownerDocument->saveHTML($element);
-    file_unmanaged_save_data($markup, $directory . '/' . $esi_filename, FILE_EXISTS_REPLACE);
+    \Drupal::service('file_system')->saveData($markup, $directory . '/' . $esi_filename, FileSystemInterface::EXISTS_REPLACE);
   }
 
   /**
@@ -2004,22 +2005,22 @@ class StaticGenerator {
     }
 
     $generator_directory = $this->generatorDirectory(TRUE);
-    $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
+    $files = \Drupal::service('file_system')->scanDirectory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
       $html_file = substr($filename, -strlen('html')) == 'html';
       if ($html_file && !in_array($filename, $non_drupal_array)) {
-        file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+        \Drupal::service('file_system')->deleteRecursive($file->uri, $callback = NULL);
       } else {
         if (!in_array($filename, $drupal_array) && !in_array($filename, $non_drupal_array)) {
           if ($filename == 'node') {
-            $node_files = file_scan_directory($generator_directory . '/node', '/.*/', ['recurse' => TRUE]);
+            $node_files = \Drupal::service('file_system')->scanDirectory($generator_directory . '/node', '/.*/', ['recurse' => TRUE]);
             foreach ($node_files as $node_file) {
-              file_unmanaged_delete_recursive($node_file->uri, $callback = NULL);
+              \Drupal::service('file_system')->deleteRecursive($node_file->uri, $callback = NULL);
             }
-            file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+            \Drupal::service('file_system')->deleteRecursive($file->uri, $callback = NULL);
           } else {
-            file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+            \Drupal::service('file_system')->deleteRecursive($file->uri, $callback = NULL);
             exec('rm -rf ' . $file->uri);
           }
         }
@@ -2048,32 +2049,40 @@ class StaticGenerator {
     // Delete Blocks
     $dir = $this->generatorDirectory(TRUE) . '/esi/block';
 
-    // Delete ESIs include files and the esi directory.
-    $esi_files = file_scan_directory($dir, '/.*/', ['recurse' => TRUE]);
-    foreach ($esi_files as $block_esi_file) {
-      file_unmanaged_delete_recursive($block_esi_file->uri, $callback = NULL);
+    if (is_dir($dir)) {
+      // Delete ESIs include files and the esi directory.
+      $esi_files = \Drupal::service('file_system')->scanDirectory($dir, '/.*/', ['recurse' => true]);
+      foreach ($esi_files as $block_esi_file) {
+          \Drupal::service('file_system')->deleteRecursive($block_esi_file->uri, $callback = null);
+      }
+      \Drupal::service('file_system')->deleteRecursive($dir, $callback = null);
     }
-    file_unmanaged_delete_recursive($dir, $callback = NULL);
 
     // Delete sg_esi tags
-    $dir = $this->generatorDirectory(TRUE) . '/esi/sg-esi';
+    $dir = $this->generatorDirectory(true) . '/esi/sg-esi';
 
-    // Delete sg esi include files and the sg-esi directory.
-    $esi_files = file_scan_directory($dir, '/.*/', ['recurse' => TRUE]);
-    foreach ($esi_files as $block_esi_file) {
-      file_unmanaged_delete_recursive($block_esi_file->uri, $callback = NULL);
+    if (is_dir($dir)) {
+      // Delete sg esi include files and the sg-esi directory.
+      $esi_files = \Drupal::service('file_system')->scanDirectory($dir, '/.*/', ['recurse' => true]);
+      foreach ($esi_files as $block_esi_file) {
+          \Drupal::service('file_system')->deleteRecursive($block_esi_file->uri, $callback = null);
+      }
+      \Drupal::service('file_system')->deleteRecursive($dir, $callback = null);
     }
-    file_unmanaged_delete_recursive($dir, $callback = NULL);
 
     // Delete /esi directory.
     $dir = $this->generatorDirectory(TRUE) . '/esi';
-    file_unmanaged_delete_recursive($dir, $callback = NULL);
+
+    if (is_dir($dir)) {
+      \Drupal::service('file_system')->deleteRecursive($dir, $callback = NULL);
+    }
 
     // Elapsed time.
     $end_time = time();
     $elapsed_time = $end_time - $start_time;
     \Drupal::logger('static_generator')
       ->notice('Delete blocks elapsed time: ' . $elapsed_time . ' seconds.');
+
     return $elapsed_time;
   }
 
@@ -2089,7 +2098,7 @@ class StaticGenerator {
     $web_directory = $this->directoryFromPath($path);
     $file_name = $this->filenameFromPath($path);
     $full_file_name = $this->generatorDirectory() . $web_directory . '/' . $file_name;
-    file_unmanaged_delete($full_file_name);
+    \Drupal::service('file_system')->delete($full_file_name);
     \Drupal::logger('static_generator')
       ->notice('Deleted page: ' . $full_file_name);
   }
@@ -2115,11 +2124,11 @@ class StaticGenerator {
     }
 
     $generator_directory = $this->generatorDirectory(TRUE);
-    $files = file_scan_directory($generator_directory, '/.*/', ['recurse' => FALSE]);
+    $files = \Drupal::service('file_system')->scanDirectory($generator_directory, '/.*/', ['recurse' => FALSE]);
     foreach ($files as $file) {
       $filename = $file->filename;
       if (in_array($filename, $drupal_array)) {
-        file_unmanaged_delete_recursive($file->uri, $callback = NULL);
+        \Drupal::service('file_system')->deleteRecursive($file->uri, $callback = NULL);
         exec('rm -rf ' . $file->uri);
       }
     }
@@ -2183,7 +2192,7 @@ class StaticGenerator {
     $file_info = $this->fileInfo($path);
 
     // Get path alias for path.
-    $path_alias = \Drupal::service('path.alias_manager')
+    $path_alias = \Drupal::service('path_alias.manager')
       ->getAliasByPath($path);
 
     // Get static URL setting.

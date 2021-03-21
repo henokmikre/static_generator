@@ -9,8 +9,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drupal\Console\Core\Command\ContainerAwareCommand;
 use Drupal\Console\Annotations\DrupalCommand;
-use Drupal\static_generator\StaticGeneratorBlockCreationTrait;
-
+use Drupal\Tests\block\Traits\BlockCreationTrait;
 
 /**
  * Class GenerateBlocksCommand.
@@ -22,7 +21,7 @@ use Drupal\static_generator\StaticGeneratorBlockCreationTrait;
  */
 class GenerateBlocksCommand extends ContainerAwareCommand {
 
-  use StaticGeneratorBlockCreationTrait;
+  use BlockCreationTrait;
 
   /**
    * The Static Generator service.

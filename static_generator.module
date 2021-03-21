@@ -1,5 +1,7 @@
 <?php
 
+use Drupal\user\Entity\User;
+use Drupal\node\NodeInterface;
 /**
  * @file
  * Generates a static version of a Drupal site.
@@ -37,7 +39,7 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
  *
  * @throws \Drupal\Core\Entity\EntityMalformedException
  */
-function static_generator_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+function static_generator_entity_insert(EntityInterface $entity) {
   process_workflow($entity, 'insert');
 }
 
@@ -189,12 +191,12 @@ function static_generator_entity_delete(EntityInterface $entity) {
  * @param $form_id
  */
 function static_generator_form_alter(&$form, $form_state, $form_id) {
-  $has_generate_permission = \Drupal\user\Entity\User::load(\Drupal::currentUser()
+  $has_generate_permission = User::load(\Drupal::currentUser()
     ->id())->hasPermission('generate static pages');
 
   if ($has_generate_permission && substr($form_id,0,5) == 'node_' && \Drupal::service('static_generator')->endsWith($form_id,'_edit_form')) {
     $node = $form_state->getFormObject()->getEntity();
-    if ($node instanceof \Drupal\node\NodeInterface) {
+    if ($node instanceof NodeInterface) {
       if ($node->isPublished()) {
         \Drupal::service('static_generator')
           ->generationInfoForm('/node/' . $node->id(), $node, $form, TRUE);

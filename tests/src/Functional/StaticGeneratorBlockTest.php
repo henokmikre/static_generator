@@ -2,10 +2,10 @@
 
 namespace Drupal\Tests\static_generator\Functional;
 
+use Drupal\Core\File\FileSystemInterface;
 use Drupal;
 use Drupal\Tests\BrowserTestBase;
-use Drupal\simpletest\BlockCreationTrait;
-
+Use Drupal\Tests\block\Traits\BlockCreationTrait;
 /**
  * Tests generating blocks.
  *
@@ -102,7 +102,7 @@ class StaticGeneratorBlockTest extends BrowserTestBase {
     //    file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
     $elapsed_time = Drupal::service('static_generator')->generateBlocks();
     $this->assertTrue($elapsed_time > 0, 'Block generation elapsed time: ' . $elapsed_time);
-    file_unmanaged_save_data($elapsed_time, 'private://elapsed_time.txt', FILE_EXISTS_REPLACE);
+    \Drupal::service('file_system')->saveData($elapsed_time, 'private://elapsed_time.txt', FileSystemInterface::EXISTS_REPLACE);
 
     //drupal_unlink('private://index.html');
   }
