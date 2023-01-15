@@ -1,0 +1,6 @@
+services:
+  static_generator.commands:
+    class: \Drupal\static_generator\Commands\StaticGeneratorCommands
+    arguments: ['@static_generator']
+    tags:
+      - { name: drush.command }
