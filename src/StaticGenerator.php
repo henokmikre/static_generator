@@ -390,10 +390,21 @@ class StaticGenerator {
 
         // Generate pages for bundle.
         foreach ($entity_ids as $entity_id) {
-          $path_alias = \Drupal::service('path_alias.manager')
-            ->getAliasByPath('/taxonomy/term/' . $entity_id);
-          $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
-          $count_gen++;
+
+          // Load only published nodes tagged by each entity_id (term_id).
+          $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadByProperties([
+            'status' => 1,
+            'field_topics' => $entity_id,
+          ]);
+
+          // Only generate page if there are nodes tagged by topic.
+          if (!empty($nodes)) {
+            $path_alias = \Drupal::service('path_alias.manager')
+              ->getAliasByPath('/taxonomy/term/' . $entity_id);
+            $this->generatePage($path_alias, '', $esi_only, false, false, false, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+            $count_gen++;
+          }
+
         }
 
         // Exit if single run for specified content type.
