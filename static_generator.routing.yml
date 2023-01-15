@@ -37,7 +37,7 @@ static_generator.generation_info_node:
   requirements:
     _permission: 'administer static generator'
   options:
-      _admin_route: FALSE
+    _admin_route: FALSE
 
 static_generator.generation_info_media:
   path: '/media/{media}/sg'

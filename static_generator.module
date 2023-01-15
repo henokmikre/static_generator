@@ -1,12 +1,12 @@
 <?php
 
-use Drupal\user\Entity\User;
-use Drupal\node\NodeInterface;
 /**
  * @file
  * Generates a static version of a Drupal site.
  */
 
+use Drupal\user\Entity\User;
+use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
@@ -64,22 +64,20 @@ function static_generator_entity_update(EntityInterface $entity) {
  * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function process_workflow(EntityInterface $entity, $operation) {
-
-  // @todo need some sortof check here
-  //  if (!isset($entity->moderation_state)) {
-  //    return;
-  //  }
-
-  // Node.
   if ($entity->getEntityTypeId() === 'node') {
-
+    // Get list of content types allowed to be generated.
     $bundles_string = \Drupal::service('config.factory')
       ->get('static_generator.settings')
       ->get('gen_node');
+
     $bundles = explode(',', $bundles_string);
+
+    // Return if SG is not enabled for the content type.
     if (!in_array($entity->bundle(), $bundles)) {
       return;
     }
+
+    // Get the path.
     if ($operation == 'update') {
       $path = $entity->toUrl()->toString();
     }
@@ -88,15 +86,23 @@ function process_workflow(EntityInterface $entity, $operation) {
         ->createEntityAlias($entity, 'insert');
       $path = $path_array['alias'];
     }
+
+    // Handle missing alias.
     if (!isset($path)) {
       $path = $entity->toUrl()->toString();
     }
+
+    // Ensure path has leading slash.
     if (substr($path, 0, 1) !== '/') {
       $path = '/' . $path;
     }
+
+    // @todo: Expose this for other modules.
+    // If moderation state is published, queue for generation.
     if ($entity->get('moderation_state')->value == 'published') {
       \Drupal::service('static_generator')->queuePage($path);
     }
+    // If it is archived, delete static page.
     elseif ($entity->get('moderation_state')->value == 'archived') {
       \Drupal::service('static_generator')->deletePage($path);
     }
@@ -216,6 +222,3 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
-
-// as seen in the content_moderation_notifications.
-// Implementing these hooks gives you a single place to react to content states changes.

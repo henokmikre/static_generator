@@ -37,12 +37,14 @@ class StaticGeneratorController extends ControllerBase {
     try {
       \Drupal::service('static_generator')
         ->generatePage('/node/' . $nid, '', FALSE, TRUE);
-    } catch (\Exception $exception) {
+    } catch (\Exception $e) {
+      watchdog_exception('static_generator', $e);
     }
 
     $build = [
       '#markup' => $this->t('Page generation complete.'),
     ];
+
     return $build;
   }
 
@@ -99,5 +101,5 @@ class StaticGeneratorController extends ControllerBase {
     ];
     return $build;
   }
-  
+
 }
