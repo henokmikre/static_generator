@@ -33,9 +33,9 @@ in which case the generation of Block ESIs may be disabled from the settings pag
 
 ### Requirements
 
-- Drupal 8.6 or greater
-- PHP 7.2 or greater
-- Drupal Console
+- Drupal 9.4 or greater
+- PHP 7.4 or greater
+- Drush 10 or greater
 
 ### Installation
 - Install this module using the normal Drupal module installation process.
