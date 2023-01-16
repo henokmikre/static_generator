@@ -85,7 +85,7 @@ class StaticGeneratorCommands extends DrushCommands {
    * @command static_generator:generate-blocks
    * @aliases sgb
    */
-  public function generateBlocks($block_id, $options = ['frequent' => FALSE]) {
+  public function generateBlocks($block_id = '', $options = ['frequent' => FALSE]) {
     $elapsed_time = 0;
 
     if (empty($block_id)) {
@@ -106,7 +106,7 @@ class StaticGeneratorCommands extends DrushCommands {
     }
     else {
       // Generate single block.
-      $this->staticGenerator->generateBlock($block_id);
+      $this->staticGenerator->generateBlockById($block_id);
       $this->output()->writeln('Generate of block ' . $block_id . ' complete.');
     }
   }
