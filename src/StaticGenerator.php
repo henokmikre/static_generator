@@ -750,13 +750,15 @@ class StaticGenerator {
     $tree = $menu_tree_service->load('main', $menu_parameters);
     $children = $menu_tree_service->build($tree);
 
-    if (isset($child_items) && array_key_exists('#items', $child_items)) {
-      $child_items = $children['#items'];
-      foreach ($child_items as $child_item) {
-        $url = $child_item['url'];
-        $path = $url->toString();
-        if (substr($path, 0, 1) == '/') {
-          \Drupal::service('static_generator')->queuePage($path);
+    if (isset($child_items)) {
+      if (array_key_exists('#items', $child_items)) {
+        $child_items = $children['#items'];
+        foreach ($child_items as $child_item) {
+          $url = $child_item['url'];
+          $path = $url->toString();
+          if (substr($path, 0, 1) == '/') {
+            \Drupal::service('static_generator')->queuePage($path);
+          }
         }
       }
     }
