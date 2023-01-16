@@ -2,7 +2,6 @@
 
 namespace Drupal\static_generator;
 
-use Drupal\Core\Menu\MenuTreeParameters;
 use DOMDocument;
 use DOMXPath;
 use Drupal\Component\Utility\Html;
@@ -10,6 +9,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileSystemInterface;
+use Drupal\Core\Menu\MenuActiveTrailInterface;
 use Drupal\Core\Path\PathMatcherInterface;
 use Drupal\Core\Queue\QueueInterface;
 use Drupal\Core\Queue\QueueWorkerInterface;
@@ -26,6 +26,10 @@ use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Drupal\Core\Extension\ModuleHandler;
+use Drupal\node\NodeInterface;
+use Drupal\path_alias\AliasManagerInterface;
+use Drupal\Core\Menu\MenuTreeParameters;
 
 /**
  * Static Generator Service.
@@ -126,6 +130,29 @@ class StaticGenerator {
   protected $pathMatcher;
 
   /**
+   * The menu active trail cache collector.
+   *
+   * @var \Drupal\Core\Menu\MenuActiveTrailInterface
+   */
+  protected $menuActiveTrail;
+
+  /**
+   * The module_handler service.
+   *
+   * @var \Drupal\Core\Extension\ModuleHandler
+   *   The module_handler service.
+   */
+  protected $moduleHandler;
+
+  /**
+   * The path_alias manager.
+   *
+   * @var \Drupal\path_alias\AliasManagerInterface
+   */
+  protected $pathAliasManager;
+
+
+  /**
    * Constructs a new StaticGenerator object.ClassResolverInterface
    * $class_resolver,
    *
@@ -151,8 +178,14 @@ class StaticGenerator {
    *   Entity type manager.
    * @param \Drupal\Core\Path\PathMatcherInterface $path_matcher
    *   Path matcher.
+   * @param \Drupal\Core\Menu\MenuActiveTrailInterface $menu_active_trail
+   *   The menu active trail cache collector.
+   * @param \Drupal\Core\Extension\ModuleHandler $moduleHandler
+   *   The module Handler service.
+   * @param \Drupal\path_alias\AliasManagerInterface $pathManager
+   *   The path_alias manager.
    */
-  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager, PathMatcherInterface $path_matcher) {
+  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager, PathMatcherInterface $path_matcher, MenuActiveTrailInterface $menu_active_trail, ModuleHandler $moduleHandler, AliasManagerInterface $pathAliasManager) {
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
@@ -165,6 +198,9 @@ class StaticGenerator {
     $this->fileSystem = $file_system;
     $this->entityTypeManager = $entity_type_manager;
     $this->pathMatcher = $path_matcher;
+    $this->menuActiveTrail = $menu_active_trail;
+    $this->moduleHandler = $moduleHandler;
+    $this->pathAliasManager = $pathAliasManager;
   }
 
   /**
@@ -624,9 +660,8 @@ class StaticGenerator {
    */
   public function generatePage($path, $path_generate = '', $esi_only = FALSE, $log = FALSE, $account_switcher = TRUE, $theme_switcher = TRUE, &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing = [], $check_published = FALSE) {
 
-    // Get path alias for path.
-    $path_alias = \Drupal::service('path_alias.manager')
-      ->getAliasByPath($path);
+    // Get path alias for path (incase path provided is not an alias itself).
+    $path_alias = $this->pathAliasManager->getAliasByPath($path);
 
     // Return if path is excluded.
     if ($this->excludePath($path)) {
@@ -638,13 +673,14 @@ class StaticGenerator {
       return null;
     }
 
-    // Return if check published and not published.
+    // Get node object if path is a node.
+    $path_canonical = $this->pathAliasManager->getPathByAlias($path);
+    $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
+    $node = $this->entityTypeManager->getStorage('node')->load($nid);
+
+    // Check publish state if required.
     if ($check_published) {
-      $node_storage = $this->entityTypeManager->getStorage('node');
-      $path_canonical = \Drupal::service('path_alias.manager')
-        ->getPathByAlias($path);
-      $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
-      $node = $node_storage->load($nid);
+      // Only do this if path is a node.
       if ($node instanceof NodeInterface) {
         if (!$node->isPublished()) {
           return null;
@@ -1312,6 +1348,14 @@ class StaticGenerator {
         ->notice('generateCodeFiles() Modules: ' . $rsync_modules);
     }
     exec($rsync_modules);
+
+    // rSync profiles.
+    $rsync_profiles = $rsync_code . ' ' . DRUPAL_ROOT . '/profiles ' . $generator_directory;
+    if ($this->verboseLogging()) {
+      \Drupal::logger('static_generator')
+        ->notice('generateCodeFiles() profiles: ' . $rsync_profiles);
+    }
+    exec($rsync_profiles);
 
     // rSync themes.
     $rsync_themes = $rsync_code . ' ' . DRUPAL_ROOT . '/themes ' . $generator_directory;
