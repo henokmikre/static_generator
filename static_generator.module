@@ -98,13 +98,16 @@ function process_workflow(EntityInterface $entity, $operation) {
     }
 
     // @todo: Expose this for other modules.
-    // If moderation state is published, queue for generation.
-    if ($entity->get('moderation_state')->value == 'published') {
-      \Drupal::service('static_generator')->queuePage($path);
-    }
-    // If it is archived, delete static page.
-    elseif ($entity->get('moderation_state')->value == 'archived') {
-      \Drupal::service('static_generator')->deletePage($path);
+    if ($entity->hasField('moderation_state')) {
+      // If moderation state is published, queue for generation.
+      if ($entity->get('moderation_state')->value == 'published') {
+        \Drupal::service('static_generator')->queuePage($path);
+      }
+      // If it is archived, delete static page.
+      elseif ($entity->get('moderation_state')->value == 'archived') {
+        $path_alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/' . $entity->id());
+        \Drupal::service('static_generator')->queuePage($path_alias, 'delete');
+      }
     }
   }
 
@@ -135,11 +138,12 @@ function process_workflow(EntityInterface $entity, $operation) {
     if (substr($path, 0, 1) !== '/') {
       $path = '/' . $path;
     }
-    if ($entity->get('moderation_state')->value == 'published') {
-      \Drupal::service('static_generator')->queuePage($path);
-    }
-    elseif ($entity->get('moderation_state')->value == 'archived') {
-      \Drupal::service('static_generator')->deletePage($path);
+    if ($entity->hasField('moderation_state')) {
+      if ($entity->get('moderation_state')->value == 'published') {
+        \Drupal::service('static_generator')->queuePage($path);
+      } elseif ($entity->get('moderation_state')->value == 'archived') {
+        \Drupal::service('static_generator')->queuePage($path, 'delete');
+      }
     }
   }
 
@@ -153,40 +157,24 @@ function process_workflow(EntityInterface $entity, $operation) {
     \Drupal::service('static_generator')
       ->generatePagesMenuChildrenSiblings($entity, $path);
   }
-
-  // Block.
-  //  if ($entity->getEntityTypeId() === 'block') {
-  //    // @todo not sure if we need to handle blocks in real time. How would we know which page to generate?
-  //    $block_id = $entity->toUrl()->toString();
-  //    if ($entity->get('moderation_state')->value == 'published') {
-  //      if (in_array($block_id, \Drupal\static_generator\StaticGenerator::BLOCK_IDS_ESI)) {
-  //        \Drupal::service('static_generator')->generateBlock($block_id, $generate_blocks);
-  //      }
-  //    }
-  //    elseif ($entity->get('moderation_state')->value == 'archived') {
-  //      // @todo Not sure if block can be archived.
-  //      \Drupal::service('static_generator')->deleteBlock($block_id);
-  //    }
-  //  }
-
 }
 
 /**
- * Implements hook_entity_delete().
+ * Implements hook_entity_predelete()
  *
- * @param \Drupal\Core\Entity\EntityInterface $entity
- *
- * @throws \Drupal\Core\Entity\EntityMalformedException
+ * @param Drupal\Core\Entity\EntityInterface $entity
+ * @return void
  */
-function static_generator_entity_delete(EntityInterface $entity) {
-  // Content entities only.
-  if (!($entity->getEntityTypeId() === 'node')) {
+function static_generator_entity_predelete($entity) {
+  // Only operate on nodes.
+  if ($entity->getEntityTypeId() !== 'node') {
     return;
   }
-  else {
-    $path = $entity->toUrl()->toString();
-    \Drupal::service('static_generator')->deletePage($path);
-  }
+
+  // We queue the deletion here b/c the alias is not available in hook_entity_delete().
+  $nid = $entity->id();
+  $alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/' . $nid);
+  \Drupal::service('static_generator')->queuePage($alias, 'delete');
 }
 
 /**
@@ -221,4 +209,3 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
     }
   }
 }
-
