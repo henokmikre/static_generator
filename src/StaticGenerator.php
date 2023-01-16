@@ -687,6 +687,32 @@ class StaticGenerator {
       return null;
     }
 
+    // Write JSON files as-is.
+    // TODO: This assumes the path always ends with .json (no query parameters).
+    // If query string exists, use generateJsonPath() method.
+
+    if ($this->endsWith($path_alias, '.json')) {
+      // Get the markup.
+      $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher, TRUE);
+
+      $web_directory = $this->directoryFromPath($path_alias);
+      $file_name = $this->filenameFromPath($path_alias);
+
+      // Write the page.
+      $directory = $this->generatorDirectory() . $web_directory;
+
+      if (!$esi_only && \Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY)) {
+        \Drupal::service('file_system')->saveData($markup, $directory . '/' . $file_name, FileSystemInterface::EXISTS_REPLACE);
+
+        if ($log) {
+          \Drupal::logger('static_generator')
+            ->notice('Generate Page: ' . $directory . '/' . $file_name);
+        }
+      }
+
+      return;
+    }
+
     // Get node object if path is a node.
     $path_canonical = $this->pathAliasManager->getPathByAlias($path);
     $nid = substr($path_canonical, strpos($path_canonical, '/', 1) + 1);
@@ -752,6 +778,40 @@ class StaticGenerator {
       }
     }
 
+  }
+
+  /**
+   * Generate a JSON path.
+   *
+   * @return int
+   *   Execution time in seconds.
+   *
+   * @throws \Exception
+   * @throws \GuzzleHttp\Exception\GuzzleException
+   */
+  public function generateJsonPath($path) {
+    // Define defaults.
+    $account_switcher = TRUE;
+    $theme_switcher = TRUE;
+    $raw_markup = TRUE;
+
+    // Get the markup.
+    $markup = $this->markupForPage($path, $account_switcher, $theme_switcher, $raw_markup);
+
+    $web_directory = $this->directoryFromPath($path);
+    $file_name = substr(strrchr($path, '/'), 1) . '.json';
+
+    // Get the directory structure.
+    $directory = $this->generatorDirectory() . $web_directory;
+
+    // Write the file.
+    if (\Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY)) {
+      \Drupal::service('file_system')
+        ->saveData($markup, $directory . '/' . $file_name, FileSystemInterface::EXISTS_REPLACE);
+
+      \Drupal::logger('static_generator')
+        ->notice('Generate Page: ' . $directory . '/' . $file_name);
+    }
   }
 
   /**
@@ -1488,6 +1548,9 @@ class StaticGenerator {
       ->getAliasByPath($front);
     if ($path_alias == $front_alias) {
       $file_name = 'index.html';
+    } elseif ($this->endsWith($path_alias, '.json')) {
+      $file_name = strrchr($path_alias, '/');
+      $file_name = substr($file_name, 1);
     } else {
       $file_name = strrchr($path_alias, '/') . '.html';
       $file_name = substr($file_name, 1);
