@@ -2117,7 +2117,7 @@ class StaticGenerator {
    *
    * @return void ;
    */
-  public function queuePage($path, $path_generate = '') {
+  public function queuePage($path, $action = 'create', $path_generate = '') {
     // Get the queue implementation for SG
     $queue_factory = \Drupal::service('queue');
     $queue = $queue_factory->get('page_generator');
@@ -2125,6 +2125,7 @@ class StaticGenerator {
     // Create new queue item
     $item = new \stdClass();
     $item->path = $path;
+    $item->action = $action;
     $item->path_generate = $path_generate;
     $queue->createItem($item);
   }

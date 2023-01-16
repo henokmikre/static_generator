@@ -67,6 +67,7 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
 
     $path = '';
     $path_generate = '';
+    $action = 'create'; // default behavior is to create a page.
     $empty_array = []; // For simplicity.
 
     try {
@@ -77,11 +78,18 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
           $path_generate = $item->data->path_generate;
         }
 
-        if (empty($path_generate)) {
-          $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+        if (isset($item->data->action)) {
+          $action = $item->data->action;
         }
-        else {
-          $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+
+        if ($action == 'delete') {
+          $this->staticGenerator->deletePage($path);
+        } else {
+          if (empty($path_generate)) {
+            $this->staticGenerator->generatePage($path, '', false, false, true, true, $empty_array, $empty_array, $empty_array, true);
+          } else {
+            $this->staticGenerator->generatePage($path, $path_generate, false, false, true, true, $empty_array, $empty_array, $empty_array, true);
+          }
         }
       } elseif (isset($item->path)) {
         $path = $item->path;
@@ -90,11 +98,18 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
           $path_generate = $item->path_generate;
         }
 
-        if (empty($path_generate)) {
-          $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+        if (isset($item->action)) {
+          $action = $item->action;
         }
-        else {
-          $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+
+        if ($action == 'delete') {
+          $this->staticGenerator->deletePage($path);
+        } else {
+          if (empty($path_generate)) {
+            $this->staticGenerator->generatePage($path, '', false, false, true, true, $empty_array, $empty_array, $empty_array, true);
+          } else {
+            $this->staticGenerator->generatePage($path, $path_generate, false, false, true, true, $empty_array, $empty_array, $empty_array, true);
+          }
         }
       }
     } catch (Exception $e) {
