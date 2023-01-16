@@ -1071,57 +1071,20 @@ class StaticGenerator {
 
     // Unpublished files to exclude.
     $exclude_media_ids = $this->excludeMediaIdsUnpublished();
-    if (!isset($exclude_media_ids) || empty($exclude_media_ids)) {
-      $exclude_media_ids = [];
-    }
 
-    $exclude_files = '';
-    foreach ($exclude_media_ids as $exclude_media_id) {
-
-      // Get the media entity.
-      $media = \Drupal::entityTypeManager()
-        ->getStorage('media')
-        ->load($exclude_media_id);
-
-      // Get the file id.
-      $fid = 0;
-      if ($media->hasField('field_media_image')) {
-        $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
-      } elseif ($media->hasField('field_media_file')) {
-        $value = $media->get('field_media_file')->getValue();
-        if (!is_null($value) && is_array($value) && count($value) > 0 && array_key_exists('target_id', $value[0])) {
-          $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
-        }
-      } elseif ($media->hasField('field_media_audio_file')) {
-        $fid = $media->get('field_media_audio_file')
-          ->getValue()[0]['target_id'];
-      }
-      if ($fid > 0) {
-        $file = File::load($fid);
-        if (!is_null($file)) {
-          $url = Url::fromUri($file->getFileUri());
-          $uri = $url->getUri();
-          $exclude_file = substr($uri, 9);
-          $exclude_files .= $exclude_file . "\r\n";
-        }
-      }
-    }
-
-    // Files to exclude specified in settings.
-    $rsync_public_exclude = $this->configFactory->get('static_generator.settings')
-      ->get('rsync_public_exclude');
-    if (!empty($rsync_public_exclude)) {
-      $rsync_public_exclude_array = explode(',', $rsync_public_exclude);
-      foreach ($rsync_public_exclude_array as $rsync_public_exclude_file) {
-        $exclude_files .= $rsync_public_exclude_file . "\r\n";
-      }
-    }
-
-    //$tmp_files_directory = $this->fileSystem->realpath('tmp://');
     $public_files_directory = $this->fileSystem->realpath('public://');
 
-    \Drupal::service('file_system')->saveData($exclude_files, $public_files_directory . '/rsync_public_exclude.tmp', FileSystemInterface::EXISTS_REPLACE);
+    // Exclude list.
+    $exclude_media_entities = $this->loadMediaEntities($exclude_media_ids);
+    $this->createExcludeFile($exclude_media_entities, $public_files_directory);
 
+    // Get the Draft media.
+    $exclude_media_rids = $this->excludeMediaIdsDraft();
+    $exclude_media_entities = $this->loadMediaRevisionEntities($exclude_media_rids);
+    $this->createExcludeFile($exclude_media_entities, $public_files_directory, 'rsync_public_draft_exclude.tmp', $draft = TRUE);
+
+
+    // Draft List.
     // Create files directory if it does not exist.
     $generator_directory = $this->generatorDirectory(TRUE);
     exec('mkdir -p ' . $generator_directory . '/sites/default/files');
@@ -1129,7 +1092,7 @@ class StaticGenerator {
     // rSync public.
     $rsync_public = $this->configFactory->get('static_generator.settings')
       ->get('rsync_public');
-    $rsync_public_command = $rsync_public . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
+    $rsync_public_command = $rsync_public . ' --filter="merge ' . $public_files_directory . '/rsync_public_draft_exclude.tmp" ' . ' --exclude-from "' . $public_files_directory . '/rsync_public_exclude.tmp" ' . $public_files_directory . '/ ' . $generator_directory . '/sites/default/files';
 
     exec($rsync_public_command);
 
@@ -1146,8 +1109,8 @@ class StaticGenerator {
     exec($rsync_js);
 
     // Create symlinks to static files directory from css and js directories.
-    symlink($css_directory, $generator_directory . '/sites/default/files/css');
-    symlink($js_directory, $generator_directory . '/sites/default/files/js');
+    //symlink($css_directory, $generator_directory . '/sites/default/files/css');
+    //symlink($js_directory, $generator_directory . '/sites/default/files/js');
 
     // Elapsed time.
     $end_time = time();
@@ -1158,6 +1121,165 @@ class StaticGenerator {
           ' seconds. (' . $rsync_public . ')');
     }
     return $elapsed_time;
+  }
+
+  /**
+   * Get the exclude files.
+   *
+   * @param array $exclude_media_entities
+   *   Media entities in array.
+   * @param string $public_files_directory
+   *   Public directory  path.
+   * @param string $exclude_file_tmp
+   *   Exclude or draft file name.
+   * @param bool $draft
+   *   Is draft or not.
+   */
+  protected function createExcludeFile(array $exclude_media_entities, $public_files_directory, $exclude_file_tmp = 'rsync_public_exclude.tmp', $draft = FALSE) {
+
+    if (empty($exclude_media_entities)) {
+      $exclude_media_entities = [];
+    }
+
+    $exclude_files = '';
+    $field = '';
+    foreach ($exclude_media_entities as $media) {
+      // Get the file id.
+      $fid = 0;
+      if ($media->hasField('field_media_image')) {
+        $field = 'field_media_image';
+        $fid = $media->get('field_media_image')->getValue()[0]['target_id'];
+      }
+      elseif ($media->hasField('field_media_file')) {
+        $value = $media->get('field_media_file')->getValue();
+        $field = 'field_media_file';
+        if (!is_null($value) && is_array($value) && count($value) > 0 && array_key_exists('target_id', $value[0])) {
+          $fid = $media->get('field_media_file')->getValue()[0]['target_id'];
+        }
+      }
+      elseif ($media->hasField('field_media_audio_file')) {
+        $field = 'field_media_audio_file';
+        $value = $media->get('field_media_audio_file')->getValue();
+        if (!empty($value) && is_array($value)) {
+          $fid = $media->get('field_media_audio_file')->getValue()[0]['target_id'];
+        }
+      }
+      if ($fid > 0) {
+          if ($draft) {
+            $uri = \Drupal::database()->query('SELECT uri FROM file_managed WHERE fid=:fid', [':fid' => $fid])->fetchField();
+            if (!empty($uri)) {
+              $exclude_file = substr($uri, 9);
+              $exclude_files .= '- ' . $exclude_file . "\r\n";
+              $exclude_files .= 'P ' . $exclude_file . "\r\n";
+            }
+          }
+          else {
+            $this->updateExcludeFilesForUnpublishedMedia($media, $exclude_files, $field, $fid);
+          }
+
+      }
+    }
+    // Files to exclude specified in settings.
+    if (!$draft) {
+      $rsync_public_exclude = $this->configFactory->get('static_generator.settings')
+        ->get('rsync_public_exclude');
+      if (!empty($rsync_public_exclude)) {
+        $rsync_public_exclude_array = explode(',', $rsync_public_exclude);
+        foreach ($rsync_public_exclude_array as $rsync_public_exclude_file) {
+          $exclude_files .= $rsync_public_exclude_file . "\r\n";
+        }
+      }
+    }
+
+    \Drupal::service('file_system')
+      ->saveData($exclude_files, $public_files_directory . '/' . $exclude_file_tmp, FileSystemInterface::EXISTS_REPLACE);
+  }
+
+  /**
+   * Update the exclude files.
+   *
+   * @param $media
+   */
+  protected function updateExcludeFilesForUnpublishedMedia($media, &$exclude_files, $field, $fid = 0) {
+    $fid_cond = 0;
+    if ($media->isPublished()) {
+      $fid_cond = $fid;
+    }
+    $files_path = \Drupal::database()
+      ->query('SELECT fm.fid AS fid, fm.uri AS uri FROM media_revision__' . $field . ' fmf
+ LEFT JOIN file_managed fm on fm.fid=fmf.' . $field . '_target_id
+ LEFT JOIN file_usage fu ON fu.fid=fm.fid WHERE fu.id=:media_id AND fu.type=:entity_type AND fm.fid!=:fid', [
+        ':media_id' => $media->id(),
+        ':entity_type' => 'media',
+        ':fid' => $fid_cond,
+      ])
+      ->fetchAllKeyed();
+    if (!empty($files_path)) {
+
+      foreach (array_unique($files_path) as $uri) {
+        $exclude_file = substr($uri, 9);
+        $exclude_files .= $exclude_file . "\r\n";
+      }
+    }
+  }
+
+  /**
+   * Load the media revisions.
+   *
+   * @param array $media_revision_ids
+   *   Media revision ids.
+   *
+   * @return mixed
+   *   Media revisions in the array.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function loadMediaRevisionEntities(array $media_revision_ids) {
+    return \Drupal::entityTypeManager()
+      ->getStorage('media')
+      ->loadMultipleRevisions($media_revision_ids);
+  }
+
+  /**
+   * Load the media entities.
+   *
+   * @param array $media_ids
+   *   Media ids array.
+   *
+   * @return mixed
+   *   Load the media by using media ids.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function loadMediaEntities(array $media_ids) {
+    return \Drupal::entityTypeManager()
+      ->getStorage('media')
+      ->loadMultipleRevisions(array_keys($media_ids));;
+  }
+
+  /**
+   * Load the Media draft revisions.
+   *
+   * @return array
+   *   Revision array.
+   */
+  protected function excludeMediaIdsDraft() {
+    $q = \Drupal::entityQuery('media');
+    $or_cond = $q
+      ->orConditionGroup()
+      ->condition('moderation_state', 'draft')
+      ->condition('moderation_state', 'scheduled_publish');
+    $q->latestRevision();
+    $q->condition($or_cond);
+    $draft_ids = $q->execute();
+
+    if (!empty($draft_ids)) {
+      return array_flip($draft_ids);
+    }
+
+    return [];
   }
 
   /**
@@ -1441,7 +1563,7 @@ class StaticGenerator {
         }
 
         if (strpos($exception, '404') !== FALSE) {
-          \Drupal::logger('static_generator_404')->notice($path);
+          \Drupal::logger('static_generator_404')->critical($path);
           return '404';
         } else {
           watchdog_exception('static_generator', $exception);
