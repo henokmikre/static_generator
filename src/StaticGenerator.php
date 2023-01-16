@@ -490,33 +490,26 @@ class StaticGenerator {
 
       $count_gen = 0;
 
-      for ($i = $start; $i <= $count; $i = $i + $length) {
-        $query = \Drupal::entityQuery('node');
-        $query->condition('status', 1);
-        $query->condition('type', $bundle);
-        $query->range($i, $length);
-        $query->sort('nid', 'DESC');
-        $entity_ids = $query->execute();
+      $query = \Drupal::entityQuery('node');
+      $query->condition('status', 1);
+      $query->condition('type', $bundle);
+      $query->range($start, $length);
+      $query->sort('nid', 'DESC');
+      $entity_ids = $query->execute();
 
-        // Generate pages for bundle.
-        foreach ($entity_ids as $entity_id) {
-          $path_alias = \Drupal::service('path_alias.manager')
-            ->getAliasByPath('/node/' . $entity_id);
-          $error_time = $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
-          if (!is_null($error_time)) {
-            $error_times[] = $error_time;
-            if ($this->errorThresholdExceeded($error_times)) {
-              watchdog_exception('static_generator_flood', new Exception('Static Generator - error log flooding.'));
-              break;
-            }
+      // Generate pages for bundle.
+      foreach ($entity_ids as $entity_id) {
+        $path_alias = \Drupal::service('path_alias.manager')
+          ->getAliasByPath('/node/' . $entity_id);
+        $error_time = $this->generatePage($path_alias, '', $esi_only, FALSE, FALSE, FALSE, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+        if (!is_null($error_time)) {
+          $error_times[] = $error_time;
+          if ($this->errorThresholdExceeded($error_times)) {
+            watchdog_exception('static_generator_flood', new Exception('Static Generator - error log flooding.'));
+            break;
           }
-          $count_gen++;
         }
-
-        // Exit if single run for specified content type.
-        if (!empty($type)) {
-          break;
-        }
+        $count_gen++;
       }
 
       // Elapsed time.
