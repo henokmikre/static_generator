@@ -62,16 +62,43 @@ class PageGenerator extends QueueWorkerBase implements ContainerFactoryPluginInt
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function processItem($item) {
-    $path = $item->data->path;
-    if (isset($item->data->path_generate)) {
-      $path_generate = $item->data->path_generate;
-    }
-    $empty_array = [];
-    if (empty($path_generate)) {
-      $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
-    }
-    else {
-      $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+    // If called by StaticGenerator::processQueue, queue object is sent, which has [data], [created], [item_id].
+    // If called by cron, only [path] and [path_generate] are sent.
+
+    $path = '';
+    $path_generate = '';
+    $empty_array = []; // For simplicity.
+
+    try {
+      if (isset($item->data)) {
+        $path = $item->data->path;
+
+        if (isset($item->data->path_generate)) {
+          $path_generate = $item->data->path_generate;
+        }
+
+        if (empty($path_generate)) {
+          $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+        }
+        else {
+          $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+        }
+      } elseif (isset($item->path)) {
+        $path = $item->path;
+
+        if (isset($item->path_generate)) {
+          $path_generate = $item->path_generate;
+        }
+
+        if (empty($path_generate)) {
+          $this->staticGenerator->generatePage($path, '', FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+        }
+        else {
+          $this->staticGenerator->generatePage($path, $path_generate, FALSE, FALSE, TRUE, TRUE, $empty_array, $empty_array, $empty_array, TRUE);
+        }
+      }
+    } catch (Exception $e) {
+      \Drupal::logger('static_generator')->error('%msg', array('%msg' => $e->getMessage()));
     }
   }
 }
