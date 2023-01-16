@@ -47,6 +47,9 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
 
+    // Set status.
+    \Drupal::state()->set('static_generator.status', $form_state->getValue('status'));
+
     // Render method.
     $render_method = $form_state->getValue('render_method');
     $this->config('static_generator.settings')
@@ -173,8 +176,19 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       ->set('rsync_public_exclude', $rsync_public_exclude)
       ->save();
 
-    $this->messenger()->addStatus($this->t('Your settings have been saved.'));
+    // Prep rsync destination hosts.
+    $rsync_destination = explode(PHP_EOL, $form_state->getValue('rsync_destination'));
+    $rsync_destination = array_map('trim', $rsync_destination);
+    $rsync_destination = array_filter($rsync_destination, function ($value) {
+      return !empty($value);
+    });
 
+    $rsync_destination = $form_state->getValue('rsync_destination');
+    $this->config('static_generator.settings')
+      ->set('rsync_destination', $rsync_destination)
+      ->save();
+
+    $this->messenger()->addStatus($this->t('Your settings have been saved.'));
   }
 
   /**
@@ -194,6 +208,20 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
 
     $entityTypeManager = \Drupal::entityTypeManager();
     $entityTypeBundleInfo = \Drupal::service('entity_type.bundle.info');
+
+    // Rsync status.
+    $form['status_container'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Status'),
+      '#open' => TRUE,
+    ];
+
+    $form['status_container']['status'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable static generation'),
+      '#default_value' => \Drupal::state()->get('static_generator.status'),
+      '#description' => $this->t('Check this box to enable static generation. This can be used to pause static generation and/or rsync process during deployment.'),
+    ];
 
     // Render method.
     $form['render_method'] = [
@@ -344,6 +372,13 @@ class StaticGeneratorSettingsForm extends ConfigFormBase {
       '#title' => $this->t('rSync code'),
       '#default_value' => $config->get('rsync_code'),
       '#description' => $this->t('rSync command for code files.'),
+    ];
+    $form['rsync_destination'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('rSync destination hosts'),
+      '#maxlength' => NULL,
+      '#default_value' => implode(PHP_EOL, (array) $config->get('rsync_destination')),
+      '#description' => $this->t('Enter a line-separated list of hostnames.'),
     ];
 
     $header = [
