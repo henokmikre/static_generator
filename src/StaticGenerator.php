@@ -26,7 +26,11 @@ use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Drupal\Core\Extension\ModuleHandler;
+use Drupal\static_generator\Event\ModifyMarkupEvent;
+use Drupal\static_generator\Event\ModifyEsiMarkupEvent;
+use Drupal\static_generator\Event\StaticGeneratorEvents;
 use Drupal\node\NodeInterface;
 use Drupal\path_alias\AliasManagerInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
@@ -137,6 +141,13 @@ class StaticGenerator {
   protected $menuActiveTrail;
 
   /**
+   * The event dispatcher.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  protected $eventDispatcher;
+
+  /**
    * The module_handler service.
    *
    * @var \Drupal\Core\Extension\ModuleHandler
@@ -182,10 +193,12 @@ class StaticGenerator {
    *   The menu active trail cache collector.
    * @param \Drupal\Core\Extension\ModuleHandler $moduleHandler
    *   The module Handler service.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $event_dispatcher
+   *   The event dispatcher.
    * @param \Drupal\path_alias\AliasManagerInterface $pathManager
    *   The path_alias manager.
    */
-  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager, PathMatcherInterface $path_matcher, MenuActiveTrailInterface $menu_active_trail, ModuleHandler $moduleHandler, AliasManagerInterface $pathAliasManager) {
+  public function __construct(RendererInterface $renderer, RouteMatchInterface $route_match, ClassResolverInterface $class_resolver, RequestStack $request_stack, HttpKernelInterface $http_kernel, ThemeManagerInterface $theme_manager, ThemeInitializationInterface $theme_initialization, ConfigFactoryInterface $config_factory, FileSystemInterface $file_system, EntityTypeManagerInterface $entity_type_manager, PathMatcherInterface $path_matcher, MenuActiveTrailInterface $menu_active_trail, ModuleHandler $moduleHandler, EventDispatcherInterface $event_dispatcher, AliasManagerInterface $pathAliasManager) {
     $this->renderer = $renderer;
     $this->routeMatch = $route_match;
     $this->classResolver = $class_resolver;
@@ -200,6 +213,7 @@ class StaticGenerator {
     $this->pathMatcher = $path_matcher;
     $this->menuActiveTrail = $menu_active_trail;
     $this->moduleHandler = $moduleHandler;
+    $this->eventDispatcher = $event_dispatcher;
     $this->pathAliasManager = $pathAliasManager;
   }
 
@@ -689,7 +703,7 @@ class StaticGenerator {
     }
 
     // Get the markup.
-    $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher);
+    $markup = $this->markupForPage($path_alias, $account_switcher, $theme_switcher, FALSE);
 
     // Return if error.
     if ($markup == 'error') {
@@ -701,6 +715,13 @@ class StaticGenerator {
 
     // Process ESIs.
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
+
+    // Allow modules to modify the markup (for nodes only).
+    if ($node instanceof NodeInterface) {
+      $event = new ModifyMarkupEvent($markup, $node);
+      $this->eventDispatcher->dispatch(StaticGeneratorEvents::MODIFY_MARKUP, $event);
+      $markup = $event->getMarkup();
+    }
 
     // Get file name.
     if (empty($path_generate)) {
@@ -1525,7 +1546,7 @@ class StaticGenerator {
    * @throws \Drupal\Core\Theme\MissingThemeDependencyException
    * @throws \GuzzleHttp\Exception\GuzzleException
    */
-  public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
+  public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE, $raw_markup = FALSE) {
     global $base_url;
 
     $configuration = \Drupal::service('config.factory')->get('static_generator.settings');
@@ -1625,6 +1646,11 @@ class StaticGenerator {
     // Switch back from anonymous user.
     if ($account_switcher) {
       \Drupal::service('account_switcher')->switchBack();
+    }
+
+    // If the markup does not need any transformation, return raw.
+    if ($raw_markup) {
+      return $markup;
     }
 
     // @todo need to implement this as a plugin, similar to a migrate process plugin
@@ -1844,7 +1870,7 @@ class StaticGenerator {
    * @return string
    *   Markup with ESI's injected.
    */
-  public function injectESIs($markup, $path = '', &$blocks_processed = [], &$sg_esi_processed = [], $sg_esi_existing) {
+  public function injectESIs($markup, $path, &$blocks_processed, &$sg_esi_processed, $sg_esi_existing) {
 
     // Find all of the blocks in the markup.
     // @todo Currently SG does ESI for every block, but specific blocks may
@@ -2409,5 +2435,4 @@ class StaticGenerator {
     $markup = $this->renderer->render($form);
     return $markup;
   }
-
 }
