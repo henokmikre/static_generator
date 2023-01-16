@@ -2036,6 +2036,12 @@ class StaticGenerator {
 
     // Generate esi fragment file.
     $markup = $element->ownerDocument->saveHTML($element);
+
+    // Allow modules to modify ESI markup.
+    $esi_event = new ModifyEsiMarkupEvent($markup);
+    $this->eventDispatcher->dispatch(StaticGeneratorEvents::MODIFY_ESI_MARKUP, $esi_event);
+    $markup = $esi_event->getMarkup();
+
     \Drupal::service('file_system')->saveData($markup, $directory . '/' . $esi_filename, FileSystemInterface::EXISTS_REPLACE);
   }
 
