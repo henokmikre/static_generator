@@ -633,6 +633,7 @@ class StaticGenerator {
       return null;
     }
 
+    // Ignore if path is xml.
     if ($this->endsWith($path_alias, '.xml')) {
       return null;
     }
@@ -662,7 +663,7 @@ class StaticGenerator {
       return null;
     }
 
-    // Prcoess ESIs.
+    // Process ESIs.
     $markup = $this->injectESIs($markup, $path, $blocks_processed, $sg_esi_processed, $sg_esi_existing);
 
     // Get file name.
@@ -684,7 +685,7 @@ class StaticGenerator {
 
     // Write the page.
     $directory = $this->generatorDirectory() . $web_directory;
-    //if ($path_alias == '/problem-page') { // This is good way to quickly debug bad page in batch.
+
     if (!$esi_only && \Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY)) {
       \Drupal::service('file_system')->saveData($markup, $directory . '/' . $file_name, FileSystemInterface::EXISTS_REPLACE);
 
@@ -1359,6 +1360,8 @@ class StaticGenerator {
   public function markupForPage($path, $account_switcher = TRUE, $theme_switcher = TRUE) {
     global $base_url;
 
+    $configuration = \Drupal::service('config.factory')->get('static_generator.settings');
+
     // Switch to anonymous user.
     if ($account_switcher) {
       // Generate as Anonymous user.
@@ -1574,11 +1577,8 @@ class StaticGenerator {
     $markup = $dom->saveHTML();
 
     // Fix canonical link so it has static site url.
-    $configuration = \Drupal::service('config.factory')->get('static_generator.settings');
-
-    // If we are using core, the source URL will be http://default.
     if ($render_method == 'Core') {
-      // $markup = str_replace('http://default', $static_url, $markup);
+      // If we are using core, the source URL will be http://default.
       $markup = str_replace($base_url, '', $markup);
     } else {
       $static_url = $configuration->get('static_url');
@@ -1656,9 +1656,7 @@ class StaticGenerator {
       $markup = str_replace($node_path, substr($path_alias, 1), $markup);
     }
 
-    // Return the markup.
     return $markup;
-
   }
 
   /**
@@ -1838,7 +1836,6 @@ class StaticGenerator {
    * The target directory (/esi/<directory>)
    */
   public function generateEsiFileByElement($esi_filename, $element, $directory) {
-
     // Make sure directory exists.
     $directory = $this->generatorDirectory() . '/esi/' . $directory;
     \Drupal::service('file_system')->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY);
@@ -2069,7 +2066,7 @@ class StaticGenerator {
       // Delete sg esi include files and the sg-esi directory.
       $esi_files = \Drupal::service('file_system')->scanDirectory($dir, '/.*/', ['recurse' => true]);
       foreach ($esi_files as $block_esi_file) {
-          \Drupal::service('file_system')->deleteRecursive($block_esi_file->uri, $callback = null);
+        \Drupal::service('file_system')->deleteRecursive($block_esi_file->uri, $callback = null);
       }
       \Drupal::service('file_system')->deleteRecursive($dir, $callback = null);
     }
@@ -2152,7 +2149,7 @@ class StaticGenerator {
    */
   public function excludeMediaIdsUnpublished() {
     $query = \Drupal::entityQuery('media');
-    $query->condition('status', 0);
+    $query->latestRevision();
     $exclude_media_ids = $query->execute();
     return $exclude_media_ids;
   }
