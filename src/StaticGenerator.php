@@ -310,6 +310,7 @@ class StaticGenerator {
       $start_time = time();
 
       $query = \Drupal::entityQuery('media');
+      $query->accessCheck(TRUE);
       $query->condition('status', 1);
       $query->condition('bundle', $bundle);
       $count = $query->count()->execute();
@@ -318,6 +319,7 @@ class StaticGenerator {
 
       for ($i = $start; $i <= $count; $i = $i + $length) {
         $query = \Drupal::entityQuery('media');
+        $query->accessCheck(TRUE);
         $query->condition('status', 1);
         $query->condition('bundle', $bundle);
         $query->range($i, $length);
@@ -413,6 +415,7 @@ class StaticGenerator {
       $start_time = time();
 
       $query = \Drupal::entityQuery('taxonomy_term');
+      $query->accessCheck(TRUE);
       $query->condition('status', 1);
       $query->condition('vid', $vid);
       $count = $query->count()->execute();
@@ -432,6 +435,7 @@ class StaticGenerator {
         // @TODO Can we reset container?
 
         $query = \Drupal::entityQuery('taxonomy_term');
+        $query->accessCheck(TRUE);
         $query->condition('status', 1);
         $query->condition('vid', $vid);
         $query->sort('weight');
@@ -534,6 +538,7 @@ class StaticGenerator {
       $start_time = time();
 
       $query = \Drupal::entityQuery('node');
+      $query->accessCheck(TRUE);
       $query->condition('status', 1);
       $query->condition('type', $bundle);
       $count = $query->count()->execute();
@@ -541,6 +546,7 @@ class StaticGenerator {
       $count_gen = 0;
 
       $query = \Drupal::entityQuery('node');
+      $query->accessCheck(TRUE);
       $query->condition('status', 1);
       $query->condition('type', $bundle);
       $query->range($start, $length);
@@ -745,7 +751,7 @@ class StaticGenerator {
     // Allow modules to modify the markup (for nodes only).
     if ($node instanceof NodeInterface) {
       $event = new ModifyMarkupEvent($markup, $node);
-      $this->eventDispatcher->dispatch(StaticGeneratorEvents::MODIFY_MARKUP, $event);
+      $this->eventDispatcher->dispatch(new ModifyMarkupEvent($markup, $node), StaticGeneratorEvents::MODIFY_MARKUP);
       $markup = $event->getMarkup();
     }
 
@@ -1283,7 +1289,9 @@ class StaticGenerator {
       }
       if ($fid > 0) {
           if ($draft) {
-            $uri = \Drupal::database()->query('SELECT uri FROM file_managed WHERE fid=:fid', [':fid' => $fid])->fetchField();
+            $uri = \Drupal::database()
+              ->query('SELECT uri FROM file_managed WHERE fid=:fid', [':fid' => $fid])
+              ->fetchField();
             if (!empty($uri)) {
               $exclude_file = substr($uri, 9);
               $exclude_files .= '- ' . $exclude_file . "\r\n";
@@ -1389,6 +1397,7 @@ class StaticGenerator {
       ->condition('moderation_state', 'draft')
       ->condition('moderation_state', 'scheduled_publish');
     $q->latestRevision();
+    $q->accessCheck(TRUE);
     $q->condition($or_cond);
     $draft_ids = $q->execute();
 
@@ -1662,7 +1671,7 @@ class StaticGenerator {
         return '';
       }
     } else {
-      // Guzzle request using Drupal core (much slower than internal request).
+      // Guzzle request.
       $client = \Drupal::httpClient(['SERVER_NAME' => $static_url]);
       try {
         $guzzle_host = $this->configFactory->get('static_generator.settings')
@@ -2413,6 +2422,7 @@ class StaticGenerator {
    */
   public function excludeMediaIdsUnpublished() {
     $query = \Drupal::entityQuery('media');
+    $query->accessCheck(TRUE);
     $query->latestRevision();
     $exclude_media_ids = $query->execute();
     return $exclude_media_ids;

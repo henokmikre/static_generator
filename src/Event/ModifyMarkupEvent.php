@@ -2,7 +2,7 @@
 
 namespace Drupal\static_generator\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Drupal\Component\EventDispatcher\Event;
 
 /**
  * Allows modules to modify the markup.

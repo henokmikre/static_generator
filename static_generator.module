@@ -5,10 +5,10 @@
  * Generates a static version of a Drupal site.
  */
 
-use Drupal\user\Entity\User;
-use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\node\NodeInterface;
+use Drupal\user\Entity\User;
 
 /**
  * Implements hook_help().
@@ -40,7 +40,7 @@ function static_generator_help($route_name, RouteMatchInterface $route_match) {
  * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function static_generator_entity_insert(EntityInterface $entity) {
-  process_workflow($entity, 'insert');
+  _static_generator_process_entity($entity, 'insert');
 }
 
 /**
@@ -51,7 +51,7 @@ function static_generator_entity_insert(EntityInterface $entity) {
  * @throws \Drupal\Core\Entity\EntityMalformedException
  */
 function static_generator_entity_update(EntityInterface $entity) {
-  process_workflow($entity, 'update');
+  _static_generator_process_entity($entity, 'update');
 }
 
 /**
@@ -63,7 +63,7 @@ function static_generator_entity_update(EntityInterface $entity) {
  *
  * @throws \Drupal\Core\Entity\EntityMalformedException
  */
-function process_workflow(EntityInterface $entity, $operation) {
+function _static_generator_process_entity(EntityInterface $entity, $operation) {
   if ($entity->getEntityTypeId() === 'node') {
     // Get list of content types allowed to be generated.
     $bundles_string = \Drupal::service('config.factory')
@@ -188,7 +188,7 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
   $has_generate_permission = User::load(\Drupal::currentUser()
     ->id())->hasPermission('generate static pages');
 
-  if ($has_generate_permission && substr($form_id,0,5) == 'node_' && \Drupal::service('static_generator')->endsWith($form_id,'_edit_form')) {
+  if ($has_generate_permission && substr($form_id, 0, 5) == 'node_' && \Drupal::service('static_generator')->endsWith($form_id, '_edit_form')) {
     $node = $form_state->getFormObject()->getEntity();
     if ($node instanceof NodeInterface) {
       if ($node->isPublished()) {
@@ -199,9 +199,9 @@ function static_generator_form_alter(&$form, $form_state, $form_id) {
   }
 
   if ($has_generate_permission && in_array($form_id, [
-      'media_image_edit_form',
-      'media_remote_video_edit_form',
-    ])) {
+    'media_image_edit_form',
+    'media_remote_video_edit_form',
+  ])) {
     $media = $form_state->getFormObject()->getEntity();
     if ($media->isPublished()) {
       \Drupal::service('static_generator')
