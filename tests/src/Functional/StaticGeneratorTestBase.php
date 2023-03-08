@@ -3,11 +3,27 @@
 namespace Drupal\Tests\static_generator\Functional;
 
 use Drupal\Tests\BrowserTestBase;
+use Drupal\filter\Entity\FilterFormat;
+use Drupal\editor\Entity\Editor;
 
 /**
  * Base class to test StaticGenerator features.
  */
 abstract class StaticGeneratorTestBase extends BrowserTestBase {
+
+  /**
+   * Installation profile.
+   *
+   * @var string
+   */
+  protected $profile = 'standard';
+
+  /**
+   * The text editor.
+   *
+   * @var \Drupal\editor\EditorInterface
+   */
+  protected $editor;
 
   /**
    * {@inheritdoc}
@@ -17,6 +33,8 @@ abstract class StaticGeneratorTestBase extends BrowserTestBase {
     // @see testAvailableConfigEntities
     'node',
     // 'views', // Required to load the front page.
+    'editor',
+    'ckeditor5',
 
     // // Core test modules.
     // 'entity_test',
@@ -36,6 +54,13 @@ abstract class StaticGeneratorTestBase extends BrowserTestBase {
    */
   protected function setup(): void {
     parent::setup();
+
+    // Set default theme.
+    $this->container->get('theme_installer')->install(['olivero']);
+    $this->container->get('config.factory')
+      ->getEditable('system.theme')
+      ->set('default', 'olivero')
+      ->save();
 
     // Create content types.
     if ($this->profile != 'standard') {

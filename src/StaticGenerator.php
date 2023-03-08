@@ -1831,6 +1831,12 @@ class StaticGenerator {
     /** @var \DOMElement $node */
     foreach ($finder->query('//a[contains(@href,"?page=")]') as $node) {
       $original_href = $node->getAttribute('href');
+
+      // If the href is not a relative path, skip it.
+      if (strpos($node->getAttribute('href'), '/') !== 0) {
+        continue;
+      }
+
       if (strpos($path, '?') === FALSE) {
         $new_path = $path;
       } else {
