@@ -751,7 +751,7 @@ class StaticGenerator {
     // Allow modules to modify the markup (for nodes only).
     if ($node instanceof NodeInterface) {
       $event = new ModifyMarkupEvent($markup, $node);
-      $this->eventDispatcher->dispatch(new ModifyMarkupEvent($markup, $node), StaticGeneratorEvents::MODIFY_MARKUP);
+      $this->eventDispatcher->dispatch($event, StaticGeneratorEvents::MODIFY_MARKUP);
       $markup = $event->getMarkup();
     }
 
@@ -834,6 +834,7 @@ class StaticGenerator {
 
       $redirect_ids = $redirect_storage->getQuery()
         ->condition('redirect_redirect__uri', '%' . $nid, 'LIKE')
+        ->accessCheck(TRUE)
         ->execute();
       $redirects = $redirect_storage->loadMultiple($redirect_ids);
 
@@ -2116,9 +2117,9 @@ class StaticGenerator {
     $markup = $element->ownerDocument->saveHTML($element);
 
     // Allow modules to modify ESI markup.
-    $esi_event = new ModifyEsiMarkupEvent($markup);
-    $this->eventDispatcher->dispatch(StaticGeneratorEvents::MODIFY_ESI_MARKUP, $esi_event);
-    $markup = $esi_event->getMarkup();
+    $event = new ModifyEsiMarkupEvent($markup);
+    $this->eventDispatcher->dispatch($event, StaticGeneratorEvents::MODIFY_ESI_MARKUP);
+    $markup = $event->getMarkup();
 
     \Drupal::service('file_system')->saveData($markup, $directory . '/' . $esi_filename, FileSystemInterface::EXISTS_REPLACE);
   }
