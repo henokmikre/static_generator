@@ -750,7 +750,7 @@ class StaticGenerator {
 
     // Allow modules to modify the markup (for nodes only).
     if ($node instanceof NodeInterface) {
-      $event = new ModifyMarkupEvent($markup, $node);
+      $event = new ModifyMarkupEvent($markup, $node, $path);
       $this->eventDispatcher->dispatch($event, StaticGeneratorEvents::MODIFY_MARKUP);
       $markup = $event->getMarkup();
     }
